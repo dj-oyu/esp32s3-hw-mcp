@@ -28,8 +28,12 @@ jobs:
           python tools/build_corpus.py sources/esp32-s3_datasheet_en.pdf --out corpus/datasheet-s3
       - name: Extract PIE knowledge
         run: python tools/extract_pie.py
-      - name: Verify (coverage / syntax / stages / spot checks)
+      - name: Extract register knowledge
+        run: python tools/extract_registers.py
+      - name: Verify PIE (coverage / syntax / stages / spot checks)
         run: python tools/verify_pie.py
+      - name: Verify registers (coverage / shape / collisions / spot checks)
+        run: python tools/verify_registers.py
       - name: Committed data must match a fresh extraction
         run: |
           if ! git diff --quiet -- data/ ; then

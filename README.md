@@ -47,6 +47,8 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 | `pie_pipeline.json` | TRM Table 1.7-2（p66-74）: 命令ごとのオペランド／特殊レジスタの use/def パイプライン段（1=E, 2=M） | 217行 |
 | `pie_hazards.md` | TRM 1.7.1〜1.7.3（p65-75）の本文（データハザード／ハードウェア資源ハザード／制御ハザード） | ページマーカー付き原文 |
 | `pie_review.json` | マニュアル自身の記述が食い違う行（後述） | 2行 |
+| `registers.json` | TRM の "Register Summary" 表（第2〜39章、41節）: レジスタ名・説明・オフセット・アクセス種別・グループ・節・ページ | **1581レジスタ** |
+| `peripheral_map.json` | Table 4.3-3（p408-409）: ペリフェラル名と境界アドレス・サイズ。オフセットを絶対アドレスに直す基準 | 44行 |
 
 `pie_pipeline.json` が本プロジェクトの中核データで、これがあると
 **「この命令列は何サイクルストールするか」を決定論的に計算できる**（LLMの推定に頼らない）。
@@ -54,7 +56,8 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 ### 検証
 
 ```bash
-.venv/bin/python tools/verify_pie.py      # 0 failure / 2 warning で緑
+.venv/bin/python tools/verify_pie.py        # PIE:  0 failure / 2 warning で緑
+.venv/bin/python tools/verify_registers.py  # レジスタ: 0 failure / 0 warning で緑（pypdfとの突き合わせで数分）
 ```
 
 再現性の門: `tools/extract_pie.py` を流し直した結果が `data/` と一致すること（CI でも検査している）。
@@ -67,7 +70,21 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 コーパス統計）で行う。**片方の抽出器だけを信じない**方針で、表のセルは pypdf と PyMuPDF の
 両方で取り、両者が一致することを確認済み。
 
-## 既知の限界（データに正直に記録する）
+## 既知の限界（レジスタ側）
+
+1. **I2S 章はアドレス列を2本（I2S0 / I2S1）持つ**（p1059 のヘッダは "I2S0 Ad-" + "dress" にハイフネーション
+   される）。抽出は左の列を採用しており、両インスタンスでオフセットが一致することを前提にしている。
+2. **RNG 章はオフセットでなく絶対アドレス**（`0x6003_507C`）を印字する。`address_is_absolute: true` を
+   付けて区別してある。オフセットとして解釈してはならない。
+3. **メモリブロック表（20.4, p878）はレジスタ表ではない**ため収録しない（"Starting/Ending Address" を
+   持つヘッダを弾いている）。
+4. 抽出したのは **Register Summary 表のみ**。各レジスタの**フィールド（ビット範囲）は図版**
+   （ビットマップ図）に描かれており、テキスト層には説明文しかない。フィールドの抽出は次の段階で、
+   図形の座標からビット範囲を復元するか、ESP-IDF の `soc/*_reg.h` と突き合わせる必要がある。
+5. オフセットの一意性検査は「同一節かつ同一レジスタファミリ（先頭トークン）」に限定している。章をまたいで
+   同じ番地に別ペリフェラルのレジスタが並ぶのは正常（別ベースアドレス）。
+
+## 既知の限界（PIE側）
 
 1. **`LD.QR` / `ST.QR` / `MV.QR`（p301-303）は Table 1.7-2 に載っていない**。ハザード段の情報が
    一次情報に存在しないので、これら3命令のスケジューリングは「未検証」として扱う。
@@ -117,11 +134,18 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 リソースとして TRM のページとセクションを `trm://page/65` のように公開し、プロンプトで
 「PIEで書かれたカーネルのストール解析」を定型化する。
 
-## 未決事項（ユーザー判断待ち）
+## 決定事項（2026-09-14、ユーザー判断）
 
-1. 実装言語: **Python一本**（推奨・確定待ち） / TypeScript一本 / 2言語
-2. 知識の持ち方: **構造化KB＋ページ全文検索**（推奨） / ＋ベクトルRAG補助 / RAG中心
-3. 収録範囲: TRM＋Datasheet のPDF中核＋公式HTMLを補助として区別収録（推奨） / PDFのみ厳守 / PDF＋SDK突き合わせ
-4. リポジトリ: ローカル新規（推奨） / GitHub private / GitHub public / 既存リポジトリのサブディレクトリ
-
-回答が来るまで、どの案でも共通の部分（コーパス・PIE抽出・検証・レジスタ節の抽出）を進める。
+1. **実装言語: Python 一本。`uv` / `uvx` で動かせることを必須要件とする。**
+   `pyproject.toml` に `[project.scripts]` と依存を宣言し、`uvx --from <path|repo> esp32s3-hw-mcp`
+   で起動できる形にする（`uv run` も同じ宣言から動く）。`python3 -m venv` の手順は補助に落とす。
+2. **知識の持ち方: 構造化KB＋ページ全文検索**（ベクトルRAG・埋め込みは入れない）。
+   値（オフセット・段数・ハザード・集約）は構造化データから、記述はページ全文検索から引く。
+   どちらの経路でも回答に文書名・版・ページを付ける。
+3. **収録範囲: PDF中核（TRM/Datasheet）＋ SDK突き合わせ。**
+   ESP-IDF の `soc/esp32s3/include/soc/*_reg.h` 等を**照合専用データ**として収録し、
+   PDF の値との一致・不一致の両方を返せるようにする（PDFを一次、SDKは突き合わせ用と区別する）。
+   公式HTML（errata 等）は補助で、PDFと同格には扱わない。
+4. **リポジトリ: GitHub public**（`dj-oyu/esp32s3-hw-mcp`、現行のまま）。
+   著作権の免責（出所は Espressif 著作物、非公式、PDF非同梱、引用は技術仕様を伝えるのに必要な
+   最小限）を `NOTICE.md` に明記する。**MCP の応答にも免責と出所を必ず載せる**。

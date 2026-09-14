@@ -1,0 +1,354 @@
+[
+ {
+  "target": "UART Controller 0",
+  "low_address": "0x6000_0000",
+  "high_address": "0x6000_0FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "SPI Controller 1",
+  "low_address": "0x6000_2000",
+  "high_address": "0x6000_2FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "SPI Controller 0",
+  "low_address": "0x6000_3000",
+  "high_address": "0x6000_3FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "GPIO",
+  "low_address": "0x6000_4000",
+  "high_address": "0x6000_4FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "eFuse Controller",
+  "low_address": "0x6000_7000",
+  "high_address": "0x6000_7FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "Low-Power Management",
+  "low_address": "0x6000_8000",
+  "high_address": "0x6000_8FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "IO MUX",
+  "low_address": "0x6000_9000",
+  "high_address": "0x6000_9FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "I2S Controller 0",
+  "low_address": "0x6000_F000",
+  "high_address": "0x6000_FFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "UART Controller 1",
+  "low_address": "0x6001_0000",
+  "high_address": "0x6001_0FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "I2C Controller 0",
+  "low_address": "0x6001_3000",
+  "high_address": "0x6001_3FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "UHCI0",
+  "low_address": "0x6001_4000",
+  "high_address": "0x6001_4FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "Remote Control Peripheral",
+  "low_address": "0x6001_6000",
+  "high_address": "0x6001_6FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "Pulse Count Controller",
+  "low_address": "0x6001_7000",
+  "high_address": "0x6001_7FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "LED PWM Controller",
+  "low_address": "0x6001_9000",
+  "high_address": "0x6001_9FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "Motor Control PWM 0",
+  "low_address": "0x6001_E000",
+  "high_address": "0x6001_EFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "Timer Group 0",
+  "low_address": "0x6001_F000",
+  "high_address": "0x6001_FFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "Timer Group 1",
+  "low_address": "0x6002_0000",
+  "high_address": "0x6002_0FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "RTC SLOW Memory",
+  "low_address": "0x6002_1000",
+  "high_address": "0x6002_2FFF",
+  "size_kb": 8,
+  "notes": null,
+  "source_page": 408
+ },
+ {
+  "target": "System Timer",
+  "low_address": "0x6002_3000",
+  "high_address": "0x6002_3FFF",
+  "size_kb": 4,
+  "notes": "page",
+  "source_page": 408
+ },
+ {
+  "target": "SPI Controller 2",
+  "low_address": "0x6002_4000",
+  "high_address": "0x6002_4FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "SPI Controller 3",
+  "low_address": "0x6002_5000",
+  "high_address": "0x6002_5FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "SYSCON",
+  "low_address": "0x6002_6000",
+  "high_address": "0x6002_6FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "I2C Controller 1",
+  "low_address": "0x6002_7000",
+  "high_address": "0x6002_7FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "SD/MMC Host Controller",
+  "low_address": "0x6002_8000",
+  "high_address": "0x6002_8FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "Two-wire Automotive Interface",
+  "low_address": "0x6002_B000",
+  "high_address": "0x6002_BFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "Motor Control PWM 1",
+  "low_address": "0x6002_C000",
+  "high_address": "0x6002_CFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "I2S Controller 1",
+  "low_address": "0x6002_D000",
+  "high_address": "0x6002_DFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "UART controller 2",
+  "low_address": "0x6002_E000",
+  "high_address": "0x6002_EFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "USB Serial/JTAG Controller",
+  "low_address": "0x6003_8000",
+  "high_address": "0x6003_8FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "USB External Control registers",
+  "low_address": "0x6003_9000",
+  "high_address": "0x6003_9FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "AES Accelerator",
+  "low_address": "0x6003_A000",
+  "high_address": "0x6003_AFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "SHA Accelerator",
+  "low_address": "0x6003_B000",
+  "high_address": "0x6003_BFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "RSA Accelerator",
+  "low_address": "0x6003_C000",
+  "high_address": "0x6003_CFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "Digital Signature",
+  "low_address": "0x6003_D000",
+  "high_address": "0x6003_DFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "HMAC Accelerator",
+  "low_address": "0x6003_E000",
+  "high_address": "0x6003_EFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "GDMA Controller",
+  "low_address": "0x6003_F000",
+  "high_address": "0x6003_FFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "ADC Controller",
+  "low_address": "0x6004_0000",
+  "high_address": "0x6004_0FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "Camera-LCD Controller",
+  "low_address": "0x6004_1000",
+  "high_address": "0x6004_1FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "USB core registers",
+  "low_address": "0x6008_0000",
+  "high_address": "0x600B_FFFF",
+  "size_kb": 256,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "System Registers",
+  "low_address": "0x600C_0000",
+  "high_address": "0x600C_0FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "PMS Registers",
+  "low_address": "0x600C_1000",
+  "high_address": "0x600C_1FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "Interrupt Matrix",
+  "low_address": "0x600C_2000",
+  "high_address": "0x600C_2FFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "External Memory Encryption",
+  "low_address": "0x600C_C000",
+  "high_address": "0x600C_CFFF",
+  "size_kb": 4,
+  "notes": null,
+  "source_page": 409
+ },
+ {
+  "target": "World Controller",
+  "low_address": "0x600D_0000",
+  "high_address": "0x600D_0FFF",
+  "size_kb": 4,
+  "notes": "a request to 15 Permission",
+  "source_page": 409
+ }
+]
