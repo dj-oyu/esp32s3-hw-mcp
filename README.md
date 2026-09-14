@@ -118,7 +118,38 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 
 コーパスへの問い合わせは skill 付属の `tools/pdf_corpus.py`（`toc` / `find` / `text` / `grep`）が使える。
 
-## 予定している MCP のサーフェス（設計案）
+## MCPサーバー（実装済み・`server/esp32s3_mcp.py`）
+
+```bash
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python server/esp32s3_mcp.py --list      # ツール面を人向けに表示
+.venv/bin/python server/esp32s3_mcp.py             # MCP（stdio）として起動
+.venv/bin/python tools/test_mcp_server.py          # stdio越しに15項目のE2E検査
+```
+
+クライアントへの登録は各クライアントの流儀に従う（Hermes なら `hermes mcp add` → `hermes mcp test`）。
+
+実装済みツール（すべて応答に文書・版・印字ページを添える）:
+
+| ツール | 内容 |
+|---|---|
+| `get_register(name, include_base_guess)` | レジスタ名で引く（`_REG` 省略可・部分一致）。`include_base_guess` で Table 4.3-3 からのベースアドレス推定（**推定であることを明示**して返す） |
+| `list_registers(prefix/chapter/section/group)` | 前置き・章・節・グループで一覧 |
+| `get_instruction(name)` | PIE命令のエンコード・構文・説明・操作擬似コード |
+| `instruction_pipeline(name)` | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い」と返す |
+| `list_peripherals(target)` | Table 4.3-3 のペリフェラル境界アドレス |
+| `search_manual(query)` / `get_page(page)` | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ作り方を返す） |
+
+リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256）。
+
+設計上の約束:
+
+- マニュアルに書かれていないことは**「無い」と言う**。例: LD.QR のハザード段は Table 1.7-2 に無いので
+  推定せず absent を返す。フィールドのビット範囲も未抽出なので返さない。
+- 推定値（レジスタのベースアドレス）は `confidence: heuristic` と候補列を付けて返す。
+- 応答に必ず `citation`（文書名・版・ページ・sha256）を付ける。
+
+## 予定している MCP のサーフェス（未実装分の設計案）
 
 ツール（すべて回答に TRM/Datasheet のページを付ける）:
 
@@ -127,7 +158,10 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 - `list_instructions(class?)` — 1.6 の分類（Read/Write/DataExchange/Arithmetic/Comparison/…）で絞る
 - `instruction_pipeline(name)` — use/def 段とハザード則（`pie_pipeline.json`）
 - `analyze_sequence([...])` — **命令列のストール段数を見積もる決定論的ツール**（1.7.1 の D=max(SA-SB+1,0) など）
-- `get_register(name)` / `get_field(reg, field)` / `list_registers(chapter)` — 各章の Registers 節から
+  ※着手前に 1.7.1 の段番号の使い方（Table 1.7-1 の R0/E1/M2/W3 と、本文の例が W を 2 として計算している
+  点）を読み切る必要がある。ここを曖昧なまま実装すると「それらしい嘘」を作るので、まだ実装していない。
+- `get_field(reg, field)` — レジスタのビット範囲。**一次情報では図版に描かれている**ため、図形座標からの
+  復元か ESP-IDF `soc/*_reg.h` との突き合わせが要る（未実装）
 - `memory_map()` / `clock_tree()` — Ch.4 (p400-409) / Ch.7 (p526-533)
 - `perf_checklist(topic)` — チューニング項目の整理（根拠ページ付き）
 

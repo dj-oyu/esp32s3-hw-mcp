@@ -1,0 +1,5 @@
+# Extraction pipeline
+pypdf>=6
+pymupdf>=1.26
+# MCP server (stdio)
+mcp>=2
