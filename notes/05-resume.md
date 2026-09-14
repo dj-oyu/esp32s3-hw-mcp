@@ -194,3 +194,31 @@ PORT=/dev/ttyACM0 bash tools/restore_flash.sh /workspace/backups/cardputer-s3-<�
 |---|---|
 | `cardputer-s3-20260914T093526Z.bin` | 当時の「元の中身」。09:35 時点 |
 | `cardputer-s3-20260914T150410Z.bin` | **今回の書き込み直前の中身。戻すならこれ** |
+
+## ホスト側から焼く経路（コンテナが死んでいるときの本線）
+
+コンテナの `/dev/ttyACM0` は起動時の inode を bind するだけなので、USB 再列挙で削除済み inode を
+指したままになる（mode 0000・open 不可・内側からは復旧不能）。**WSL ホスト側の /dev はカーネルが
+作り直すので常に生きており、再列挙も無害。** そこでホストで焼いて、ログを bind 共有に落とす:
+
+```bash
+uv run --no-project --with esptool --with pyserial python -m esptool version   # 依存は uv に任せる
+bash /workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh                     # 以後は uv を自動で使う
+```
+
+`tools/host_flash_and_log.sh` は esptool + pyserial だけを要求する（ファームはコンテナ側で
+ビルド済み、IDF 不要）。識別 →（任意で全8MB退避＋構造ゲート）→ 書込み（`--after no-reset`）→
+アプリ区間の読み戻し＋sha256照合 → アプリ起動 → レポート取得（ハンドシェイク1バイト、ENDが無ければ
+1回だけ再リセットして再取得）→ `parse_pie_timing.py` で解釈まで自走し、ログを
+`<repo 親>/backups/pie-timing-<stamp>.log`（＝コンテナの `/workspace/backups/...`）に置く。
+実行前後で `/dev/ttyACM0` の inode を比べ、「再列挙でノードが作り直されたか」を verdict として出す。
+
+- `--restore <dump>` で書き戻し（`tools/check_flash_dump.py` のゲート付き）
+- `--no-flash`（焼かずにログ取りのみ）/ `--backup` / `--dry-run` / `--uv`（uv を強制）/ `--port` / `--out-dir`
+- 依存の探し方: ESP_PYTHON → .venv-host → ~/.venv-esp → IDF env → python3 → **uv**（無ければ作り方を表示）
+
+uv しか無い環境では `tools/capture_serial.py` 単体も使える（PEP 723 のヘッダで pyserial を宣言済み）:
+
+```bash
+uv run --no-project tools/capture_serial.py --port /dev/ttyACM0 --out /workspace/backups/log.txt
+```

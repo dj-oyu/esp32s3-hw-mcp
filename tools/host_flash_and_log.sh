@@ -6,16 +6,28 @@
 #   bash ... --backup                                                        # dump the whole 8 MB first
 #   bash ... --restore /workspace/backups/cardputer-s3-<stamp>.bin           # put a dump back
 #   bash ... --dry-run                                                       # say what it would do, touch nothing
+#   bash ... --uv                                                            # force the uv-managed interpreter
 #   PORT=/dev/ttyACM1 bash ...                                               # if the port number moved
+#
+# Dependencies: esptool + pyserial, and nothing else -- the firmware is already built in this repository, so
+# no ESP-IDF is needed here. Three ways to provide them, tried in this order:
+#
+#   1. an interpreter that already has both (ESP_PYTHON=/path/to/python, or .venv-host, ~/.venv-esp, the
+#      ESP-IDF env, then plain python3/python);
+#   2. `uv`, if it is installed: every step then runs as
+#        uv run --quiet --no-project --with esptool --with pyserial python ...
+#      which builds a throwaway environment in uv's cache -- nothing installed into the system, nothing to
+#      clean up, and no venv to remember. `--uv` forces this path.
+#   3. nothing: the script prints the two commands that fix it and stops.
 #
 # Why on the host: the container's /dev entry is bound at start-up to whatever inode existed then, so a USB
 # re-enumeration (which every esptool run triggers) can leave it pointing at a deleted inode -- mode 0000,
 # open() refused, unrecoverable from inside (no CAP_MKNOD / CAP_SYS_ADMIN). The host's own /dev/ttyACM0 is
-# created fresh by the kernel and is always the live one, so the host is where the flashing runs reliably.
+# created fresh by the kernel and is always the live one, so the host is where flashing runs reliably. The
+# script reports the node's inode before and after, so this shows up as evidence rather than as folklore.
 #
-# Needs only esptool + pyserial: the firmware is already built in this repository (pietiming bins), so no
-# ESP-IDF is required on the host. Outputs land next to this repository, i.e. in the same /workspace tree
-# the container sees, so the logs can be parsed from either side.
+# Outputs land next to this repository, i.e. in the same tree the container sees as /workspace, so the log
+# can be parsed from either side.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,6 +39,7 @@ DO_FLASH=1
 DO_BACKUP=0
 DO_PARSE=1
 DRY_RUN=0
+FORCE_UV=0
 RESTORE=""
 PORT="${PORT:-}"
 TIMEOUT="${TIMEOUT:-240}"
@@ -37,10 +50,11 @@ while [ $# -gt 0 ]; do
     --backup)   DO_BACKUP=1 ;;
     --no-parse) DO_PARSE=0 ;;
     --dry-run)  DRY_RUN=1 ;;
+    --uv)       FORCE_UV=1 ;;
     --port)     PORT="${2:?--port needs a device path}"; shift ;;
     --restore)  RESTORE="${2:?--restore needs a dump path}"; shift ;;
     --out-dir)  OUT_DIR="${2:?--out-dir needs a path}"; shift ;;
-    -h|--help)  sed -n '2,25p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)  sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
   shift
@@ -51,31 +65,43 @@ step() { printf '\n== %s ==\n' "$*"; }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
 run()  { if [ "$DRY_RUN" = 1 ]; then printf '  [dry-run] %s\n' "$*"; else "$@"; fi; }
 
-# ---------------------------------------------------------------- interpreter with esptool + pyserial
+# ---------------------------------------------------------------- interpreter that can import both modules
 has_modules() {
   "$1" - <<'PY' >/dev/null 2>&1
 import importlib.util as u, sys
-need = ["esptool", "serial"]
-missing = [n for n in need if u.find_spec(n) is None]
+missing = [n for n in ("esptool", "serial") if u.find_spec(n) is None]
 sys.exit(1 if missing else 0)
 PY
 }
 
-PY=""
-for cand in ${ESP_PYTHON:-} "$REPO/.venv-host/bin/python" "$HOME/.venv-esp/bin/python" \
-            "$HOME/.espressif/python_env/idf6.0_py3.11_env/bin/python" python3 python; do
-  [ -n "$cand" ] || continue
-  if command -v "$cand" >/dev/null 2>&1 && has_modules "$(command -v "$cand")"; then
-    PY="$(command -v "$cand")"
-    break
+PY_CMD=()
+if [ "$FORCE_UV" = 1 ]; then
+  command -v uv >/dev/null 2>&1 || die "--uv was given but there is no uv on PATH"
+  PY_CMD=(uv run --quiet --no-project --with esptool --with pyserial python)
+else
+  for cand in ${ESP_PYTHON:-} "$REPO/.venv-host/bin/python" "$HOME/.venv-esp/bin/python" \
+              "$HOME/.espressif/python_env/idf6.0_py3.11_env/bin/python" python3 python; do
+    [ -n "$cand" ] || continue
+    if command -v "$cand" >/dev/null 2>&1 && has_modules "$(command -v "$cand")"; then
+      PY_CMD=("$(command -v "$cand")")
+      break
+    fi
+  done
+  if [ "${#PY_CMD[@]}" -eq 0 ] && command -v uv >/dev/null 2>&1; then
+    PY_CMD=(uv run --quiet --no-project --with esptool --with pyserial python)
   fi
-done
+fi
 
-if [ -z "$PY" ]; then
+if [ "${#PY_CMD[@]}" -eq 0 ]; then
   cat >&2 <<'MSG'
-error: no python3 with esptool AND pyserial was found on this host.
+error: no interpreter with esptool AND pyserial was found on this host, and there is no uv either.
 
-Install them into a private venv (no sudo, no system policy problems), then re-run:
+With uv (nothing is installed into the system; uv caches the environment itself):
+
+  uv run --no-project --with esptool --with pyserial python -m esptool version
+  bash /workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh          # picks uv up automatically
+
+Without uv, a private venv (no sudo, no PEP 668 trouble):
 
   python3 -m venv ~/.venv-esp
   ~/.venv-esp/bin/pip install --upgrade esptool pyserial
@@ -86,10 +112,12 @@ MSG
   exit 2
 fi
 
+ESPTOOL_CMD=("${PY_CMD[@]}" -m esptool)
+
 say "repository : $REPO"
 say "build dir  : $BUILD"
 say "output dir : $OUT_DIR"
-say "python     : $PY"
+say "interpreter: ${PY_CMD[*]}"
 say "port       : ${PORT:-<auto>}"
 
 # ---------------------------------------------------------------- port
@@ -106,20 +134,20 @@ fi
 say "using      : $PORT"
 
 if [ "$DRY_RUN" = 0 ]; then
-  if ! "$PY" - "$PORT" <<'PY'
+  if ! "${PY_CMD[@]}" - "$PORT" <<'PY'
 import os, stat, sys
 p = sys.argv[1]
 st = os.stat(p)
 if not stat.S_ISCHR(st.st_mode):
-    print(f"{p} is not a character device", file=sys.stderr); sys.exit(1)
-if os.major(st.st_rdev) == 166:
-    pass                      # USB CDC-ACM: what the ESP32-S3 USB-Serial-JTAG shows up as
+    print(f"{p} is not a character device", file=sys.stderr)
+    sys.exit(1)
 try:
     os.close(os.open(p, os.O_RDWR | os.O_NONBLOCK))
 except OSError as exc:
     print(f"cannot open {p}: {exc}", file=sys.stderr)
-    print("if mode is c--------- and the device is attached, this is the stranded-container-node case "
-          "described in notes/05-resume.md", file=sys.stderr)
+    print("if the mode is c--------- while the device is attached, this is the stranded-container-node "
+          "case described in notes/05-resume.md -- and if it happens on the host, the user is probably not "
+          "in the dialout group (sudo usermod -aG dialout $USER, then log in again)", file=sys.stderr)
     sys.exit(1)
 PY
   then
@@ -148,8 +176,8 @@ if [ -n "$RESTORE" ]; then
   if [ -f "$RESTORE.sha256" ] && [ "$DRY_RUN" = 0 ]; then
     (cd "$(dirname "$RESTORE")" && sha256sum -c "$(basename "$RESTORE").sha256")
   fi
-  run "$PY" "$REPO/tools/check_flash_dump.py" "$RESTORE"
-  run "$PY" -m esptool --chip esp32s3 --port "$PORT" --baud 921600 write_flash 0x0 "$RESTORE"
+  run "${PY_CMD[@]}" "$REPO/tools/check_flash_dump.py" "$RESTORE"
+  run "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --baud 921600 write_flash 0x0 "$RESTORE"
   say "restored. The chip now holds whatever that dump contained."
   exit 0
 fi
@@ -161,7 +189,7 @@ if [ "$DO_FLASH" = 1 ]; then
        cd $REPO && bash tools/build_pie_timing.sh"
   while read -r off path; do
     FLASH_PAIRS+=("$off" "$path")
-  done < <("$PY" - "$BUILD/flasher_args.json" <<'PY'
+  done < <("${PY_CMD[@]}" - "$BUILD/flasher_args.json" <<'PY'
 import json, os, sys
 d = json.load(open(sys.argv[1], encoding="utf-8"))
 base = os.path.dirname(os.path.abspath(sys.argv[1]))
@@ -184,9 +212,9 @@ fi
 
 # ---------------------------------------------------------------- 1. identify
 step "1/5 identify"
-run "$PY" -m esptool --chip esp32s3 --port "$PORT" --before default-reset --after no-reset flash_id
+run "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --before default-reset --after no-reset flash_id
 if [ "$DRY_RUN" = 0 ]; then
-  "$PY" -m esptool --chip esp32s3 --port "$PORT" --before no-reset --after no-reset flash_id \
+  "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --before no-reset --after no-reset flash_id \
     > "$OUT_DIR/flash_id-$STAMP.txt" 2>&1 || true
 fi
 
@@ -194,18 +222,18 @@ fi
 if [ "$DO_BACKUP" = 1 ]; then
   step "2/5 backup the whole 8 MB (this is the only copy of what is on the chip now)"
   DUMP="$OUT_DIR/cardputer-s3-$STAMP.bin"
-  run "$PY" -m esptool --chip esp32s3 --port "$PORT" --baud 921600 --before default-reset --after no-reset \
+  run "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --baud 921600 --before default-reset --after no-reset \
       read_flash 0 0x800000 "$DUMP"
   if [ "$DRY_RUN" = 0 ]; then
     (cd "$OUT_DIR" && sha256sum "$(basename "$DUMP")" | tee "$(basename "$DUMP").sha256")
-    "$PY" "$REPO/tools/check_flash_dump.py" "$DUMP"
+    "${PY_CMD[@]}" "$REPO/tools/check_flash_dump.py" "$DUMP"
   fi
 fi
 
 # ---------------------------------------------------------------- 3. flash
 if [ "$DO_FLASH" = 1 ]; then
   step "3/5 flash the measurement firmware (--after no-reset: the chip stays in the loader)"
-  run "$PY" -m esptool --chip esp32s3 --port "$PORT" --baud 921600 --before default-reset --after no-reset \
+  run "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --baud 921600 --before default-reset --after no-reset \
       write_flash --flash-mode dio --flash-freq 80m --flash-size 8MB "${FLASH_PAIRS[@]}"
 
   step "4/5 read the app region back and compare hashes (a write nobody checked is not a write)"
@@ -214,7 +242,7 @@ if [ "$DO_FLASH" = 1 ]; then
   if [ "$DRY_RUN" = 1 ]; then
     say "  [dry-run] read_flash $APP_OFF $APP_SIZE -> $READBACK, then compare sha256 with $APP_BIN"
   else
-    "$PY" -m esptool --chip esp32s3 --port "$PORT" --baud 921600 --before no-reset --after no-reset \
+    "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --baud 921600 --before no-reset --after no-reset \
       read_flash "$APP_OFF" "$APP_SIZE" "$READBACK" >/dev/null
     if [ "$(sha256sum < "$APP_BIN")" != "$(sha256sum < "$READBACK")" ]; then
       die "the bytes at $APP_OFF do not match the built image:
@@ -237,20 +265,20 @@ reset_into_app() {
   # cannot follow it, which is exactly why this script runs on the host.
   if [ "$DRY_RUN" = 1 ]; then
     printf '  [dry-run] %s -m esptool --chip esp32s3 --port %s --before no-reset --after hard-reset read_mac\n' \
-      "$PY" "$PORT"
+      "${PY_CMD[*]}" "$PORT"
     return 0
   fi
-  "$PY" -m esptool --chip esp32s3 --port "$PORT" --before no-reset --after hard-reset read_mac \
+  "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --before no-reset --after hard-reset read_mac \
       >/dev/null 2>&1 || true
 }
 capture() {
-  run "$PY" "$REPO/tools/capture_serial.py" --port "$PORT" --out "$LOG" --timeout "$TIMEOUT"
+  run "${PY_CMD[@]}" "$REPO/tools/capture_serial.py" --port "$PORT" --out "$LOG" --timeout "$TIMEOUT"
 }
 if [ "$DRY_RUN" = 0 ]; then
   cat >&2 <<'MSG'
 note: the firmware waits for one byte from the host and then prints its whole report, so capture_serial.py
       sends that byte after opening the port. If the chip was left in the loader it is reset into the
-      application first; either way the report is printed after the byte arrives, not before.
+      application first; either way the report follows the byte, not the reset.
 MSG
 fi
 reset_into_app
@@ -284,11 +312,11 @@ if [ "$DO_PARSE" = 1 ]; then
   REV="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   say "firmware   : $REV"
   say ""
-  "$PY" "$REPO/tools/parse_pie_timing.py" "$LOG" --firmware-rev "$REV" \
+  "${PY_CMD[@]}" "$REPO/tools/parse_pie_timing.py" "$LOG" --firmware-rev "$REV" \
       --out "$REPO/data/pie_timing_measured.json" || true
 fi
 say ""
 say "first lines of the report:"
 grep -m6 -E "^(ENV|ROUND|HOST|BEGIN)" "$LOG" 2>/dev/null | sed 's/^/  /' || true
 say ""
-say "next: tell the agent the log path and it will pick the result up from /workspace/backups."
+say "next: the agent can pick the log up from /workspace/backups -- no need to copy anything anywhere."

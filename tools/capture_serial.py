@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["pyserial"]
+# ///
 """Capture the measurement firmware's serial output into a log file.
 
     tools/capture_serial.py --port /dev/ttyACM0 --out /tmp/pie_timing.log [--timeout 120]
+
+    # on a machine with only uv (the PEP 723 block above supplies pyserial):
+    uv run --no-project tools/capture_serial.py --port /dev/ttyACM0 --out /tmp/pie_timing.log
 
 Resets the chip (DTR/RTS, falling back to a plain reopen for USB-Serial-JTAG), reads until the firmware
 prints its END marker or the timeout expires, and echoes what it read so a failure is visible immediately.
