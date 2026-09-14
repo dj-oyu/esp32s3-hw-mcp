@@ -1,0 +1,39 @@
+name: verify
+
+# The point of this job is reproducibility: refetch the primary sources, rebuild every derived file from
+# the PDFs, and require the result to be byte-identical to what is committed. A silent change in the
+# extraction (or an Espressif re-release that changes a page) fails here instead of quietly serving
+# wrong register or pipeline data.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install extractor dependencies
+        run: pip install pypdf pymupdf
+      - name: Fetch primary sources (sha256-pinned)
+        run: bash tools/fetch_sources.sh
+      - name: Build corpora
+        run: |
+          python tools/build_corpus.py sources/esp32-s3_technical_reference_manual_en.pdf --out corpus/trm-s3
+          python tools/build_corpus.py sources/esp32-s3_datasheet_en.pdf --out corpus/datasheet-s3
+      - name: Extract PIE knowledge
+        run: python tools/extract_pie.py
+      - name: Verify (coverage / syntax / stages / spot checks)
+        run: python tools/verify_pie.py
+      - name: Committed data must match a fresh extraction
+        run: |
+          if ! git diff --quiet -- data/ ; then
+            echo "::error::data/ differs from a fresh extraction -- regenerate and commit"
+            git diff --stat -- data/
+            exit 1
+          fi

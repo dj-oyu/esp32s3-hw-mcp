@@ -4,6 +4,17 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 チューニング**に関する知識を、MCP（Model Context Protocol）経由でエージェントに提供するための
 サーバー。回答は推測ではなく **Espressif 公式PDFのページ番号付き引用**で返すことを設計の前提にする。
 
+公開: https://github.com/dj-oyu/esp32s3-hw-mcp
+
+## 公開・ライセンス方針
+
+- **ライセンスは付与しない（All rights reserved）。** 事実の出所が Espressif Systems の著作物である
+  派生データを含むため、明示的な利用許諾は与えない立場を取る。詳細は [NOTICE.md](NOTICE.md)。
+- 公式PDFは**同梱しない**（git 管理外）。`tools/fetch_sources.sh` が配布元から取得し sha256 で検証する。
+- 抽出データには常に出所（文書・版・ページ）を持たせる。ページを出せない値はデータに入れない。
+- CI（`.github/workflows/verify.yml`）が一次情報を再取得して全派生ファイルを再生成し、
+  コミット済みの `data/` と**バイト一致**することを要求する。抽出の静かな変化・上流の改版はここで落ちる。
+
 ## 一次情報ポリシー
 
 - 収録する事実は **Espressif 公式ドキュメント**のみ。本リポジトリは PDF を再配布せず、
@@ -44,6 +55,12 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 
 ```bash
 .venv/bin/python tools/verify_pie.py      # 0 failure / 2 warning で緑
+```
+
+再現性の門: `tools/extract_pie.py` を流し直した結果が `data/` と一致すること（CI でも検査している）。
+
+```bash
+.venv/bin/python tools/extract_pie.py && git diff --exit-code -- data/
 ```
 
 6つの検査を、抽出器とは独立の情報源（1.8 のアセンブラ構文、Table 1.7-1 の段番号、印字ページの目視、
