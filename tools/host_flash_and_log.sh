@@ -134,6 +134,13 @@ if [ "$DRY_RUN" = 0 ] && ! touch "$OUT_DIR/.write-test" 2>/dev/null; then
 fi
 rm -f "$OUT_DIR/.write-test"
 
+# The device node's identity, before and after the flashing resets. This is the thing the container cannot
+# follow: if the inode changes here and the port still opens, the host came through a re-enumeration
+# cleanly, which is exactly what is being checked.
+fingerprint() { stat -c 'ino=%i mode=%A mtime=%y' "$PORT" 2>/dev/null || echo "gone"; }
+NODE_BEFORE="$(fingerprint)"
+say "node       : $NODE_BEFORE"
+
 # ---------------------------------------------------------------- restore mode
 if [ -n "$RESTORE" ]; then
   step "restore: $RESTORE (whole 8 MB at 0x0)"
@@ -228,7 +235,12 @@ reset_into_app() {
   # One explicit reset leaves the loader and starts the application. On the host this costs a USB
   # re-enumeration, which is harmless here (the kernel re-creates /dev/ttyACM0) -- it is the container that
   # cannot follow it, which is exactly why this script runs on the host.
-  run "$PY" -m esptool --chip esp32s3 --port "$PORT" --before no-reset --after hard-reset read_mac \
+  if [ "$DRY_RUN" = 1 ]; then
+    printf '  [dry-run] %s -m esptool --chip esp32s3 --port %s --before no-reset --after hard-reset read_mac\n' \
+      "$PY" "$PORT"
+    return 0
+  fi
+  "$PY" -m esptool --chip esp32s3 --port "$PORT" --before no-reset --after hard-reset read_mac \
       >/dev/null 2>&1 || true
 }
 capture() {
@@ -259,6 +271,15 @@ say "log        : $LOG"
 say "container  : /workspace/${LOG#"$(dirname "$REPO")/"}"
 say "             (the host's $(dirname "$REPO") is bind-mounted at /workspace inside the pod, so the"
 say "              agent can read this file directly)"
+NODE_AFTER="$(fingerprint)"
+say "node after : $NODE_AFTER"
+if [ "$NODE_AFTER" = "$NODE_BEFORE" ]; then
+  say "verdict    : the device node kept its inode through the whole run (no re-enumeration reached it),"
+  say "             and the port is still usable."
+else
+  say "verdict    : the node was re-created (inode changed) and the port still works -- that is exactly the"
+  say "             re-enumeration the container cannot follow, and why this runs on the host."
+fi
 if [ "$DO_PARSE" = 1 ]; then
   REV="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   say "firmware   : $REV"
