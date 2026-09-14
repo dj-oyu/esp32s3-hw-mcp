@@ -22,6 +22,40 @@ cd /workspace/esp32s3-hw-mcp
 PORT=/dev/ttyACM0 BACKUP_DIR=/workspace/backups bash tools/device_experiment.sh
 ```
 
+### 2026-09-14 の到達点（ここから再開）
+
+退避までは完走する。**書込み後の実測で2つ詰まりを潰した**（両方ともリポジトリ側の修正済み）:
+
+1. `tools/check_flash_dump.py` が ESP32 クラシックのブートローダオフセット（0x1000）を見ていて、
+   自分の退避を拒否していた（S3 は 0x0）。→ チップ別オフセット表＋イメージのチップID照合＋
+   パーティション表が指すアプリ区間の実在確認＋イメージ自身の SHA-256 再検証に書き直し、
+   11ケースのセルフテスト（`tools/selftest_check_flash_dump.py`）を CI に追加。
+2. `tools/gen_pie_timing_asm.py` が生成する関数が **windowed ABI 違反**（`ret` で戻っていた）。
+   call8 で呼ばれる関数は `entry`/`retw` を対にしないと*呼び出し側*のレジスタ窓が回りっぱなしになり、
+   2回目の呼び出しで引数が壊れる（実機では a2=3 で `EE.LD.ACCX.IP` がアドレス0を読み、LoadProhibited）。
+   → 生成側を `entry a1, 32` + `retw.n` に修正し、`ret` を出したら生成器が落ちる不変条件を追加。
+
+この2件の後は **書込みまでは通っている**（書込み後にアプリ区間を読み戻してハッシュ照合する検証も追加済み）。
+止まっているのは最後のシリアル取得だけ:
+
+- 書込み直後のチップリセットで USB-Serial-JTAG が再列挙し、ホスト側の `vhci_hcd` が
+  デバイスを切り離して再アタッチする（`dmesg` に `USB disconnect` → `cdc_acm ttyACM0` が出る）。
+- その結果コンテナ内の `/dev/ttyACM0` は **mode 0000・所有者は未マップ uid** になり、
+  コンテナの中からは `chmod` も `mknod` もできない（CAP_MKNOD / CAP_SYS_ADMIN が無い）→ EACCES。
+- 対処: WSL 側（ポッドの外）で `sudo chmod 666 /dev/ttyACM0`。効かなければ
+  **USB を attach 済みの状態でポッドを再起動**（`--device=/dev/ttyACM0` は起動時バインド）。
+
+そのときの状態: デバイスには **プローブ入りの計測ファームが焼かれている**（`main/probe.S` + `main.c` の
+PROBE ブロック。CPENABLE と PIE 命令の実行可否を1命令ずつ確かめる一時的な仕掛け）。
+計測が通ったら PROBE を外して計測ファームだけを焼き直し、最後に退避を書き戻す:
+
+```bash
+PORT=/dev/ttyACM0 bash tools/restore_flash.sh /workspace/backups/cardputer-s3-20260914T093526Z.bin
+```
+
+（退避の中身は `cardputer_pocketjs 1-55-g97bd403-dirty`／ESP-IDF v6.0.1。ブートローダとアプリの
+自己 SHA-256 まで一致を確認済み。）
+
 順序（スクリプトが強制する）:
 
 1. `esptool flash_id` でチップ素性を記録

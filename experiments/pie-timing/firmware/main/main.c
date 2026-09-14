@@ -26,6 +26,19 @@
 #define BUF_BYTES 256
 static uint8_t s_buf[BUF_BYTES] __attribute__((aligned(16)));
 
+/* ---- scratch diagnostic (probe.S); remove once the fault cause is known ---- */
+extern uint32_t probe_cpenable(void);
+extern uint32_t probe_ccount(void);
+extern void probe_andq_loop(void);
+extern void probe_ld_accx_once(void *p);
+extern void probe_st_accx_once(void *p);
+extern void probe_ldqr_once(void *p);
+extern void probe_ld_accx_16loop(void *p);
+extern uint32_t probe_ld_accx_loop(void *p);
+#define PROBE(label, stmt) do { printf("PROBE " label " ...\n"); fflush(stdout); stmt; \
+                                printf("PROBE " label " ok\n"); fflush(stdout); } while (0)
+/* -------------------------------------------------------------------------- */
+
 typedef struct {
     const char *case_id;
     int distance;
@@ -94,6 +107,24 @@ static void report_environment(void)
 void app_main(void)
 {
     memset(s_buf, 0, sizeof(s_buf));
+
+    printf("PROBE cpenable=0x%08x (bit3 = PIE/ACCX)\n", (unsigned)probe_cpenable());
+    fflush(stdout);
+    PROBE("andq_loop", probe_andq_loop());
+    PROBE("ld_accx_once", probe_ld_accx_once(s_buf));
+    PROBE("st_accx_once", probe_st_accx_once(s_buf));
+    PROBE("ldqr_once", probe_ldqr_once(s_buf));
+    PROBE("ld_accx_16loop", probe_ld_accx_16loop(s_buf));
+    {
+        uint32_t c0 = probe_ccount();
+        uint32_t d = probe_ld_accx_loop(s_buf);
+        uint32_t c1 = probe_ccount();
+        printf("PROBE ld_accx_loop 2000 iter = %u cycles (wall %u)\n", (unsigned)d, (unsigned)(c1 - c0));
+        fflush(stdout);
+    }
+    printf("PROBE end\n");
+    fflush(stdout);
+
     /* One warm-up pass so cache/line fills do not land inside the first measured run. */
     for (size_t i = 0; i < sizeof(MEASUREMENTS) / sizeof(MEASUREMENTS[0]); i++) {
         (void)MEASUREMENTS[i].fn(s_buf);

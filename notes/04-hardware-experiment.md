@@ -41,6 +41,19 @@ CP3 = `cop_ai`）と保存領域の記述はあるが、**命令の段・レイ�
 
 ## 測定の設計
 
+### 実機で踏んだ2つの罠（どちらも記録に値する）
+
+- **windowed ABI**: 関数ポインタ経由（`call8`）で呼ばれるアセンブラ関数は `entry`/`retw` を対にすること。
+  裸の `ret` は命令としては正しいが、呼び出し側のレジスタ窓が回ったままになる。症状は「コンパイルも
+  書込みも通り、実機でだけ別の命令が fault する」— 実際は2回目の呼び出しの引数が壊れていた
+  （a2 が 3 になり `EE.LD.ACCX.IP a3, 0` がアドレス0を読む）。`tools/gen_pie_timing_asm.py` は
+  `entry a1, 32` + `retw.n` を出し、`ret` を出したら生成器が落ちるようにしてある。
+- **ESP32-S3 の EXCCAUSE 28 は LoadProhibited ではない**。S3（LX7）の `core.h` では
+  28 = `XCHAL_EXCCAUSE_LOAD_CACHE_ATTRIBUTE`、29 = STORE_CACHE_ATTRIBUTE。ESP-IDF のパニック
+  メッセージ（32系の名前が残っている）は「LoadProhibited」と出すので、名前ではなく
+  `components/xtensa/esp32s3/include/xtensa/config/core.h` の値で読むこと。
+  ちなみにコプロセッサ無効は 32+3 = 35（PIE は `tie.h` の CP3 = `cop_ai`）。
+
 `experiments/pie-timing/cases.json` が測定ケースの唯一の定義で、`tools/gen_pie_timing_asm.py` が
 それを実アセンブリ（`experiments/pie-timing/firmware/main/measure.S`）に変換する。
 C では「2命令を1サイクル差で並べる」ことを保証できないので、測定対象は手書き生成のアセンブリで固定する。

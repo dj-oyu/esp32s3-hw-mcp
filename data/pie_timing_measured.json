@@ -1,0 +1,52 @@
+{
+ "provenance": {
+  "kind": "measured_on_hardware",
+  "note": "These values come from a run on silicon, not from a document. Every entry keeps the log line basis in `basis`, and the harness anchors are listed so a reader can see whether the method reproduced the manual's own numbers.",
+  "log": "pie-timing-20260914T094430Z.log",
+  "firmware_git_rev": "cedaa9b",
+  "iterations_per_measurement": 2000,
+  "environment": {}
+ },
+ "valid": false,
+ "anchors": [],
+ "measurements": [],
+ "derived": [],
+ "problems": [
+  "anchor_accx_M_to_E d=1: missing dep/indep runs in the log",
+  "anchor_accx_M_to_E d=2: missing dep/indep runs in the log",
+  "anchor_accx_M_to_E d=3: missing dep/indep runs in the log",
+  "anchor_qs_M_to_E d=1: missing dep/indep runs in the log",
+  "anchor_qs_M_to_E d=2: missing dep/indep runs in the log",
+  "anchor_qs_M_to_E d=3: missing dep/indep runs in the log",
+  "anchor_qr_E_to_E d=1: missing dep/indep runs in the log",
+  "anchor_qr_E_to_E d=2: missing dep/indep runs in the log",
+  "anchor_qr_E_to_E d=3: missing dep/indep runs in the log",
+  "native_load_use d=1: missing dep/indep runs in the log",
+  "native_load_use d=2: missing dep/indep runs in the log",
+  "native_load_use d=3: missing dep/indep runs in the log",
+  "native_alu_use d=1: missing dep/indep runs in the log",
+  "native_alu_use d=2: missing dep/indep runs in the log",
+  "LD_QR_def_stage d=1: missing dep/indep runs in the log",
+  "LD_QR_def_stage d=2: missing dep/indep runs in the log",
+  "LD_QR_def_stage d=3: missing dep/indep runs in the log",
+  "LD_QR_def_stage d=4: missing dep/indep runs in the log",
+  "MV_QR_def_stage d=1: missing dep/indep runs in the log",
+  "MV_QR_def_stage d=2: missing dep/indep runs in the log",
+  "MV_QR_def_stage d=3: missing dep/indep runs in the log",
+  "MV_QR_def_stage d=4: missing dep/indep runs in the log",
+  "ST_QR_use_stage d=1: missing dep/indep runs in the log",
+  "ST_QR_use_stage d=2: missing dep/indep runs in the log",
+  "ST_QR_use_stage d=3: missing dep/indep runs in the log",
+  "LD_QR_reads_as d=1: missing dep/indep runs in the log",
+  "LD_QR_reads_as d=2: missing dep/indep runs in the log",
+  "LD_QR_reads_as d=3: missing dep/indep runs in the log",
+  "QR_load_to_QR_op d=1: missing dep/indep runs in the log",
+  "QR_load_to_QR_op d=2: missing dep/indep runs in the log",
+  "QR_load_to_QR_op d=3: missing dep/indep runs in the log"
+ ],
+ "caveats": [
+  "Adjacent-pair interlocks only; hardware-resource (1.7.2) and control (1.7.3) hazards are untouched.",
+  "Stall counts are quoted in whole cycles: the reported noise floor bounds the resolution.",
+  "A stage derived from a stall difference assumes the rule of TRM 1.7.1 holds on this silicon; the anchors are what test that assumption."
+ ]
+}

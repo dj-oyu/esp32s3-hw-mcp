@@ -11,6 +11,7 @@
     .global m_anchor_accx_M_to_E_d1_dep
     .type m_anchor_accx_M_to_E_d1_dep,@function
 m_anchor_accx_M_to_E_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -21,7 +22,7 @@ m_anchor_accx_M_to_E_d1_dep:
     bnez a6, .Lloop_m_anchor_accx_M_to_E_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_accx_M_to_E_d1_dep, .-m_anchor_accx_M_to_E_d1_dep
 
     .text
@@ -29,6 +30,7 @@ m_anchor_accx_M_to_E_d1_dep:
     .global m_anchor_accx_M_to_E_d1_indep
     .type m_anchor_accx_M_to_E_d1_indep,@function
 m_anchor_accx_M_to_E_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -39,7 +41,7 @@ m_anchor_accx_M_to_E_d1_indep:
     bnez a6, .Lloop_m_anchor_accx_M_to_E_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_accx_M_to_E_d1_indep, .-m_anchor_accx_M_to_E_d1_indep
 
     .text
@@ -47,6 +49,7 @@ m_anchor_accx_M_to_E_d1_indep:
     .global m_anchor_accx_M_to_E_d2_dep
     .type m_anchor_accx_M_to_E_d2_dep,@function
 m_anchor_accx_M_to_E_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -58,7 +61,7 @@ m_anchor_accx_M_to_E_d2_dep:
     bnez a6, .Lloop_m_anchor_accx_M_to_E_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_accx_M_to_E_d2_dep, .-m_anchor_accx_M_to_E_d2_dep
 
     .text
@@ -66,6 +69,7 @@ m_anchor_accx_M_to_E_d2_dep:
     .global m_anchor_accx_M_to_E_d2_indep
     .type m_anchor_accx_M_to_E_d2_indep,@function
 m_anchor_accx_M_to_E_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -77,7 +81,7 @@ m_anchor_accx_M_to_E_d2_indep:
     bnez a6, .Lloop_m_anchor_accx_M_to_E_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_accx_M_to_E_d2_indep, .-m_anchor_accx_M_to_E_d2_indep
 
     .text
@@ -85,6 +89,7 @@ m_anchor_accx_M_to_E_d2_indep:
     .global m_anchor_accx_M_to_E_d3_dep
     .type m_anchor_accx_M_to_E_d3_dep,@function
 m_anchor_accx_M_to_E_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -97,7 +102,7 @@ m_anchor_accx_M_to_E_d3_dep:
     bnez a6, .Lloop_m_anchor_accx_M_to_E_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_accx_M_to_E_d3_dep, .-m_anchor_accx_M_to_E_d3_dep
 
     .text
@@ -105,6 +110,7 @@ m_anchor_accx_M_to_E_d3_dep:
     .global m_anchor_accx_M_to_E_d3_indep
     .type m_anchor_accx_M_to_E_d3_indep,@function
 m_anchor_accx_M_to_E_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -117,7 +123,7 @@ m_anchor_accx_M_to_E_d3_indep:
     bnez a6, .Lloop_m_anchor_accx_M_to_E_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_accx_M_to_E_d3_indep, .-m_anchor_accx_M_to_E_d3_indep
 
     .text
@@ -125,6 +131,7 @@ m_anchor_accx_M_to_E_d3_indep:
     .global m_anchor_qs_M_to_E_d1_dep
     .type m_anchor_qs_M_to_E_d1_dep,@function
 m_anchor_qs_M_to_E_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -135,7 +142,7 @@ m_anchor_qs_M_to_E_d1_dep:
     bnez a6, .Lloop_m_anchor_qs_M_to_E_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qs_M_to_E_d1_dep, .-m_anchor_qs_M_to_E_d1_dep
 
     .text
@@ -143,6 +150,7 @@ m_anchor_qs_M_to_E_d1_dep:
     .global m_anchor_qs_M_to_E_d1_indep
     .type m_anchor_qs_M_to_E_d1_indep,@function
 m_anchor_qs_M_to_E_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -153,7 +161,7 @@ m_anchor_qs_M_to_E_d1_indep:
     bnez a6, .Lloop_m_anchor_qs_M_to_E_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qs_M_to_E_d1_indep, .-m_anchor_qs_M_to_E_d1_indep
 
     .text
@@ -161,6 +169,7 @@ m_anchor_qs_M_to_E_d1_indep:
     .global m_anchor_qs_M_to_E_d2_dep
     .type m_anchor_qs_M_to_E_d2_dep,@function
 m_anchor_qs_M_to_E_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -172,7 +181,7 @@ m_anchor_qs_M_to_E_d2_dep:
     bnez a6, .Lloop_m_anchor_qs_M_to_E_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qs_M_to_E_d2_dep, .-m_anchor_qs_M_to_E_d2_dep
 
     .text
@@ -180,6 +189,7 @@ m_anchor_qs_M_to_E_d2_dep:
     .global m_anchor_qs_M_to_E_d2_indep
     .type m_anchor_qs_M_to_E_d2_indep,@function
 m_anchor_qs_M_to_E_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -191,7 +201,7 @@ m_anchor_qs_M_to_E_d2_indep:
     bnez a6, .Lloop_m_anchor_qs_M_to_E_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qs_M_to_E_d2_indep, .-m_anchor_qs_M_to_E_d2_indep
 
     .text
@@ -199,6 +209,7 @@ m_anchor_qs_M_to_E_d2_indep:
     .global m_anchor_qs_M_to_E_d3_dep
     .type m_anchor_qs_M_to_E_d3_dep,@function
 m_anchor_qs_M_to_E_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -211,7 +222,7 @@ m_anchor_qs_M_to_E_d3_dep:
     bnez a6, .Lloop_m_anchor_qs_M_to_E_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qs_M_to_E_d3_dep, .-m_anchor_qs_M_to_E_d3_dep
 
     .text
@@ -219,6 +230,7 @@ m_anchor_qs_M_to_E_d3_dep:
     .global m_anchor_qs_M_to_E_d3_indep
     .type m_anchor_qs_M_to_E_d3_indep,@function
 m_anchor_qs_M_to_E_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -231,7 +243,7 @@ m_anchor_qs_M_to_E_d3_indep:
     bnez a6, .Lloop_m_anchor_qs_M_to_E_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qs_M_to_E_d3_indep, .-m_anchor_qs_M_to_E_d3_indep
 
     .text
@@ -239,6 +251,7 @@ m_anchor_qs_M_to_E_d3_indep:
     .global m_anchor_qr_E_to_E_d1_dep
     .type m_anchor_qr_E_to_E_d1_dep,@function
 m_anchor_qr_E_to_E_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -249,7 +262,7 @@ m_anchor_qr_E_to_E_d1_dep:
     bnez a6, .Lloop_m_anchor_qr_E_to_E_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qr_E_to_E_d1_dep, .-m_anchor_qr_E_to_E_d1_dep
 
     .text
@@ -257,6 +270,7 @@ m_anchor_qr_E_to_E_d1_dep:
     .global m_anchor_qr_E_to_E_d1_indep
     .type m_anchor_qr_E_to_E_d1_indep,@function
 m_anchor_qr_E_to_E_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -267,7 +281,7 @@ m_anchor_qr_E_to_E_d1_indep:
     bnez a6, .Lloop_m_anchor_qr_E_to_E_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qr_E_to_E_d1_indep, .-m_anchor_qr_E_to_E_d1_indep
 
     .text
@@ -275,6 +289,7 @@ m_anchor_qr_E_to_E_d1_indep:
     .global m_anchor_qr_E_to_E_d2_dep
     .type m_anchor_qr_E_to_E_d2_dep,@function
 m_anchor_qr_E_to_E_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -286,7 +301,7 @@ m_anchor_qr_E_to_E_d2_dep:
     bnez a6, .Lloop_m_anchor_qr_E_to_E_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qr_E_to_E_d2_dep, .-m_anchor_qr_E_to_E_d2_dep
 
     .text
@@ -294,6 +309,7 @@ m_anchor_qr_E_to_E_d2_dep:
     .global m_anchor_qr_E_to_E_d2_indep
     .type m_anchor_qr_E_to_E_d2_indep,@function
 m_anchor_qr_E_to_E_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -305,7 +321,7 @@ m_anchor_qr_E_to_E_d2_indep:
     bnez a6, .Lloop_m_anchor_qr_E_to_E_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qr_E_to_E_d2_indep, .-m_anchor_qr_E_to_E_d2_indep
 
     .text
@@ -313,6 +329,7 @@ m_anchor_qr_E_to_E_d2_indep:
     .global m_anchor_qr_E_to_E_d3_dep
     .type m_anchor_qr_E_to_E_d3_dep,@function
 m_anchor_qr_E_to_E_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -325,7 +342,7 @@ m_anchor_qr_E_to_E_d3_dep:
     bnez a6, .Lloop_m_anchor_qr_E_to_E_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qr_E_to_E_d3_dep, .-m_anchor_qr_E_to_E_d3_dep
 
     .text
@@ -333,6 +350,7 @@ m_anchor_qr_E_to_E_d3_dep:
     .global m_anchor_qr_E_to_E_d3_indep
     .type m_anchor_qr_E_to_E_d3_indep,@function
 m_anchor_qr_E_to_E_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -345,7 +363,7 @@ m_anchor_qr_E_to_E_d3_indep:
     bnez a6, .Lloop_m_anchor_qr_E_to_E_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_anchor_qr_E_to_E_d3_indep, .-m_anchor_qr_E_to_E_d3_indep
 
     .text
@@ -353,6 +371,7 @@ m_anchor_qr_E_to_E_d3_indep:
     .global m_native_load_use_d1_dep
     .type m_native_load_use_d1_dep,@function
 m_native_load_use_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -363,7 +382,7 @@ m_native_load_use_d1_dep:
     bnez a6, .Lloop_m_native_load_use_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_load_use_d1_dep, .-m_native_load_use_d1_dep
 
     .text
@@ -371,6 +390,7 @@ m_native_load_use_d1_dep:
     .global m_native_load_use_d1_indep
     .type m_native_load_use_d1_indep,@function
 m_native_load_use_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -381,7 +401,7 @@ m_native_load_use_d1_indep:
     bnez a6, .Lloop_m_native_load_use_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_load_use_d1_indep, .-m_native_load_use_d1_indep
 
     .text
@@ -389,6 +409,7 @@ m_native_load_use_d1_indep:
     .global m_native_load_use_d2_dep
     .type m_native_load_use_d2_dep,@function
 m_native_load_use_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -400,7 +421,7 @@ m_native_load_use_d2_dep:
     bnez a6, .Lloop_m_native_load_use_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_load_use_d2_dep, .-m_native_load_use_d2_dep
 
     .text
@@ -408,6 +429,7 @@ m_native_load_use_d2_dep:
     .global m_native_load_use_d2_indep
     .type m_native_load_use_d2_indep,@function
 m_native_load_use_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -419,7 +441,7 @@ m_native_load_use_d2_indep:
     bnez a6, .Lloop_m_native_load_use_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_load_use_d2_indep, .-m_native_load_use_d2_indep
 
     .text
@@ -427,6 +449,7 @@ m_native_load_use_d2_indep:
     .global m_native_load_use_d3_dep
     .type m_native_load_use_d3_dep,@function
 m_native_load_use_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -439,7 +462,7 @@ m_native_load_use_d3_dep:
     bnez a6, .Lloop_m_native_load_use_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_load_use_d3_dep, .-m_native_load_use_d3_dep
 
     .text
@@ -447,6 +470,7 @@ m_native_load_use_d3_dep:
     .global m_native_load_use_d3_indep
     .type m_native_load_use_d3_indep,@function
 m_native_load_use_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -459,7 +483,7 @@ m_native_load_use_d3_indep:
     bnez a6, .Lloop_m_native_load_use_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_load_use_d3_indep, .-m_native_load_use_d3_indep
 
     .text
@@ -467,6 +491,7 @@ m_native_load_use_d3_indep:
     .global m_native_alu_use_d1_dep
     .type m_native_alu_use_d1_dep,@function
 m_native_alu_use_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -477,7 +502,7 @@ m_native_alu_use_d1_dep:
     bnez a6, .Lloop_m_native_alu_use_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_alu_use_d1_dep, .-m_native_alu_use_d1_dep
 
     .text
@@ -485,6 +510,7 @@ m_native_alu_use_d1_dep:
     .global m_native_alu_use_d1_indep
     .type m_native_alu_use_d1_indep,@function
 m_native_alu_use_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -495,7 +521,7 @@ m_native_alu_use_d1_indep:
     bnez a6, .Lloop_m_native_alu_use_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_alu_use_d1_indep, .-m_native_alu_use_d1_indep
 
     .text
@@ -503,6 +529,7 @@ m_native_alu_use_d1_indep:
     .global m_native_alu_use_d2_dep
     .type m_native_alu_use_d2_dep,@function
 m_native_alu_use_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -514,7 +541,7 @@ m_native_alu_use_d2_dep:
     bnez a6, .Lloop_m_native_alu_use_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_alu_use_d2_dep, .-m_native_alu_use_d2_dep
 
     .text
@@ -522,6 +549,7 @@ m_native_alu_use_d2_dep:
     .global m_native_alu_use_d2_indep
     .type m_native_alu_use_d2_indep,@function
 m_native_alu_use_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -533,7 +561,7 @@ m_native_alu_use_d2_indep:
     bnez a6, .Lloop_m_native_alu_use_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_native_alu_use_d2_indep, .-m_native_alu_use_d2_indep
 
     .text
@@ -541,6 +569,7 @@ m_native_alu_use_d2_indep:
     .global m_LD_QR_def_stage_d1_dep
     .type m_LD_QR_def_stage_d1_dep,@function
 m_LD_QR_def_stage_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -551,7 +580,7 @@ m_LD_QR_def_stage_d1_dep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d1_dep, .-m_LD_QR_def_stage_d1_dep
 
     .text
@@ -559,6 +588,7 @@ m_LD_QR_def_stage_d1_dep:
     .global m_LD_QR_def_stage_d1_indep
     .type m_LD_QR_def_stage_d1_indep,@function
 m_LD_QR_def_stage_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -569,7 +599,7 @@ m_LD_QR_def_stage_d1_indep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d1_indep, .-m_LD_QR_def_stage_d1_indep
 
     .text
@@ -577,6 +607,7 @@ m_LD_QR_def_stage_d1_indep:
     .global m_LD_QR_def_stage_d2_dep
     .type m_LD_QR_def_stage_d2_dep,@function
 m_LD_QR_def_stage_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -588,7 +619,7 @@ m_LD_QR_def_stage_d2_dep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d2_dep, .-m_LD_QR_def_stage_d2_dep
 
     .text
@@ -596,6 +627,7 @@ m_LD_QR_def_stage_d2_dep:
     .global m_LD_QR_def_stage_d2_indep
     .type m_LD_QR_def_stage_d2_indep,@function
 m_LD_QR_def_stage_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -607,7 +639,7 @@ m_LD_QR_def_stage_d2_indep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d2_indep, .-m_LD_QR_def_stage_d2_indep
 
     .text
@@ -615,6 +647,7 @@ m_LD_QR_def_stage_d2_indep:
     .global m_LD_QR_def_stage_d3_dep
     .type m_LD_QR_def_stage_d3_dep,@function
 m_LD_QR_def_stage_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -627,7 +660,7 @@ m_LD_QR_def_stage_d3_dep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d3_dep, .-m_LD_QR_def_stage_d3_dep
 
     .text
@@ -635,6 +668,7 @@ m_LD_QR_def_stage_d3_dep:
     .global m_LD_QR_def_stage_d3_indep
     .type m_LD_QR_def_stage_d3_indep,@function
 m_LD_QR_def_stage_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -647,7 +681,7 @@ m_LD_QR_def_stage_d3_indep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d3_indep, .-m_LD_QR_def_stage_d3_indep
 
     .text
@@ -655,6 +689,7 @@ m_LD_QR_def_stage_d3_indep:
     .global m_LD_QR_def_stage_d4_dep
     .type m_LD_QR_def_stage_d4_dep,@function
 m_LD_QR_def_stage_d4_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -668,7 +703,7 @@ m_LD_QR_def_stage_d4_dep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d4_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d4_dep, .-m_LD_QR_def_stage_d4_dep
 
     .text
@@ -676,6 +711,7 @@ m_LD_QR_def_stage_d4_dep:
     .global m_LD_QR_def_stage_d4_indep
     .type m_LD_QR_def_stage_d4_indep,@function
 m_LD_QR_def_stage_d4_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -689,7 +725,7 @@ m_LD_QR_def_stage_d4_indep:
     bnez a6, .Lloop_m_LD_QR_def_stage_d4_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_def_stage_d4_indep, .-m_LD_QR_def_stage_d4_indep
 
     .text
@@ -697,6 +733,7 @@ m_LD_QR_def_stage_d4_indep:
     .global m_MV_QR_def_stage_d1_dep
     .type m_MV_QR_def_stage_d1_dep,@function
 m_MV_QR_def_stage_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -707,7 +744,7 @@ m_MV_QR_def_stage_d1_dep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d1_dep, .-m_MV_QR_def_stage_d1_dep
 
     .text
@@ -715,6 +752,7 @@ m_MV_QR_def_stage_d1_dep:
     .global m_MV_QR_def_stage_d1_indep
     .type m_MV_QR_def_stage_d1_indep,@function
 m_MV_QR_def_stage_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -725,7 +763,7 @@ m_MV_QR_def_stage_d1_indep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d1_indep, .-m_MV_QR_def_stage_d1_indep
 
     .text
@@ -733,6 +771,7 @@ m_MV_QR_def_stage_d1_indep:
     .global m_MV_QR_def_stage_d2_dep
     .type m_MV_QR_def_stage_d2_dep,@function
 m_MV_QR_def_stage_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -744,7 +783,7 @@ m_MV_QR_def_stage_d2_dep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d2_dep, .-m_MV_QR_def_stage_d2_dep
 
     .text
@@ -752,6 +791,7 @@ m_MV_QR_def_stage_d2_dep:
     .global m_MV_QR_def_stage_d2_indep
     .type m_MV_QR_def_stage_d2_indep,@function
 m_MV_QR_def_stage_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -763,7 +803,7 @@ m_MV_QR_def_stage_d2_indep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d2_indep, .-m_MV_QR_def_stage_d2_indep
 
     .text
@@ -771,6 +811,7 @@ m_MV_QR_def_stage_d2_indep:
     .global m_MV_QR_def_stage_d3_dep
     .type m_MV_QR_def_stage_d3_dep,@function
 m_MV_QR_def_stage_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -783,7 +824,7 @@ m_MV_QR_def_stage_d3_dep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d3_dep, .-m_MV_QR_def_stage_d3_dep
 
     .text
@@ -791,6 +832,7 @@ m_MV_QR_def_stage_d3_dep:
     .global m_MV_QR_def_stage_d3_indep
     .type m_MV_QR_def_stage_d3_indep,@function
 m_MV_QR_def_stage_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -803,7 +845,7 @@ m_MV_QR_def_stage_d3_indep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d3_indep, .-m_MV_QR_def_stage_d3_indep
 
     .text
@@ -811,6 +853,7 @@ m_MV_QR_def_stage_d3_indep:
     .global m_MV_QR_def_stage_d4_dep
     .type m_MV_QR_def_stage_d4_dep,@function
 m_MV_QR_def_stage_d4_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -824,7 +867,7 @@ m_MV_QR_def_stage_d4_dep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d4_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d4_dep, .-m_MV_QR_def_stage_d4_dep
 
     .text
@@ -832,6 +875,7 @@ m_MV_QR_def_stage_d4_dep:
     .global m_MV_QR_def_stage_d4_indep
     .type m_MV_QR_def_stage_d4_indep,@function
 m_MV_QR_def_stage_d4_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -845,7 +889,7 @@ m_MV_QR_def_stage_d4_indep:
     bnez a6, .Lloop_m_MV_QR_def_stage_d4_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_MV_QR_def_stage_d4_indep, .-m_MV_QR_def_stage_d4_indep
 
     .text
@@ -853,6 +897,7 @@ m_MV_QR_def_stage_d4_indep:
     .global m_ST_QR_use_stage_d1_dep
     .type m_ST_QR_use_stage_d1_dep,@function
 m_ST_QR_use_stage_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -863,7 +908,7 @@ m_ST_QR_use_stage_d1_dep:
     bnez a6, .Lloop_m_ST_QR_use_stage_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_ST_QR_use_stage_d1_dep, .-m_ST_QR_use_stage_d1_dep
 
     .text
@@ -871,6 +916,7 @@ m_ST_QR_use_stage_d1_dep:
     .global m_ST_QR_use_stage_d1_indep
     .type m_ST_QR_use_stage_d1_indep,@function
 m_ST_QR_use_stage_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -881,7 +927,7 @@ m_ST_QR_use_stage_d1_indep:
     bnez a6, .Lloop_m_ST_QR_use_stage_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_ST_QR_use_stage_d1_indep, .-m_ST_QR_use_stage_d1_indep
 
     .text
@@ -889,6 +935,7 @@ m_ST_QR_use_stage_d1_indep:
     .global m_ST_QR_use_stage_d2_dep
     .type m_ST_QR_use_stage_d2_dep,@function
 m_ST_QR_use_stage_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -900,7 +947,7 @@ m_ST_QR_use_stage_d2_dep:
     bnez a6, .Lloop_m_ST_QR_use_stage_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_ST_QR_use_stage_d2_dep, .-m_ST_QR_use_stage_d2_dep
 
     .text
@@ -908,6 +955,7 @@ m_ST_QR_use_stage_d2_dep:
     .global m_ST_QR_use_stage_d2_indep
     .type m_ST_QR_use_stage_d2_indep,@function
 m_ST_QR_use_stage_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -919,7 +967,7 @@ m_ST_QR_use_stage_d2_indep:
     bnez a6, .Lloop_m_ST_QR_use_stage_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_ST_QR_use_stage_d2_indep, .-m_ST_QR_use_stage_d2_indep
 
     .text
@@ -927,6 +975,7 @@ m_ST_QR_use_stage_d2_indep:
     .global m_ST_QR_use_stage_d3_dep
     .type m_ST_QR_use_stage_d3_dep,@function
 m_ST_QR_use_stage_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -939,7 +988,7 @@ m_ST_QR_use_stage_d3_dep:
     bnez a6, .Lloop_m_ST_QR_use_stage_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_ST_QR_use_stage_d3_dep, .-m_ST_QR_use_stage_d3_dep
 
     .text
@@ -947,6 +996,7 @@ m_ST_QR_use_stage_d3_dep:
     .global m_ST_QR_use_stage_d3_indep
     .type m_ST_QR_use_stage_d3_indep,@function
 m_ST_QR_use_stage_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -959,7 +1009,7 @@ m_ST_QR_use_stage_d3_indep:
     bnez a6, .Lloop_m_ST_QR_use_stage_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_ST_QR_use_stage_d3_indep, .-m_ST_QR_use_stage_d3_indep
 
     .text
@@ -967,6 +1017,7 @@ m_ST_QR_use_stage_d3_indep:
     .global m_LD_QR_reads_as_d1_dep
     .type m_LD_QR_reads_as_d1_dep,@function
 m_LD_QR_reads_as_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -977,7 +1028,7 @@ m_LD_QR_reads_as_d1_dep:
     bnez a6, .Lloop_m_LD_QR_reads_as_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_reads_as_d1_dep, .-m_LD_QR_reads_as_d1_dep
 
     .text
@@ -985,6 +1036,7 @@ m_LD_QR_reads_as_d1_dep:
     .global m_LD_QR_reads_as_d1_indep
     .type m_LD_QR_reads_as_d1_indep,@function
 m_LD_QR_reads_as_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -995,7 +1047,7 @@ m_LD_QR_reads_as_d1_indep:
     bnez a6, .Lloop_m_LD_QR_reads_as_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_reads_as_d1_indep, .-m_LD_QR_reads_as_d1_indep
 
     .text
@@ -1003,6 +1055,7 @@ m_LD_QR_reads_as_d1_indep:
     .global m_LD_QR_reads_as_d2_dep
     .type m_LD_QR_reads_as_d2_dep,@function
 m_LD_QR_reads_as_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1014,7 +1067,7 @@ m_LD_QR_reads_as_d2_dep:
     bnez a6, .Lloop_m_LD_QR_reads_as_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_reads_as_d2_dep, .-m_LD_QR_reads_as_d2_dep
 
     .text
@@ -1022,6 +1075,7 @@ m_LD_QR_reads_as_d2_dep:
     .global m_LD_QR_reads_as_d2_indep
     .type m_LD_QR_reads_as_d2_indep,@function
 m_LD_QR_reads_as_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1033,7 +1087,7 @@ m_LD_QR_reads_as_d2_indep:
     bnez a6, .Lloop_m_LD_QR_reads_as_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_reads_as_d2_indep, .-m_LD_QR_reads_as_d2_indep
 
     .text
@@ -1041,6 +1095,7 @@ m_LD_QR_reads_as_d2_indep:
     .global m_LD_QR_reads_as_d3_dep
     .type m_LD_QR_reads_as_d3_dep,@function
 m_LD_QR_reads_as_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1053,7 +1108,7 @@ m_LD_QR_reads_as_d3_dep:
     bnez a6, .Lloop_m_LD_QR_reads_as_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_reads_as_d3_dep, .-m_LD_QR_reads_as_d3_dep
 
     .text
@@ -1061,6 +1116,7 @@ m_LD_QR_reads_as_d3_dep:
     .global m_LD_QR_reads_as_d3_indep
     .type m_LD_QR_reads_as_d3_indep,@function
 m_LD_QR_reads_as_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1073,7 +1129,7 @@ m_LD_QR_reads_as_d3_indep:
     bnez a6, .Lloop_m_LD_QR_reads_as_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_LD_QR_reads_as_d3_indep, .-m_LD_QR_reads_as_d3_indep
 
     .text
@@ -1081,6 +1137,7 @@ m_LD_QR_reads_as_d3_indep:
     .global m_QR_load_to_QR_op_d1_dep
     .type m_QR_load_to_QR_op_d1_dep,@function
 m_QR_load_to_QR_op_d1_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1091,7 +1148,7 @@ m_QR_load_to_QR_op_d1_dep:
     bnez a6, .Lloop_m_QR_load_to_QR_op_d1_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_QR_load_to_QR_op_d1_dep, .-m_QR_load_to_QR_op_d1_dep
 
     .text
@@ -1099,6 +1156,7 @@ m_QR_load_to_QR_op_d1_dep:
     .global m_QR_load_to_QR_op_d1_indep
     .type m_QR_load_to_QR_op_d1_indep,@function
 m_QR_load_to_QR_op_d1_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1109,7 +1167,7 @@ m_QR_load_to_QR_op_d1_indep:
     bnez a6, .Lloop_m_QR_load_to_QR_op_d1_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_QR_load_to_QR_op_d1_indep, .-m_QR_load_to_QR_op_d1_indep
 
     .text
@@ -1117,6 +1175,7 @@ m_QR_load_to_QR_op_d1_indep:
     .global m_QR_load_to_QR_op_d2_dep
     .type m_QR_load_to_QR_op_d2_dep,@function
 m_QR_load_to_QR_op_d2_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1128,7 +1187,7 @@ m_QR_load_to_QR_op_d2_dep:
     bnez a6, .Lloop_m_QR_load_to_QR_op_d2_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_QR_load_to_QR_op_d2_dep, .-m_QR_load_to_QR_op_d2_dep
 
     .text
@@ -1136,6 +1195,7 @@ m_QR_load_to_QR_op_d2_dep:
     .global m_QR_load_to_QR_op_d2_indep
     .type m_QR_load_to_QR_op_d2_indep,@function
 m_QR_load_to_QR_op_d2_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1147,7 +1207,7 @@ m_QR_load_to_QR_op_d2_indep:
     bnez a6, .Lloop_m_QR_load_to_QR_op_d2_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_QR_load_to_QR_op_d2_indep, .-m_QR_load_to_QR_op_d2_indep
 
     .text
@@ -1155,6 +1215,7 @@ m_QR_load_to_QR_op_d2_indep:
     .global m_QR_load_to_QR_op_d3_dep
     .type m_QR_load_to_QR_op_d3_dep,@function
 m_QR_load_to_QR_op_d3_dep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1167,7 +1228,7 @@ m_QR_load_to_QR_op_d3_dep:
     bnez a6, .Lloop_m_QR_load_to_QR_op_d3_dep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_QR_load_to_QR_op_d3_dep, .-m_QR_load_to_QR_op_d3_dep
 
     .text
@@ -1175,6 +1236,7 @@ m_QR_load_to_QR_op_d3_dep:
     .global m_QR_load_to_QR_op_d3_indep
     .type m_QR_load_to_QR_op_d3_indep,@function
 m_QR_load_to_QR_op_d3_indep:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1187,7 +1249,7 @@ m_QR_load_to_QR_op_d3_indep:
     bnez a6, .Lloop_m_QR_load_to_QR_op_d3_indep
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_QR_load_to_QR_op_d3_indep, .-m_QR_load_to_QR_op_d3_indep
 
     .text
@@ -1195,6 +1257,7 @@ m_QR_load_to_QR_op_d3_indep:
     .global m_alone_LD_QR_alone
     .type m_alone_LD_QR_alone,@function
 m_alone_LD_QR_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1204,7 +1267,7 @@ m_alone_LD_QR_alone:
     bnez a6, .Lloop_m_alone_LD_QR_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_LD_QR_alone, .-m_alone_LD_QR_alone
 
     .text
@@ -1212,6 +1275,7 @@ m_alone_LD_QR_alone:
     .global m_alone_ST_QR_alone
     .type m_alone_ST_QR_alone,@function
 m_alone_ST_QR_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1221,7 +1285,7 @@ m_alone_ST_QR_alone:
     bnez a6, .Lloop_m_alone_ST_QR_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_ST_QR_alone, .-m_alone_ST_QR_alone
 
     .text
@@ -1229,6 +1293,7 @@ m_alone_ST_QR_alone:
     .global m_alone_MV_QR_alone
     .type m_alone_MV_QR_alone,@function
 m_alone_MV_QR_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1238,7 +1303,7 @@ m_alone_MV_QR_alone:
     bnez a6, .Lloop_m_alone_MV_QR_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_MV_QR_alone, .-m_alone_MV_QR_alone
 
     .text
@@ -1246,6 +1311,7 @@ m_alone_MV_QR_alone:
     .global m_alone_EE_ANDQ_alone
     .type m_alone_EE_ANDQ_alone,@function
 m_alone_EE_ANDQ_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1255,7 +1321,7 @@ m_alone_EE_ANDQ_alone:
     bnez a6, .Lloop_m_alone_EE_ANDQ_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_EE_ANDQ_alone, .-m_alone_EE_ANDQ_alone
 
     .text
@@ -1263,6 +1329,7 @@ m_alone_EE_ANDQ_alone:
     .global m_alone_EE_VMULAS_S16_QACC_alone
     .type m_alone_EE_VMULAS_S16_QACC_alone,@function
 m_alone_EE_VMULAS_S16_QACC_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1272,7 +1339,7 @@ m_alone_EE_VMULAS_S16_QACC_alone:
     bnez a6, .Lloop_m_alone_EE_VMULAS_S16_QACC_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_EE_VMULAS_S16_QACC_alone, .-m_alone_EE_VMULAS_S16_QACC_alone
 
     .text
@@ -1280,6 +1347,7 @@ m_alone_EE_VMULAS_S16_QACC_alone:
     .global m_alone_EE_LD_128_USAR_IP_alone
     .type m_alone_EE_LD_128_USAR_IP_alone,@function
 m_alone_EE_LD_128_USAR_IP_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1289,7 +1357,7 @@ m_alone_EE_LD_128_USAR_IP_alone:
     bnez a6, .Lloop_m_alone_EE_LD_128_USAR_IP_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_EE_LD_128_USAR_IP_alone, .-m_alone_EE_LD_128_USAR_IP_alone
 
     .text
@@ -1297,6 +1365,7 @@ m_alone_EE_LD_128_USAR_IP_alone:
     .global m_alone_native_l32i_alone
     .type m_alone_native_l32i_alone,@function
 m_alone_native_l32i_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1306,7 +1375,7 @@ m_alone_native_l32i_alone:
     bnez a6, .Lloop_m_alone_native_l32i_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_native_l32i_alone, .-m_alone_native_l32i_alone
 
     .text
@@ -1314,6 +1383,7 @@ m_alone_native_l32i_alone:
     .global m_alone_native_add_alone
     .type m_alone_native_add_alone,@function
 m_alone_native_add_alone:
+    entry a1, 32
     mov a3, a2
     movi a6, 2000
     rsr.ccount a7
@@ -1323,5 +1393,5 @@ m_alone_native_add_alone:
     bnez a6, .Lloop_m_alone_native_add_alone
     rsr.ccount a2
     sub a2, a2, a7
-    ret
+    retw.n
     .size m_alone_native_add_alone, .-m_alone_native_add_alone
