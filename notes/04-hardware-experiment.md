@@ -91,8 +91,7 @@ PORT=/dev/ttyACM0 BACKUP_DIR=/workspace/backups bash tools/device_experiment.sh
 
 1. `esptool flash_id` でチップ素性を記録
 2. **フラッシュ全8MBを退避**（`/workspace/backups/cardputer-s3-<日時>.bin`）＋ sha256
-3. 退避ファイルの構造検査（0x1000 にブートローダ、0x8000 にパーティション表、0x10000 にアプリのマジック）。
-   ここが通らなければ**焼かない**
+3. 退避ファイルの構造検査（`tools/check_flash_dump.py`）。ここが通らなければ**焼かない**
 4. ビルド → 書き込み → シリアル取得（`END` まで）
 5. `tools/parse_pie_timing.py` で解釈し `data/pie_timing_measured.json` を作る（アンカーが外れたら exit 1）
 
@@ -101,6 +100,26 @@ PORT=/dev/ttyACM0 BACKUP_DIR=/workspace/backups bash tools/device_experiment.sh
 ```bash
 PORT=/dev/ttyACM0 bash tools/restore_flash.sh /workspace/backups/cardputer-s3-<日時>.bin
 ```
+
+### 退避の検査が実際に見ているもの（2026-09-14 に修正）
+
+初回実行でこのゲートが**自分の退避を拒否した**（0x1000 に `0xE9` が無い）。原因は退避ではなく検査側で、
+ブートローダのオフセットに **ESP32 クラシックの 0x1000** を書いていた（ESP32-S3 は ROM が 0x0 から
+第2段ブートローダを読む。esptool の `targets/esp32s3.py: BOOTLOADER_FLASH_OFFSET = 0x0`）。
+0x1000 はブートローダ本体の途中（文字列 `/bootloader_support/` が居る場所）だった。
+
+いまのゲートは次を検証する（`tools/selftest_check_flash_dump.py` が11ケースで検査自体を検査する）:
+
+- サイズが期待どおり（既定 8MB）
+- チップごとの正しいオフセット（`esp32s3` = 0x0）にある**ブートローダ**のマジック 0xE9 とチップID = 9
+- 0x8000 の**パーティション表**（マジック 0xAA50、ラベル重複なし、8MB 内に収まる）
+- パーティション表が指す**アプリ区間**に、同じチップ向けのイメージが実在すること
+- イメージが末尾に持つ**自身の SHA-256**（body を再ハッシュして一致すること）。ここが通るという事は、
+  退避したバイト列がそのファーム自身のハッシュと一致している ＝ 読み出しが欠けてもずれてもいない、という事。
+
+実測（この端末）: `bootloader @0x0 digest True / app @0x10000 digest True`、アプリは
+`cardputer_pocketjs 1-55-g97bd403-dirty`（ESP-IDF v6.0.1、2026-09-14 13:52:53 ビルド）で、
+`skk_dict` / `jp_font` / `storage` のデータ区間を持つ。**この退避は上書き前の唯一のコピー**。
 
 ## 結果の扱い（一次情報との区別）
 
