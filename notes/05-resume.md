@@ -9,11 +9,24 @@
 | M0 | 一次情報のpin（TRM v1.8 1531p / Datasheet v2.2, sha256）＋コーパス（印字ページ=PDFページ） | CI緑 |
 | PIE | `data/pie_instructions.json` 220命令、`data/pie_pipeline.json` Table 1.7-2 の217行、`data/pie_hazards.md` | `tools/verify_pie.py` 0 fail / 4 warn |
 | レジスタ | `data/registers.json` 1581件、`data/peripheral_map.json` 44件 | `tools/verify_registers.py` 0 fail / 0 warn |
-| MCPサーバー | `server/esp32s3_mcp.py` 8ツール＋2リソース（全応答に文書・版・ページ） | `tools/test_mcp_server.py` 21/21 |
-| 実機実験 | ソフト一式（ファームはビルド成功、パーサは自己検査付き） | `tools/gen_pie_timing_asm.py --check`、`tools/selftest_pie_timing_parser.py` |
+| MCPサーバー | `server/esp32s3_mcp.py` 14ツール＋2リソース（全応答に文書・版・ページ） | `tools/test_mcp_server.py` 33/33 |
+| 実機実験 | 段・ハザードの実測完了（下記）。ホスト側の焼き＋ログ取得は `tools/host_flash_and_log.sh` | `parse_pie_timing.py` valid: true |
+| PIE例題 | `examples/`（手書きアセンブリ6例＋三重照合＋ホスト側チェッカー）。詳細 `examples/README.md`、知見 `notes/07-pie-examples.md` | `tools/selftest_examples_checker.py`（参照ログ通過＋8種の改竄検出） |
 
-CI（`.github/workflows/verify.yml`）は 取得→コーパス→2種の抽出→2種の検証→生成物の鮮度→パーサ自己検査→MCP E2E→
-「ゼロから再生成して `data/` とバイト一致」まで全部通る状態。
+CI（`.github/workflows/verify.yml`）は 取得→コーパス→2種の抽出→2種の検証→生成物の鮮度→パーサ自己検査→
+例題チェッカー自己検査→MCP E2E→「ゼロから再生成して `data/` とバイト一致」まで全部通る状態。
+
+## 例題（`examples/`）は焼くだけで判定まで出る
+
+```bash
+bash tools/build_examples.sh        # -> examples/firmware/build_examples/pie_examples.bin
+bash /home/exe/m5_workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --examples
+# ログ /workspace/backups/pie-examples-<stamp>.log ＋ 判定レポート report.json
+```
+
+`ex01` の生バイトプローブ（`field=1` が 8 / 4 / 1 バイトのどれを進めるか）が出れば
+`data/pie_encoding_errata.json` の `EE.ST.ACCX.IP` の項目が決着する。`ex06` のレーン対応が一致したら
+多段 FFT に進む（`notes/07-pie-examples.md` の手順）。
 
 ## 実測は完了（2026-09-14 17:17、ホスト側から）
 
