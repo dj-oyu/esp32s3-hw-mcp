@@ -17,8 +17,23 @@ CI（`.github/workflows/verify.yml`）は 取得→コーパス→2種の抽出�
 
 ## 次にやること: 実機で測る（デバイスが見えるコンテナで）
 
+**再起動直後にやること（この順で）**:
+
 ```bash
-cd /workspace/esp32s3-hw-mcp
+ls -l /dev/ttyACM0 && python3 -c "import os; os.close(os.open('/dev/ttyACM0', os.O_RDWR|os.O_NONBLOCK)); print('openable')"
+cd /workspace/esp32s3-hw-mcp && PORT=/dev/ttyACM0 BACKUP_DIR=/workspace/backups bash tools/device_experiment.sh
+```
+
+1. まず `/dev/ttyACM0` が開けることを確認する（前回はここで止まった。`c---------` なら再起動が効いていない）。
+2. スクリプトは 退避→ゲート→ビルド→書込み→読み戻し照合→シリアル取得→解釈 まで自走する。
+   取れたログの先頭に `PROBE ...` 行が出る（CPENABLE と PIE 命令の切り分け。まだ入れたまま）。
+   - `PROBE cpenable=...` の bit3 が 0 でも、ESP-IDF の遅延有効化（`_xt_coproc_exc`）で PIE 命令は
+     動くはず。もし EXCCAUSE 35（Coprocessor3 disabled）で落ちたら、そこが次の修正点。
+   - アンカー5件が全部 ok なら `data/pie_timing_measured.json` が出る。
+3. 通ったら `main/probe.S` と `main.c` の PROBE ブロックを外して計測ファームだけ焼き直し、最後に
+   退避を書き戻す（`tools/restore_flash.sh`。デバイスの元の中身は `cardputer_pocketjs`）。
+
+```bash
 PORT=/dev/ttyACM0 BACKUP_DIR=/workspace/backups bash tools/device_experiment.sh
 ```
 
@@ -42,8 +57,14 @@ PORT=/dev/ttyACM0 BACKUP_DIR=/workspace/backups bash tools/device_experiment.sh
   デバイスを切り離して再アタッチする（`dmesg` に `USB disconnect` → `cdc_acm ttyACM0` が出る）。
 - その結果コンテナ内の `/dev/ttyACM0` は **mode 0000・所有者は未マップ uid** になり、
   コンテナの中からは `chmod` も `mknod` もできない（CAP_MKNOD / CAP_SYS_ADMIN が無い）→ EACCES。
-- 対処: WSL 側（ポッドの外）で `sudo chmod 666 /dev/ttyACM0`。効かなければ
-  **USB を attach 済みの状態でポッドを再起動**（`--device=/dev/ttyACM0` は起動時バインド）。
+- 対処: **USB を attach 済みの状態でポッドを再起動する**（これが唯一の復旧手段。外からの `chmod 666`
+  も、usbipd で attach し直すのも効かなかった — コンテナが握っているのは再列挙前の inode で、
+  `mountinfo` の該当行が `root=/ttyACM0//deleted` になっている。ホスト側は `crw-rw-rw- root dialout`
+  なのにコンテナ側は `c---------` のままで、両者は別 inode）。
+- 再発防止として、書込みは `esptool ... --after no-reset`（`idf.py flash` ではなく）、読み戻しも
+  `--before no-reset --after no-reset` にして、チップのリセットは capture 側（DTR/RTS）に任せる形に
+  変更済み。USB の再列挙は書込み→取得の間で起きるとこの事故を招くため、その間は意図的に列挙を動かさない。
+  それでもアプリが起動しない場合は、`--after hard-reset` で1回だけリセットして取り直す（フォールバック）。
 
 そのときの状態: デバイスには **プローブ入りの計測ファームが焼かれている**（`main/probe.S` + `main.c` の
 PROBE ブロック。CPENABLE と PIE 命令の実行可否を1命令ずつ確かめる一時的な仕掛け）。

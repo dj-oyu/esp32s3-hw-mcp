@@ -45,17 +45,27 @@ bash tools/build_pie_timing.sh
 echo "== 4/5 flash + capture =="
 FW_REV="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 . /opt/esp-idf/export.sh >/dev/null 2>&1
-# idf.py resolves the project from the cwd, and the build dir has to be the one build_pie_timing.sh
-# created -- so flash from inside the firmware project, in a subshell that leaves our cwd alone.
-( cd experiments/pie-timing/firmware && idf.py -B build_pietiming -p "$PORT" flash )
+
+# Flash with esptool directly rather than `idf.py flash`, so the reset behaviour is explicit and the
+# USB-Serial-JTAG port does not re-enumerate between the write and the capture: the chip is left in the
+# loader (--after no-reset), the read-back stays in it (--before/--after no-reset), and the capture step
+# resets the chip into the application itself. On this pod a re-enumeration can leave /dev/ttyACM0 bound
+# to a deleted inode, which is not recoverable from inside the container (see notes/05-resume.md).
+FW_DIR="experiments/pie-timing/firmware"
+APP_BIN="$FW_DIR/build_pietiming/pie_timing.bin"
+APP_OFF="$(python3 -c "import json; d=json.load(open('$FW_DIR/build_pietiming/flasher_args.json'))['flash_files']; print([k for k, v in d.items() if v.endswith('pie_timing.bin')][0])")"
+APP_SIZE="$(stat -c %s "$APP_BIN")"
+READBACK="$BACKUP_DIR/readback-$STAMP.bin"
+
+esptool --chip esp32s3 --port "$PORT" --baud "$BAUD" --after no-reset write_flash \
+  0x0 "$FW_DIR/build_pietiming/bootloader/bootloader.bin" \
+  0x8000 "$FW_DIR/build_pietiming/partition_table/partition-table.bin" \
+  "$APP_OFF" "$APP_BIN"
 
 # A write that was not read back is not a write: the app region is read off the chip again and hashed
 # against the image that was just built, so a silently failed or short write stops the run here.
-APP_BIN="experiments/pie-timing/firmware/build_pietiming/pie_timing.bin"
-APP_OFF="$(python3 -c "import json; d=json.load(open('experiments/pie-timing/firmware/build_pietiming/flasher_args.json'))['flash_files']; print([k for k, v in d.items() if v.endswith('pie_timing.bin')][0])")"
-APP_SIZE="$(stat -c %s "$APP_BIN")"
-READBACK="$BACKUP_DIR/readback-$STAMP.bin"
-esptool --chip esp32s3 --port "$PORT" --baud "$BAUD" read_flash "$APP_OFF" "$APP_SIZE" "$READBACK" >/dev/null
+esptool --chip esp32s3 --port "$PORT" --baud "$BAUD" --before no-reset --after no-reset \
+  read_flash "$APP_OFF" "$APP_SIZE" "$READBACK" >/dev/null
 if [ "$(sha256sum < "$APP_BIN")" != "$(sha256sum < "$READBACK")" ]; then
   echo "FAIL: $APP_OFF in flash does not match the built image -- the write did not land" >&2
   echo "  built    : $(sha256sum < "$APP_BIN")" >&2
@@ -64,10 +74,21 @@ if [ "$(sha256sum < "$APP_BIN")" != "$(sha256sum < "$READBACK")" ]; then
 fi
 echo "flash verified: $APP_SIZE bytes at $APP_OFF match $APP_BIN"
 
-if ! /root/.espressif/python_env/idf6.0_py3.11_env/bin/python tools/capture_serial.py \
-     --port "$PORT" --out "$LOG" --timeout 240; then
-  # A capture that never saw END is still worth parsing: what did arrive says why.
-  echo "note: capture finished without the END marker -- parsing the log anyway" >&2
+capture() {
+  /root/.espressif/python_env/idf6.0_py3.11_env/bin/python tools/capture_serial.py \
+    --port "$PORT" --out "$LOG" --timeout 240
+}
+
+if ! capture; then
+  # The chip was left in the loader, so the capture resets it into the application. If that did not
+  # take, reset it the explicit way and capture once more -- this costs a port re-enumeration, which is
+  # exactly why it is the fallback rather than the first move.
+  echo "note: no END marker; hard-resetting the chip once and capturing again" >&2
+  esptool --chip esp32s3 --port "$PORT" --baud "$BAUD" --before no-reset --after hard-reset \
+    read_mac >/dev/null 2>&1 || true
+  if ! capture; then
+    echo "note: capture finished without the END marker -- parsing the log anyway" >&2
+  fi
 fi
 
 echo "== 5/5 parse =="
