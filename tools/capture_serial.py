@@ -35,6 +35,16 @@ def capture_once(port: str, baud: int, deadline: float, end_marker: str, settle:
         except Exception:
             pass
         ser.reset_input_buffer()
+        # The firmware waits for a byte from the host before it prints its report, so that a capture that
+        # attaches after the reset still gets the report from its first line (it used to lose the ENV block
+        # and the first repeat to the port's buffer). One write here triggers one complete report, which
+        # also means a retry after a dropped port gets a fresh one instead of nothing. The clear above
+        # happens first so it cannot throw away the report we just asked for.
+        try:
+            ser.write(b"\n")
+            ser.flush()
+        except Exception as exc:
+            print(f"warning: could not send the start byte ({exc})", file=sys.stderr)
         while time.time() < deadline:
             raw = ser.readline()
             if not raw:

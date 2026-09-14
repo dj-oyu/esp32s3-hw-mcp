@@ -45,6 +45,11 @@ def func(name: str, body: list[str], iterations: int) -> str:
     # runs on the callee's registers (observed on hardware: the next call received a2=3 and the PIE
     # load faulted at address 0). The frame is unused, but the entry/retw pair is not optional.
     #
+    # IRAM: the loop body runs from .iram1, not from flash. Executing from flash (XIP) makes every
+    # instruction fetch a cache lookup whose latency depends on what else walked through the cache, and
+    # that variance lands directly in the CCOUNT delta -- it is what kept the noise floor above the
+    # 0.5-cycle bound the parser accepts. IRAM fetches are deterministic.
+    #
     # The address registers are re-seeded at the top of every iteration. The PIE memory forms
     # (EE.LD.ACCX.IP, EE.ST.ACCX.IP, EE.LD.128.USAR.IP) *post-increment* their `as` operand, so without
     # this the loop walks 16 bytes per iteration -- 32 KB past a 256-byte buffer -- and would fault (or
@@ -52,7 +57,7 @@ def func(name: str, body: list[str], iterations: int) -> str:
     # whole loop stays in one cache line instead of streaming through the D-cache. Both variants of a
     # case get the identical seeding, so it cancels out of the (dep - indep) difference.
     lines = [
-        "    .text",
+        '    .section .iram1,"ax",@progbits',
         "    .align 4",
         f"    .global {name}",
         f"    .type {name},@function",

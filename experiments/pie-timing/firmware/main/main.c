@@ -15,6 +15,8 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <sys/select.h>
+#include <unistd.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_chip_info.h"
@@ -91,7 +93,30 @@ static const measurement_t MEASUREMENTS[] = {
     ALONE(alone_native_add),
 };
 
-#define REPEATS 5
+#define REPEATS 9
+#define ROUNDS 5
+
+/* Wait up to `seconds` for a byte from the host. Returns 1 if one arrived.
+
+   This is the fix for a lost report: the firmware finishes its whole dump in tens of milliseconds, while
+   the capture attaches about a second after the reset, so the start of the report (the ENV block and the
+   first repeat) was being overwritten in the port's buffer before anyone read it. Each host byte triggers
+   one more complete report, so the capture is already reading when the report starts, and a dropped port
+   costs one round instead of the measurement. If nothing arrives the timeout lets the run proceed. */
+static int wait_for_host(int seconds)
+{
+    struct timeval tv = {.tv_sec = seconds, .tv_usec = 0};
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET(fileno(stdin), &set);
+    int r = select(fileno(stdin) + 1, &set, NULL, NULL, &tv);
+    if (r > 0) {
+        (void)fgetc(stdin);                 // drain the trigger byte
+    }
+    printf("HOST round_wait=%d ready=%s\n", seconds, r > 0 ? "yes" : "timeout");
+    fflush(stdout);
+    return r > 0;
+}
 
 static void report_environment(void)
 {
@@ -102,6 +127,17 @@ static void report_environment(void)
            CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ, esp_get_idf_version());
     printf("ENV cpu_freq_mhz=%d heap=%u cycles_sampled=%u\n", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
            (unsigned)esp_get_free_heap_size(), (unsigned)esp_cpu_get_cycle_count());
+    // Where the measured loops actually run. On the ESP32-S3 IRAM is 0x4037_0000..0x403D_FFFF; a value
+    // in the 0x42xxxxxx flash range means the sequences are being fetched over XIP and every timing is
+    // polluted by cache behaviour (see tools/gen_pie_timing_asm.py).
+    uint32_t lo = UINT32_MAX, hi = 0;
+    for (size_t i = 0; i < sizeof(MEASUREMENTS) / sizeof(MEASUREMENTS[0]); i++) {
+        uint32_t a = (uint32_t)(uintptr_t)MEASUREMENTS[i].fn;
+        if (a < lo) lo = a;
+        if (a > hi) hi = a;
+    }
+    printf("ENV code_lo=0x%08x code_hi=0x%08x in_iram=%s excm_level=%d\n", (unsigned)lo, (unsigned)hi,
+           (lo >= 0x40370000u && hi <= 0x403DFFFFu) ? "yes" : "NO", XCHAL_EXCM_LEVEL);
 }
 
 void app_main(void)
@@ -130,17 +166,34 @@ void app_main(void)
         (void)MEASUREMENTS[i].fn(s_buf);
     }
 
-    report_environment();
-    printf("BEGIN measurements=%d repeats=%d\n", (int)(sizeof(MEASUREMENTS) / sizeof(MEASUREMENTS[0])),
-           REPEATS);
-
-    for (int rep = 0; rep < REPEATS; rep++) {
-        for (size_t i = 0; i < sizeof(MEASUREMENTS) / sizeof(MEASUREMENTS[0]); i++) {
-            const measurement_t *m = &MEASUREMENTS[i];
-            uint32_t cycles = m->fn(s_buf);
-            printf("MEAS id=%s d=%d variant=%s repeat=%d cycles=%u\n",
-                   m->case_id, m->distance, m->variant, rep, (unsigned)cycles);
+    /* Wait for the host, but never forever. The wait happens before the report is printed, so the host is
+       already reading when it starts; the timeout keeps an unattended run working. */
+    for (int round = 0; round < ROUNDS; round++) {
+        if (round > 0 && !wait_for_host(10)) {
+            break;                          // nobody asked for another report
+        } else if (round == 0) {
+            (void)wait_for_host(10);
         }
+        printf("ROUND %d\n", round);
+        report_environment();
+        printf("BEGIN measurements=%d repeats=%d round=%d\n",
+               (int)(sizeof(MEASUREMENTS) / sizeof(MEASUREMENTS[0])), REPEATS, round);
+        fflush(stdout);
+        for (int rep = 0; rep < REPEATS; rep++) {
+            for (size_t i = 0; i < sizeof(MEASUREMENTS) / sizeof(MEASUREMENTS[0]); i++) {
+                const measurement_t *m = &MEASUREMENTS[i];
+                // Interrupts masked for the timed region only. A FreeRTOS tick landing inside a 2000-iteration
+                // run costs ~1700 cycles (0.84 cycles/iteration) and *was* the entire noise floor. The mask is
+                // set identically for the dep and the indep variant, so it cancels out of the difference.
+                portDISABLE_INTERRUPTS();
+                uint32_t cycles = m->fn(s_buf);
+                portENABLE_INTERRUPTS();
+                printf("MEAS id=%s d=%d variant=%s repeat=%d cycles=%u\n",
+                       m->case_id, m->distance, m->variant, rep, (unsigned)cycles);
+            }
+        }
+        printf("END\n");
+        fflush(stdout);
     }
-    printf("END\n");
+    printf("DONE\n");
 }

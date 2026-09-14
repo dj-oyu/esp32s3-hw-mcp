@@ -6,7 +6,7 @@
  * The per-iteration interlock is (dep - indep) / iterations.
  */
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_accx_M_to_E_d1_dep
     .type m_anchor_accx_M_to_E_d1_dep,@function
@@ -26,7 +26,7 @@ m_anchor_accx_M_to_E_d1_dep:
     retw.n
     .size m_anchor_accx_M_to_E_d1_dep, .-m_anchor_accx_M_to_E_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_accx_M_to_E_d1_indep
     .type m_anchor_accx_M_to_E_d1_indep,@function
@@ -46,7 +46,7 @@ m_anchor_accx_M_to_E_d1_indep:
     retw.n
     .size m_anchor_accx_M_to_E_d1_indep, .-m_anchor_accx_M_to_E_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_accx_M_to_E_d2_dep
     .type m_anchor_accx_M_to_E_d2_dep,@function
@@ -67,7 +67,7 @@ m_anchor_accx_M_to_E_d2_dep:
     retw.n
     .size m_anchor_accx_M_to_E_d2_dep, .-m_anchor_accx_M_to_E_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_accx_M_to_E_d2_indep
     .type m_anchor_accx_M_to_E_d2_indep,@function
@@ -88,7 +88,7 @@ m_anchor_accx_M_to_E_d2_indep:
     retw.n
     .size m_anchor_accx_M_to_E_d2_indep, .-m_anchor_accx_M_to_E_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_accx_M_to_E_d3_dep
     .type m_anchor_accx_M_to_E_d3_dep,@function
@@ -110,7 +110,7 @@ m_anchor_accx_M_to_E_d3_dep:
     retw.n
     .size m_anchor_accx_M_to_E_d3_dep, .-m_anchor_accx_M_to_E_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_accx_M_to_E_d3_indep
     .type m_anchor_accx_M_to_E_d3_indep,@function
@@ -132,7 +132,7 @@ m_anchor_accx_M_to_E_d3_indep:
     retw.n
     .size m_anchor_accx_M_to_E_d3_indep, .-m_anchor_accx_M_to_E_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qs_M_to_E_d1_dep
     .type m_anchor_qs_M_to_E_d1_dep,@function
@@ -152,7 +152,7 @@ m_anchor_qs_M_to_E_d1_dep:
     retw.n
     .size m_anchor_qs_M_to_E_d1_dep, .-m_anchor_qs_M_to_E_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qs_M_to_E_d1_indep
     .type m_anchor_qs_M_to_E_d1_indep,@function
@@ -172,7 +172,7 @@ m_anchor_qs_M_to_E_d1_indep:
     retw.n
     .size m_anchor_qs_M_to_E_d1_indep, .-m_anchor_qs_M_to_E_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qs_M_to_E_d2_dep
     .type m_anchor_qs_M_to_E_d2_dep,@function
@@ -193,7 +193,7 @@ m_anchor_qs_M_to_E_d2_dep:
     retw.n
     .size m_anchor_qs_M_to_E_d2_dep, .-m_anchor_qs_M_to_E_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qs_M_to_E_d2_indep
     .type m_anchor_qs_M_to_E_d2_indep,@function
@@ -214,7 +214,7 @@ m_anchor_qs_M_to_E_d2_indep:
     retw.n
     .size m_anchor_qs_M_to_E_d2_indep, .-m_anchor_qs_M_to_E_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qs_M_to_E_d3_dep
     .type m_anchor_qs_M_to_E_d3_dep,@function
@@ -236,7 +236,7 @@ m_anchor_qs_M_to_E_d3_dep:
     retw.n
     .size m_anchor_qs_M_to_E_d3_dep, .-m_anchor_qs_M_to_E_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qs_M_to_E_d3_indep
     .type m_anchor_qs_M_to_E_d3_indep,@function
@@ -258,7 +258,7 @@ m_anchor_qs_M_to_E_d3_indep:
     retw.n
     .size m_anchor_qs_M_to_E_d3_indep, .-m_anchor_qs_M_to_E_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qr_E_to_E_d1_dep
     .type m_anchor_qr_E_to_E_d1_dep,@function
@@ -278,7 +278,7 @@ m_anchor_qr_E_to_E_d1_dep:
     retw.n
     .size m_anchor_qr_E_to_E_d1_dep, .-m_anchor_qr_E_to_E_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qr_E_to_E_d1_indep
     .type m_anchor_qr_E_to_E_d1_indep,@function
@@ -298,7 +298,7 @@ m_anchor_qr_E_to_E_d1_indep:
     retw.n
     .size m_anchor_qr_E_to_E_d1_indep, .-m_anchor_qr_E_to_E_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qr_E_to_E_d2_dep
     .type m_anchor_qr_E_to_E_d2_dep,@function
@@ -319,7 +319,7 @@ m_anchor_qr_E_to_E_d2_dep:
     retw.n
     .size m_anchor_qr_E_to_E_d2_dep, .-m_anchor_qr_E_to_E_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qr_E_to_E_d2_indep
     .type m_anchor_qr_E_to_E_d2_indep,@function
@@ -340,7 +340,7 @@ m_anchor_qr_E_to_E_d2_indep:
     retw.n
     .size m_anchor_qr_E_to_E_d2_indep, .-m_anchor_qr_E_to_E_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qr_E_to_E_d3_dep
     .type m_anchor_qr_E_to_E_d3_dep,@function
@@ -362,7 +362,7 @@ m_anchor_qr_E_to_E_d3_dep:
     retw.n
     .size m_anchor_qr_E_to_E_d3_dep, .-m_anchor_qr_E_to_E_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_anchor_qr_E_to_E_d3_indep
     .type m_anchor_qr_E_to_E_d3_indep,@function
@@ -384,7 +384,7 @@ m_anchor_qr_E_to_E_d3_indep:
     retw.n
     .size m_anchor_qr_E_to_E_d3_indep, .-m_anchor_qr_E_to_E_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_load_use_d1_dep
     .type m_native_load_use_d1_dep,@function
@@ -404,7 +404,7 @@ m_native_load_use_d1_dep:
     retw.n
     .size m_native_load_use_d1_dep, .-m_native_load_use_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_load_use_d1_indep
     .type m_native_load_use_d1_indep,@function
@@ -424,7 +424,7 @@ m_native_load_use_d1_indep:
     retw.n
     .size m_native_load_use_d1_indep, .-m_native_load_use_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_load_use_d2_dep
     .type m_native_load_use_d2_dep,@function
@@ -445,7 +445,7 @@ m_native_load_use_d2_dep:
     retw.n
     .size m_native_load_use_d2_dep, .-m_native_load_use_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_load_use_d2_indep
     .type m_native_load_use_d2_indep,@function
@@ -466,7 +466,7 @@ m_native_load_use_d2_indep:
     retw.n
     .size m_native_load_use_d2_indep, .-m_native_load_use_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_load_use_d3_dep
     .type m_native_load_use_d3_dep,@function
@@ -488,7 +488,7 @@ m_native_load_use_d3_dep:
     retw.n
     .size m_native_load_use_d3_dep, .-m_native_load_use_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_load_use_d3_indep
     .type m_native_load_use_d3_indep,@function
@@ -510,7 +510,7 @@ m_native_load_use_d3_indep:
     retw.n
     .size m_native_load_use_d3_indep, .-m_native_load_use_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_alu_use_d1_dep
     .type m_native_alu_use_d1_dep,@function
@@ -530,7 +530,7 @@ m_native_alu_use_d1_dep:
     retw.n
     .size m_native_alu_use_d1_dep, .-m_native_alu_use_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_alu_use_d1_indep
     .type m_native_alu_use_d1_indep,@function
@@ -550,7 +550,7 @@ m_native_alu_use_d1_indep:
     retw.n
     .size m_native_alu_use_d1_indep, .-m_native_alu_use_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_alu_use_d2_dep
     .type m_native_alu_use_d2_dep,@function
@@ -571,7 +571,7 @@ m_native_alu_use_d2_dep:
     retw.n
     .size m_native_alu_use_d2_dep, .-m_native_alu_use_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_native_alu_use_d2_indep
     .type m_native_alu_use_d2_indep,@function
@@ -592,7 +592,7 @@ m_native_alu_use_d2_indep:
     retw.n
     .size m_native_alu_use_d2_indep, .-m_native_alu_use_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d1_dep
     .type m_LD_QR_def_stage_d1_dep,@function
@@ -612,7 +612,7 @@ m_LD_QR_def_stage_d1_dep:
     retw.n
     .size m_LD_QR_def_stage_d1_dep, .-m_LD_QR_def_stage_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d1_indep
     .type m_LD_QR_def_stage_d1_indep,@function
@@ -632,7 +632,7 @@ m_LD_QR_def_stage_d1_indep:
     retw.n
     .size m_LD_QR_def_stage_d1_indep, .-m_LD_QR_def_stage_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d2_dep
     .type m_LD_QR_def_stage_d2_dep,@function
@@ -653,7 +653,7 @@ m_LD_QR_def_stage_d2_dep:
     retw.n
     .size m_LD_QR_def_stage_d2_dep, .-m_LD_QR_def_stage_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d2_indep
     .type m_LD_QR_def_stage_d2_indep,@function
@@ -674,7 +674,7 @@ m_LD_QR_def_stage_d2_indep:
     retw.n
     .size m_LD_QR_def_stage_d2_indep, .-m_LD_QR_def_stage_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d3_dep
     .type m_LD_QR_def_stage_d3_dep,@function
@@ -696,7 +696,7 @@ m_LD_QR_def_stage_d3_dep:
     retw.n
     .size m_LD_QR_def_stage_d3_dep, .-m_LD_QR_def_stage_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d3_indep
     .type m_LD_QR_def_stage_d3_indep,@function
@@ -718,7 +718,7 @@ m_LD_QR_def_stage_d3_indep:
     retw.n
     .size m_LD_QR_def_stage_d3_indep, .-m_LD_QR_def_stage_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d4_dep
     .type m_LD_QR_def_stage_d4_dep,@function
@@ -741,7 +741,7 @@ m_LD_QR_def_stage_d4_dep:
     retw.n
     .size m_LD_QR_def_stage_d4_dep, .-m_LD_QR_def_stage_d4_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_def_stage_d4_indep
     .type m_LD_QR_def_stage_d4_indep,@function
@@ -764,7 +764,7 @@ m_LD_QR_def_stage_d4_indep:
     retw.n
     .size m_LD_QR_def_stage_d4_indep, .-m_LD_QR_def_stage_d4_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d1_dep
     .type m_MV_QR_def_stage_d1_dep,@function
@@ -784,7 +784,7 @@ m_MV_QR_def_stage_d1_dep:
     retw.n
     .size m_MV_QR_def_stage_d1_dep, .-m_MV_QR_def_stage_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d1_indep
     .type m_MV_QR_def_stage_d1_indep,@function
@@ -804,7 +804,7 @@ m_MV_QR_def_stage_d1_indep:
     retw.n
     .size m_MV_QR_def_stage_d1_indep, .-m_MV_QR_def_stage_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d2_dep
     .type m_MV_QR_def_stage_d2_dep,@function
@@ -825,7 +825,7 @@ m_MV_QR_def_stage_d2_dep:
     retw.n
     .size m_MV_QR_def_stage_d2_dep, .-m_MV_QR_def_stage_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d2_indep
     .type m_MV_QR_def_stage_d2_indep,@function
@@ -846,7 +846,7 @@ m_MV_QR_def_stage_d2_indep:
     retw.n
     .size m_MV_QR_def_stage_d2_indep, .-m_MV_QR_def_stage_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d3_dep
     .type m_MV_QR_def_stage_d3_dep,@function
@@ -868,7 +868,7 @@ m_MV_QR_def_stage_d3_dep:
     retw.n
     .size m_MV_QR_def_stage_d3_dep, .-m_MV_QR_def_stage_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d3_indep
     .type m_MV_QR_def_stage_d3_indep,@function
@@ -890,7 +890,7 @@ m_MV_QR_def_stage_d3_indep:
     retw.n
     .size m_MV_QR_def_stage_d3_indep, .-m_MV_QR_def_stage_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d4_dep
     .type m_MV_QR_def_stage_d4_dep,@function
@@ -913,7 +913,7 @@ m_MV_QR_def_stage_d4_dep:
     retw.n
     .size m_MV_QR_def_stage_d4_dep, .-m_MV_QR_def_stage_d4_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_MV_QR_def_stage_d4_indep
     .type m_MV_QR_def_stage_d4_indep,@function
@@ -936,7 +936,7 @@ m_MV_QR_def_stage_d4_indep:
     retw.n
     .size m_MV_QR_def_stage_d4_indep, .-m_MV_QR_def_stage_d4_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_ST_QR_use_stage_d1_dep
     .type m_ST_QR_use_stage_d1_dep,@function
@@ -956,7 +956,7 @@ m_ST_QR_use_stage_d1_dep:
     retw.n
     .size m_ST_QR_use_stage_d1_dep, .-m_ST_QR_use_stage_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_ST_QR_use_stage_d1_indep
     .type m_ST_QR_use_stage_d1_indep,@function
@@ -976,7 +976,7 @@ m_ST_QR_use_stage_d1_indep:
     retw.n
     .size m_ST_QR_use_stage_d1_indep, .-m_ST_QR_use_stage_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_ST_QR_use_stage_d2_dep
     .type m_ST_QR_use_stage_d2_dep,@function
@@ -997,7 +997,7 @@ m_ST_QR_use_stage_d2_dep:
     retw.n
     .size m_ST_QR_use_stage_d2_dep, .-m_ST_QR_use_stage_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_ST_QR_use_stage_d2_indep
     .type m_ST_QR_use_stage_d2_indep,@function
@@ -1018,7 +1018,7 @@ m_ST_QR_use_stage_d2_indep:
     retw.n
     .size m_ST_QR_use_stage_d2_indep, .-m_ST_QR_use_stage_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_ST_QR_use_stage_d3_dep
     .type m_ST_QR_use_stage_d3_dep,@function
@@ -1040,7 +1040,7 @@ m_ST_QR_use_stage_d3_dep:
     retw.n
     .size m_ST_QR_use_stage_d3_dep, .-m_ST_QR_use_stage_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_ST_QR_use_stage_d3_indep
     .type m_ST_QR_use_stage_d3_indep,@function
@@ -1062,7 +1062,7 @@ m_ST_QR_use_stage_d3_indep:
     retw.n
     .size m_ST_QR_use_stage_d3_indep, .-m_ST_QR_use_stage_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_reads_as_d1_dep
     .type m_LD_QR_reads_as_d1_dep,@function
@@ -1082,7 +1082,7 @@ m_LD_QR_reads_as_d1_dep:
     retw.n
     .size m_LD_QR_reads_as_d1_dep, .-m_LD_QR_reads_as_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_reads_as_d1_indep
     .type m_LD_QR_reads_as_d1_indep,@function
@@ -1102,7 +1102,7 @@ m_LD_QR_reads_as_d1_indep:
     retw.n
     .size m_LD_QR_reads_as_d1_indep, .-m_LD_QR_reads_as_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_reads_as_d2_dep
     .type m_LD_QR_reads_as_d2_dep,@function
@@ -1123,7 +1123,7 @@ m_LD_QR_reads_as_d2_dep:
     retw.n
     .size m_LD_QR_reads_as_d2_dep, .-m_LD_QR_reads_as_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_reads_as_d2_indep
     .type m_LD_QR_reads_as_d2_indep,@function
@@ -1144,7 +1144,7 @@ m_LD_QR_reads_as_d2_indep:
     retw.n
     .size m_LD_QR_reads_as_d2_indep, .-m_LD_QR_reads_as_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_reads_as_d3_dep
     .type m_LD_QR_reads_as_d3_dep,@function
@@ -1166,7 +1166,7 @@ m_LD_QR_reads_as_d3_dep:
     retw.n
     .size m_LD_QR_reads_as_d3_dep, .-m_LD_QR_reads_as_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_LD_QR_reads_as_d3_indep
     .type m_LD_QR_reads_as_d3_indep,@function
@@ -1188,7 +1188,7 @@ m_LD_QR_reads_as_d3_indep:
     retw.n
     .size m_LD_QR_reads_as_d3_indep, .-m_LD_QR_reads_as_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_QR_load_to_QR_op_d1_dep
     .type m_QR_load_to_QR_op_d1_dep,@function
@@ -1208,7 +1208,7 @@ m_QR_load_to_QR_op_d1_dep:
     retw.n
     .size m_QR_load_to_QR_op_d1_dep, .-m_QR_load_to_QR_op_d1_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_QR_load_to_QR_op_d1_indep
     .type m_QR_load_to_QR_op_d1_indep,@function
@@ -1228,7 +1228,7 @@ m_QR_load_to_QR_op_d1_indep:
     retw.n
     .size m_QR_load_to_QR_op_d1_indep, .-m_QR_load_to_QR_op_d1_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_QR_load_to_QR_op_d2_dep
     .type m_QR_load_to_QR_op_d2_dep,@function
@@ -1249,7 +1249,7 @@ m_QR_load_to_QR_op_d2_dep:
     retw.n
     .size m_QR_load_to_QR_op_d2_dep, .-m_QR_load_to_QR_op_d2_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_QR_load_to_QR_op_d2_indep
     .type m_QR_load_to_QR_op_d2_indep,@function
@@ -1270,7 +1270,7 @@ m_QR_load_to_QR_op_d2_indep:
     retw.n
     .size m_QR_load_to_QR_op_d2_indep, .-m_QR_load_to_QR_op_d2_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_QR_load_to_QR_op_d3_dep
     .type m_QR_load_to_QR_op_d3_dep,@function
@@ -1292,7 +1292,7 @@ m_QR_load_to_QR_op_d3_dep:
     retw.n
     .size m_QR_load_to_QR_op_d3_dep, .-m_QR_load_to_QR_op_d3_dep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_QR_load_to_QR_op_d3_indep
     .type m_QR_load_to_QR_op_d3_indep,@function
@@ -1314,7 +1314,7 @@ m_QR_load_to_QR_op_d3_indep:
     retw.n
     .size m_QR_load_to_QR_op_d3_indep, .-m_QR_load_to_QR_op_d3_indep
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_LD_QR_alone
     .type m_alone_LD_QR_alone,@function
@@ -1333,7 +1333,7 @@ m_alone_LD_QR_alone:
     retw.n
     .size m_alone_LD_QR_alone, .-m_alone_LD_QR_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_ST_QR_alone
     .type m_alone_ST_QR_alone,@function
@@ -1352,7 +1352,7 @@ m_alone_ST_QR_alone:
     retw.n
     .size m_alone_ST_QR_alone, .-m_alone_ST_QR_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_MV_QR_alone
     .type m_alone_MV_QR_alone,@function
@@ -1371,7 +1371,7 @@ m_alone_MV_QR_alone:
     retw.n
     .size m_alone_MV_QR_alone, .-m_alone_MV_QR_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_EE_ANDQ_alone
     .type m_alone_EE_ANDQ_alone,@function
@@ -1390,7 +1390,7 @@ m_alone_EE_ANDQ_alone:
     retw.n
     .size m_alone_EE_ANDQ_alone, .-m_alone_EE_ANDQ_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_EE_VMULAS_S16_QACC_alone
     .type m_alone_EE_VMULAS_S16_QACC_alone,@function
@@ -1409,7 +1409,7 @@ m_alone_EE_VMULAS_S16_QACC_alone:
     retw.n
     .size m_alone_EE_VMULAS_S16_QACC_alone, .-m_alone_EE_VMULAS_S16_QACC_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_EE_LD_128_USAR_IP_alone
     .type m_alone_EE_LD_128_USAR_IP_alone,@function
@@ -1428,7 +1428,7 @@ m_alone_EE_LD_128_USAR_IP_alone:
     retw.n
     .size m_alone_EE_LD_128_USAR_IP_alone, .-m_alone_EE_LD_128_USAR_IP_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_native_l32i_alone
     .type m_alone_native_l32i_alone,@function
@@ -1447,7 +1447,7 @@ m_alone_native_l32i_alone:
     retw.n
     .size m_alone_native_l32i_alone, .-m_alone_native_l32i_alone
 
-    .text
+    .section .iram1,"ax",@progbits
     .align 4
     .global m_alone_native_add_alone
     .type m_alone_native_add_alone,@function

@@ -28,28 +28,38 @@ TRUTH = {
 }
 
 
-def synth_log(path: str, break_accx_anchor: bool = False) -> None:
+def synth_log(path: str, break_accx_anchor: bool = False, rounds: int = 1) -> None:
+    """A log in the format the measurement firmware prints.
+
+    From the firmware's side the report is emitted once per host trigger ("ROUND", "BEGIN ... round=N",
+    ... "END"), so `rounds > 1` reproduces a capture that asked for the report more than once -- the
+    repeats then appear twice and the parser has to merge them rather than trip over the duplicates.
+    """
     cases = json.load(open(CASES, encoding="utf-8"))
     iters = int(cases["iterations"])
     random.seed(7)
-    lines = ["ENV chip=esp32s3 cores=2 revision=0.2 cpu_freq_mhz=240 idf=v6.0.1",
-             f"BEGIN measurements=1 repeats=5"]
-    for c in cases["cases"]:
-        stall = TRUTH.get(c["id"], 0)
-        D = stall + 1
-        for d in c["distances"]:
-            for variant in ("dep", "indep"):
-                eff = stall if (variant == "dep" and d < D) else 0
-                cycles = 100_000 + d * 2_000 + eff * iters + random.randint(0, 3)
-                if break_accx_anchor and c["id"] == "anchor_accx_M_to_E" and d == 1 and variant == "indep":
-                    cycles += iters                     # removes the interlock the TRM says must be there
-                for rep in range(5):
-                    lines.append(f"MEAS id={c['id']} d={d} variant={variant} repeat={rep} "
-                                 f"cycles={cycles + rep}")
-    for a in cases.get("alone", []):
-        for rep in range(5):
-            lines.append(f"MEAS id={a['id']} d=0 variant=alone repeat={rep} cycles={100_000 + rep}")
-    lines.append("END")
+    lines = ["HOST round_wait=10 ready=yes"]
+    for rnd in range(rounds):
+        lines += ["ROUND %d" % rnd,
+                  "ENV chip=esp32s3 cores=2 revision=0.2 cpu_freq_mhz=240 idf=v6.0.1",
+                  f"BEGIN measurements=1 repeats=5 round={rnd}"]
+        for c in cases["cases"]:
+            stall = TRUTH.get(c["id"], 0)
+            D = stall + 1
+            for d in c["distances"]:
+                for variant in ("dep", "indep"):
+                    eff = stall if (variant == "dep" and d < D) else 0
+                    cycles = 100_000 + d * 2_000 + eff * iters + random.randint(0, 3)
+                    if break_accx_anchor and c["id"] == "anchor_accx_M_to_E" and d == 1 and variant == "indep":
+                        cycles += iters                 # removes the interlock the TRM says must be there
+                    for rep in range(5):
+                        lines.append(f"MEAS id={c['id']} d={d} variant={variant} repeat={rep} "
+                                     f"cycles={cycles + rep}")
+        for a in cases.get("alone", []):
+            for rep in range(5):
+                lines.append(f"MEAS id={a['id']} d=0 variant=alone repeat={rep} cycles={100_000 + rep}")
+        lines.append("END")
+    lines.append("DONE")
     open(path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 
@@ -85,11 +95,28 @@ def main() -> int:
         if res["derived"]:
             failed.append("an invalid run must not publish derived facts")
 
+        # The firmware re-prints its whole report for each host trigger; a capture that asks twice must
+        # still parse, and extra rounds must add repeats rather than rows (the noise floor is per row).
+        multi = os.path.join(tmp, "multi.log")
+        synth_log(multi, rounds=3)
+        rc, res = run(multi, os.path.join(tmp, "multi.json"))
+        rc1, single = run(good, os.path.join(tmp, "good.json"))
+        if rc != 0 or not res["valid"]:
+            failed.append("a three-round log must still be VALID")
+        elif max(r["noise_cycles"] for r in res["measurements"] if r["distance"] == 1) > 0.5:
+            failed.append("duplicate rounds must not inflate the noise floor")
+        elif len(res["measurements"]) != len(single["measurements"]):
+            failed.append(f"three rounds produced {len(res['measurements'])} rows, one round "
+                          f"{len(single['measurements'])}: rounds must add repeats, not rows")
+        elif rc1 != 0:
+            failed.append("the single-round log stopped parsing")
+
     if failed:
         for f in failed:
             print(f"FAIL  {f}")
         return 1
-    print("PASSED: parser self-test (valid run derives stages; broken anchor publishes nothing)")
+    print("PASSED: parser self-test (valid run derives stages; broken anchor publishes nothing; "
+          "multi-round logs parse)")
     return 0
 
 

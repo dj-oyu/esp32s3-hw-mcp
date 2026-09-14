@@ -2,48 +2,306 @@
  "provenance": {
   "kind": "measured_on_hardware",
   "note": "These values come from a run on silicon, not from a document. Every entry keeps the log line basis in `basis`, and the harness anchors are listed so a reader can see whether the method reproduced the manual's own numbers.",
-  "log": "pie-timing-20260914T094430Z.log",
-  "firmware_git_rev": "cedaa9b",
+  "log": "pie-timing-20260914T150410Z.log",
+  "firmware_git_rev": "58091a4",
   "iterations_per_measurement": 2000,
   "environment": {}
  },
  "valid": false,
- "anchors": [],
- "measurements": [],
- "derived": [],
- "problems": [
-  "anchor_accx_M_to_E d=1: missing dep/indep runs in the log",
-  "anchor_accx_M_to_E d=2: missing dep/indep runs in the log",
-  "anchor_accx_M_to_E d=3: missing dep/indep runs in the log",
-  "anchor_qs_M_to_E d=1: missing dep/indep runs in the log",
-  "anchor_qs_M_to_E d=2: missing dep/indep runs in the log",
-  "anchor_qs_M_to_E d=3: missing dep/indep runs in the log",
-  "anchor_qr_E_to_E d=1: missing dep/indep runs in the log",
-  "anchor_qr_E_to_E d=2: missing dep/indep runs in the log",
-  "anchor_qr_E_to_E d=3: missing dep/indep runs in the log",
-  "native_load_use d=1: missing dep/indep runs in the log",
-  "native_load_use d=2: missing dep/indep runs in the log",
-  "native_load_use d=3: missing dep/indep runs in the log",
-  "native_alu_use d=1: missing dep/indep runs in the log",
-  "native_alu_use d=2: missing dep/indep runs in the log",
-  "LD_QR_def_stage d=1: missing dep/indep runs in the log",
-  "LD_QR_def_stage d=2: missing dep/indep runs in the log",
-  "LD_QR_def_stage d=3: missing dep/indep runs in the log",
-  "LD_QR_def_stage d=4: missing dep/indep runs in the log",
-  "MV_QR_def_stage d=1: missing dep/indep runs in the log",
-  "MV_QR_def_stage d=2: missing dep/indep runs in the log",
-  "MV_QR_def_stage d=3: missing dep/indep runs in the log",
-  "MV_QR_def_stage d=4: missing dep/indep runs in the log",
-  "ST_QR_use_stage d=1: missing dep/indep runs in the log",
-  "ST_QR_use_stage d=2: missing dep/indep runs in the log",
-  "ST_QR_use_stage d=3: missing dep/indep runs in the log",
-  "LD_QR_reads_as d=1: missing dep/indep runs in the log",
-  "LD_QR_reads_as d=2: missing dep/indep runs in the log",
-  "LD_QR_reads_as d=3: missing dep/indep runs in the log",
-  "QR_load_to_QR_op d=1: missing dep/indep runs in the log",
-  "QR_load_to_QR_op d=2: missing dep/indep runs in the log",
-  "QR_load_to_QR_op d=3: missing dep/indep runs in the log"
+ "anchors": [
+  {
+   "case": "anchor_accx_M_to_E",
+   "expected_stall": 1,
+   "measured_stall": 1.0565,
+   "ok": true,
+   "why": "TRM Table 1.7-2: EE.LD.ACCX.IP defs ACCX at 2 (M), EE.ST.ACCX.IP uses ACCX at 1 (E)",
+   "noise_cycles": 0.7855
+  },
+  {
+   "case": "anchor_qs_M_to_E",
+   "expected_stall": 1,
+   "measured_stall": 1.0,
+   "ok": true,
+   "why": "TRM Table 1.7-2: EE.VRELU.S16 defs qs at 2 (M), EE.MOV.S16.QACC uses qs at 1 (E)",
+   "noise_cycles": 0.0
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "expected_stall": 0,
+   "measured_stall": 0.0,
+   "ok": true,
+   "why": "TRM Table 1.7-2: EE.ANDQ defs qa at 1 (E); reading it in E needs no delay",
+   "noise_cycles": 0.0695
+  },
+  {
+   "case": "native_load_use",
+   "expected_stall": 1,
+   "measured_stall": 1.0,
+   "ok": true,
+   "why": "calibration against the base ISA: a native load consumed by the next instruction costs 1 cycle (forwarding), which is what the harness must be able to resolve",
+   "noise_cycles": 0.842
+  },
+  {
+   "case": "native_alu_use",
+   "expected_stall": 0,
+   "measured_stall": 0.0,
+   "ok": true,
+   "why": "calibration: back-to-back native ALU with a dependency costs nothing",
+   "noise_cycles": 0.0
+  }
  ],
+ "measurements": [
+  {
+   "case": "anchor_accx_M_to_E",
+   "distance": 1,
+   "stall_cycles": 1.0565,
+   "noise_cycles": 0.7855,
+   "min_cycles_dep": 18112,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "anchor_accx_M_to_E",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "anchor_accx_M_to_E",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8415,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "anchor_qs_M_to_E",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "anchor_qs_M_to_E",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.841,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "anchor_qs_M_to_E",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.842,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0695,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.841,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "native_load_use",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.842,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "native_load_use",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.051,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "native_load_use",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "native_alu_use",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "native_alu_use",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.842,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.841,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0625,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 4,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.842,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 4,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.063,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "ST_QR_use_stage",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.841,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "ST_QR_use_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.841,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "ST_QR_use_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "LD_QR_reads_as",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "LD_QR_reads_as",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "LD_QR_reads_as",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "QR_load_to_QR_op",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.055,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "QR_load_to_QR_op",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.076,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "QR_load_to_QR_op",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.8425,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  }
+ ],
+ "derived": [],
+ "problems": [],
  "caveats": [
   "Adjacent-pair interlocks only; hardware-resource (1.7.2) and control (1.7.3) hazards are untouched.",
   "Stall counts are quoted in whole cycles: the reported noise floor bounds the resolution.",
