@@ -44,6 +44,13 @@ def func(name: str, body: list[str], iterations: int) -> str:
     # Only ENTRY/RETW pairs restore it -- a bare `ret` leaves the window rotated and the *caller* then
     # runs on the callee's registers (observed on hardware: the next call received a2=3 and the PIE
     # load faulted at address 0). The frame is unused, but the entry/retw pair is not optional.
+    #
+    # The address registers are re-seeded at the top of every iteration. The PIE memory forms
+    # (EE.LD.ACCX.IP, EE.ST.ACCX.IP, EE.LD.128.USAR.IP) *post-increment* their `as` operand, so without
+    # this the loop walks 16 bytes per iteration -- 32 KB past a 256-byte buffer -- and would fault (or
+    # silently touch memory it does not own). Re-seeding also keeps the accessed set to 32 bytes, so the
+    # whole loop stays in one cache line instead of streaming through the D-cache. Both variants of a
+    # case get the identical seeding, so it cancels out of the (dep - indep) difference.
     lines = [
         "    .text",
         "    .align 4",
@@ -51,10 +58,11 @@ def func(name: str, body: list[str], iterations: int) -> str:
         f"    .type {name},@function",
         f"{name}:",
         "    entry a1, 32",
-        "    mov a3, a2",                       # a2 = caller's buffer; a3 = the PIE address operand (as)
         f"    movi a6, {iterations}",
         "    rsr.ccount a7",
         f".Lloop_{name}:",
+        "    mov a3, a2",                       # a3 = caller's buffer (the TRM's `as`)
+        "    addi a4, a2, 16",                  # a4 = the second address the independent variants use
     ]
     lines += [f"    {ins}" for ins in body]
     lines += [

@@ -41,13 +41,18 @@ CP3 = `cop_ai`）と保存領域の記述はあるが、**命令の段・レイ�
 
 ## 測定の設計
 
-### 実機で踏んだ2つの罠（どちらも記録に値する）
+### ここまでで潰した罠（ABI / EXCCAUSE / アドレス歩行）
 
 - **windowed ABI**: 関数ポインタ経由（`call8`）で呼ばれるアセンブラ関数は `entry`/`retw` を対にすること。
   裸の `ret` は命令としては正しいが、呼び出し側のレジスタ窓が回ったままになる。症状は「コンパイルも
   書込みも通り、実機でだけ別の命令が fault する」— 実際は2回目の呼び出しの引数が壊れていた
   （a2 が 3 になり `EE.LD.ACCX.IP a3, 0` がアドレス0を読む）。`tools/gen_pie_timing_asm.py` は
   `entry a1, 32` + `retw.n` を出し、`ret` を出したら生成器が落ちるようにしてある。
+- **アドレス歩行**: `EE.LD.ACCX.IP` / `EE.ST.ACCX.IP` / `EE.LD.128.USAR.IP` は `as` を
+  ポストインクリメントする。生成側は1反復ごとに `as` を差し直す（`mov a3, a2` / `addi a4, a2, 16`）。
+  無いと256バイトのバッファを毎反復16バイトずつ越えていき、2000反復で32KB先を触る。差し直しは
+  dep/indep 両方に入るので差分には効かない。ついでに触る範囲が32バイト（1キャッシュライン）に固定され、
+  歩き回る場合のようなD-cacheストリーミングが乗らない。
 - **ESP32-S3 の EXCCAUSE 28 は LoadProhibited ではない**。S3（LX7）の `core.h` では
   28 = `XCHAL_EXCCAUSE_LOAD_CACHE_ATTRIBUTE`、29 = STORE_CACHE_ATTRIBUTE。ESP-IDF のパニック
   メッセージ（32系の名前が残っている）は「LoadProhibited」と出すので、名前ではなく
