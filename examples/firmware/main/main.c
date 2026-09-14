@@ -50,16 +50,25 @@ static int16_t s_pa[PIXELS] __attribute__((aligned(16)));
 static int16_t s_pb[PIXELS] __attribute__((aligned(16)));
 static int16_t s_po[PIXELS] __attribute__((aligned(16)));
 static int16_t s_pref[PIXELS] __attribute__((aligned(16)));
-static int32_t s_po32[PIXELS] __attribute__((aligned(16)));
-static int32_t s_p32ref[PIXELS] __attribute__((aligned(16)));
 static int16_t s_lo8[8] __attribute__((aligned(16)));
 static int16_t s_hi8[8] __attribute__((aligned(16)));
 static int16_t s_tint8[8] __attribute__((aligned(16)));
 static int16_t s_mask8[8] __attribute__((aligned(16)));
 static int16_t s_ones8[8] __attribute__((aligned(16)));
+static int16_t s_sign_s[8] __attribute__((aligned(16)));
+static int16_t s_sign_u[8] __attribute__((aligned(16)));
+static int16_t s_sign_s_ref[8] __attribute__((aligned(16)));
+static int16_t s_sign_u_ref[8] __attribute__((aligned(16)));
 static int32_t s_out2[2] __attribute__((aligned(16)));
 static int16_t s_lanes8[8] __attribute__((aligned(16)));
 static uint32_t s_words[4] __attribute__((aligned(16)));
+/* ex09 (the QACC probe): the readout buffers (the vectors themselves are consts in ex09()). */
+static int16_t s_out9[32] __attribute__((aligned(16)));
+static int16_t s_out9b[32] __attribute__((aligned(16)));
+static int16_t s_wb_a[8] __attribute__((aligned(16)));
+static int16_t s_wb_b[8] __attribute__((aligned(16)));
+static uint32_t s_qraw[16] __attribute__((aligned(16)));
+static uint32_t s_qrows[64] __attribute__((aligned(16)));
 
 static int s_ok, s_fail;
 
@@ -136,6 +145,37 @@ static int16_t sat16(int64_t v)
     return (int16_t)v;
 }
 
+static int16_t trunc16(int64_t v)
+{
+    /* EE.VMUL truncates the product (it does not saturate), so the reference wraps the same way: the low 16
+     * bits of the shifted product, sign interpreted. Reading it as a saturation would hide the difference. */
+    return (int16_t)((uint32_t)v & 0xFFFFu);
+}
+
+static int64_t sat40(int64_t v)
+{
+    return v > 0x7FFFFFFFFFLL ? 0x7FFFFFFFFFLL : (v < -0x8000000000LL ? -0x8000000000LL : v);
+}
+
+#define PIE16 __attribute__((aligned(16)))
+
+/* A buffer handed to a PIE kernel has to start on a 16-byte boundary: the 128-bit forms force the low four
+ * address bits to 0 (TRM p49), so a misaligned array is not reported -- it is read from the boundary below
+ * it, which shifts the lanes by (pointer & 15) / 2 elements. The first run of ex07 and the ex09 probe proved
+ * this from the C side: `static const int16_t` arrays landed 4 bytes off the grid and every value came back
+ * two lanes to the right of the model. The checks below make that a reported failure instead of a mystery. */
+static int aligned16(const void *p)
+{
+    return ((uintptr_t)p & 15u) == 0;
+}
+
+static void check_aligned(const char *ex, const char *name, const char *what, const void *p, int *fail)
+{
+    int ok = aligned16(p);
+    check(ex, name, what, ok, 1);
+    *fail += ok ? 0 : 1;
+}
+
 /* The C reference implementations the examples are timed against. They are deliberately not `static`: a
  * non-static function writing to a global cannot be reasoned away by the optimiser, so the timed loop is
  * actually executed instead of being hoisted out of the measurement. */
@@ -145,7 +185,7 @@ void c_transform8(const int16_t *m, const int16_t *v, int16_t *out, uint32_t shi
         for (int j = 0; j < 8; j++) {
             int64_t acc = 0;
             for (int k = 0; k < 4; k++) {
-                acc += (int32_t)m[r * 4 + k] * (int32_t)v[k * 8 + j];
+                acc += (int32_t)m[r * 8 + k] * (int32_t)v[k * 8 + j];   /* rows are padded to 8 lanes */
             }
             out[r * 8 + j] = sat16(acc >> shift);
         }
@@ -154,8 +194,10 @@ void c_transform8(const int16_t *m, const int16_t *v, int16_t *out, uint32_t shi
 
 void c_half_blend(const int16_t *a, const int16_t *b, int16_t *out, int n)
 {
+    /* The lanes are packed RGB565, i.e. unsigned (the kernels do the >>1 with EE.VMUL.U16 for exactly this
+     * reason: EE.VMUL.S16 would sign-extend a lane whose bit 15 is set). */
     for (int i = 0; i < n; i++) {
-        out[i] = (int16_t)(((a[i] & 0xF7DE) >> 1) + ((b[i] & 0xF7DE) >> 1));
+        out[i] = (int16_t)((((uint16_t)a[i] & 0xF7DEu) >> 1) + (((uint16_t)b[i] & 0xF7DEu) >> 1));
     }
 }
 
@@ -536,10 +578,10 @@ static void ex06(void)
 
     /* EE.CMUL.S16: two complex multiplies on interleaved (re,im) lanes, result shifted right by SAR.
      * sel4 = 0 writes lanes 0..3, sel4 = 1 writes lanes 4..7 (the other half is left untouched). */
-    int16_t u[8] = {1000, 2000, 3000, -4000, 7000, 8000, 9000, -10000};
-    int16_t v[8] = {500, -600, 700, 800, -900, 1000, 1100, 1200};
+    int16_t u[8] PIE16 = {1000, 2000, 3000, -4000, 7000, 8000, 9000, -10000};
+    int16_t v[8] PIE16 = {500, -600, 700, 800, -900, 1000, 1100, 1200};
     for (uint32_t sar = 0; sar <= 12; sar += 12) {
-        int16_t w[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+        int16_t w[8] PIE16 = {0, 0, 0, 0, 0, 0, 0, 0};
         ex06_cmul_half0(u, v, w, sar);
         for (int pair = 0; pair < 2; pair++) {
             int re = u[pair * 2], im = u[pair * 2 + 1];
@@ -581,11 +623,15 @@ static void ex07(void)
 
     /* Eight cube corners of side 1.0 in Q8 (1.0 = 256), and a rotation about Y by 30 degrees: cos = 0.866
      * -> 222 and sin = 0.5 -> 128, also Q8, so each product carries 2^16 and the readout shifts by 16. */
-    static const int16_t m[16] = {222, 0, 128, 0,
-                                  0, 256, 0, 0,
-                                  -128, 0, 222, 0,
-                                  0, 0, 0, 256};
-    static const int16_t verts[8][4] = {
+    /* Four coefficient rows, each padded to eight int16. `EE.VLD.128.IP` always advances by a multiple of
+     * 16 bytes, so a 4-lane (8-byte) row makes the loop read every OTHER row and then walk off the array --
+     * which is exactly what the first run of this example did (row 1 came back as row 2's answer, rows 2
+     * and 3 read the vertex array). Lanes 4..7 of each row are padding and never read: sel8 = 0..3. */
+    static const int16_t m[32] PIE16 = {222, 0, 128, 0, 0, 0, 0, 0,
+                                        0, 256, 0, 0, 0, 0, 0, 0,
+                                        -128, 0, 222, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 256, 0, 0, 0, 0};
+    static const int16_t verts[8][4] PIE16 = {
         {-128, -128, -128, 256}, {128, -128, -128, 256}, {128, 128, -128, 256}, {-128, 128, -128, 256},
         {-128, -128, 128, 256}, {128, -128, 128, 256}, {128, 128, 128, 256}, {-128, 128, 128, 256}};
     for (int k = 0; k < 4; k++) {
@@ -598,6 +644,12 @@ static void ex07(void)
     c_transform8(m, s_v, s_vref, 16);
 
     int ok = 0, fail = 0;
+    /* Both of these sat 4 bytes off the 16-byte grid in the first run, which shifted every lane by two
+     * elements: the alignment is asserted before the kernel is asked anything. */
+    check_aligned(ex, name, "matrix_16_byte_aligned", m, &fail);
+    check_aligned(ex, name, "vertices_16_byte_aligned", verts, &fail);
+    check_aligned(ex, name, "v_soa_16_byte_aligned", s_v, &fail);
+    check_aligned(ex, name, "out_16_byte_aligned", s_vout, &fail);
     for (int i = 0; i < 32; i++) {
         if (s_vout[i] == s_vref[i]) {
             ok++;
@@ -609,7 +661,7 @@ static void ex07(void)
             }
         }
     }
-    print_i16(ex, name, "matrix", m, 16);
+    print_i16(ex, name, "matrix", m, 32);
     print_i16(ex, name, "vertices_soa", s_v, 32);
     print_i16(ex, name, "out", s_vout, 32);
     print_i16(ex, name, "ref", s_vref, 32);
@@ -712,22 +764,330 @@ static void ex08(void)
     fail += cl ? 0 : 1;
     print_i16(ex, name, "clamped", s_po, PIXELS);
 
-    /* tint: per-lane multiply with a SAR shift (kept 32-bit: the product needs the room) */
-    ex08_tint(s_pa, s_tint8, s_po32, PIXELS, 8);
+    /* tint: per-lane multiply with a SAR shift. EE.VMUL truncates rather than saturating, so the reference
+     * wraps the same way the hardware does; a saturating tint would need an explicit VMIN/VMAX pass. */
+    ex08_tint(s_pa, s_tint8, s_po, PIXELS, 8);
     for (int i = 0; i < PIXELS; i++) {
-        s_p32ref[i] = (int32_t)(((int32_t)s_pa[i] * 300) >> 8);
+        s_pref[i] = trunc16(((int32_t)s_pa[i] * 300) >> 8);
     }
-    int ti = memcmp(s_po32, s_p32ref, PIXELS * 4) == 0;
-    check(ex, name, "tint_matches_the_reference", ti ? 1 : 0, 1);
+    int ti = memcmp(s_po, s_pref, PIXELS * 2) == 0;
+    check(ex, name, "tint_matches_the_truncating_reference", ti ? 1 : 0, 1);
     fail += ti ? 0 : 1;
+
+    /* shift sign: one shift of the same lanes two ways. EE.VMUL.S16 shifts the SIGNED lane (arithmetic),
+     * EE.VMUL.U16 the unsigned one (logical); the two can only differ where bit 15 is set. */
+    ex08_shift_sign(s_pa, s_ones8, s_sign_s, s_sign_u, 1);
+    for (int i = 0; i < 8; i++) {
+        s_sign_s_ref[i] = (int16_t)(s_pa[i] >> 1);
+        s_sign_u_ref[i] = (int16_t)(((uint16_t)s_pa[i]) >> 1);
+    }
+    int ss = memcmp(s_sign_s, s_sign_s_ref, 16) == 0;
+    int su = memcmp(s_sign_u, s_sign_u_ref, 16) == 0;
+    check(ex, name, "shift_signed_multiply_is_arithmetic", ss ? 1 : 0, 1);
+    check(ex, name, "shift_unsigned_multiply_is_logical", su ? 1 : 0, 1);
+    fail += ss ? 0 : 1;
+    fail += su ? 0 : 1;
+    print_i16(ex, name, "shift_in", s_pa, 8);
+    print_i16(ex, name, "shift_signed", s_sign_s, 8);
+    print_i16(ex, name, "shift_unsigned", s_sign_u, 8);
+    printf("EX %s %s DATA shift_expected signed=%d,%d unsigned=%d,%d shift=1\n", ex, name,
+           s_sign_s_ref[0], s_sign_s_ref[1], s_sign_u_ref[0], s_sign_u_ref[1]);
+    fflush(stdout);
 
     print_i16(ex, name, "a", s_pa, PIXELS);
     print_i16(ex, name, "b", s_pb, PIXELS);
-    print_i32(ex, name, "tint32", s_po32, PIXELS);
+    print_i16(ex, name, "tint", s_po, PIXELS);
     printf("EX %s %s DATA limits lo=%d hi=%d tint=%d shift=%d pixels=%d\n", ex, name, -1000, 1000, 300,
            8, PIXELS);
     fflush(stdout);
     section_end(ex, name, fail == 0 ? 1 : 0, fail);
+}
+
+/* ------------------------------------------------------------------ ex09: the accumulator's timing */
+
+/* The 40-bit saturating per-lane accumulator written from the same pseudo-code the kernel was: lane j holds
+ * sum over the coefficient lanes the MACs used of coef[k] * v[k][j]. Same model as ex07's, on purpose --
+ * ex07 came back with rows this model does not predict, and this example is the instrument that says why. */
+static void model_mac4(const int16_t *coef_row, const int16_t *v, int16_t *out, uint32_t shift)
+{
+    for (int j = 0; j < 8; j++) {
+        int64_t acc = 0;
+        for (int k = 0; k < 4; k++) {
+            acc = sat40(acc + (int32_t)coef_row[k] * (int32_t)v[k * 8 + j]);
+        }
+        out[j] = sat16(acc >> shift);
+    }
+}
+
+/* The same model without the readout: the raw 40-bit accumulators, for comparing against RUR.QACC_*. */
+static void model_mac4_raw(const int16_t *coef_row, const int16_t *v, int64_t *acc)
+{
+    for (int j = 0; j < 8; j++) {
+        int64_t a = 0;
+        for (int k = 0; k < 4; k++) {
+            a = sat40(a + (int32_t)coef_row[k] * (int32_t)v[k * 8 + j]);
+        }
+        acc[j] = a;
+    }
+}
+
+/* Lane i of a 160-bit accumulator register held as five 32-bit words read through RUR. */
+static int64_t lane40(const uint32_t *w, int i)
+{
+    int bit = i * 40;
+    uint64_t pair = (uint64_t)w[bit / 32] | ((uint64_t)w[bit / 32 + 1] << 32);
+    uint64_t raw = (pair >> (bit % 32)) & 0xFFFFFFFFFFull;
+    return (int64_t)(raw << 24) >> 24;          /* sign-extend from bit 39 */
+}
+
+static void ex09(void)
+{
+    const char *ex = "ex09", *name = "qacc";
+    section_begin(ex, name);
+
+    /* The one MAC probe: coefficient lane 0 (and 1..3 for the broadcast test) against eight lanes. */
+    static const int16_t v8[8] PIE16 = {1000, -2000, 3000, -4000, 5000, -6000, 7000, -8000};
+    static const int16_t coef8[8] PIE16 = {3, 7, 5, 11, 0, 0, 0, 0};
+    /* The four-MAC (ex07 row) probe: four coefficient rows and four vector rows. */
+    /* Four coefficient rows padded to eight int16, for the reason ex07 documents: a row of four coefficients
+     * is 8 bytes and the 128-bit .IP load steps 16. */
+    static const int16_t coef_rows[32] PIE16 = {3, 7, 5, 11, 0, 0, 0, 0,
+                                                0, -2, 0, 4, 0, 0, 0, 0,
+                                                1, 0, 0, 2, 0, 0, 0, 0,
+                                                0, 0, 4, 0, 0, 0, 0, 0};
+    static const int16_t v_rows[32] PIE16 = {1000, -2000, 3000, -4000, 5000, -6000, 7000, -8000,
+                                             500, -500, 500, -500, 250, -250, 250, -250,
+                                             1000, 1000, -1000, -1000, 1000, 1000, -1000, -1000,
+                                             3, 5, 7, 11, 13, 17, 19, 23};
+    int16_t model[32] PIE16, got[32] PIE16;
+    const uint32_t shift = 0;
+    int fail = 0;
+
+    /* The trap that made the first run of this probe unreadable: an array that is not on the 16-byte grid
+     * shifts every lane. Assert it for every buffer the kernels touch. */
+    check_aligned(ex, name, "v8_16_byte_aligned", v8, &fail);
+    check_aligned(ex, name, "coef8_16_byte_aligned", coef8, &fail);
+    check_aligned(ex, name, "coef_rows_16_byte_aligned", coef_rows, &fail);
+    check_aligned(ex, name, "v_rows_16_byte_aligned", v_rows, &fail);
+    check_aligned(ex, name, "out9_16_byte_aligned", s_out9, &fail);
+    check_aligned(ex, name, "out9b_16_byte_aligned", s_out9b, &fail);
+    check_aligned(ex, name, "qraw_16_byte_aligned", s_qraw, &fail);
+
+    /* 1. one MAC, then the readout one slot later each time (gap 0..6). */
+    int16_t g[7][8] PIE16;
+    const char *gnames[7] = {"g0", "g1", "g2", "g3", "g4", "g6", "g7"};
+    ex09_mac1_g0(v8, coef8, g[0], shift);
+    ex09_mac1_g1(v8, coef8, g[1], shift);
+    ex09_mac1_g2(v8, coef8, g[2], shift);
+    ex09_mac1_g3(v8, coef8, g[3], shift);
+    ex09_mac1_g4(v8, coef8, g[4], shift);
+    ex09_mac1_g6(v8, coef8, g[5], shift);
+    ex09_mac1_g6(v8, coef8, g[6], shift);
+    for (int j = 0; j < 8; j++) {
+        model[j] = sat16((int32_t)v8[j] * coef8[0]);
+    }
+    int min_gap = -1;
+    for (int i = 0; i < 7; i++) {
+        print_i16(ex, name, gnames[i], g[i], 8);
+        if (min_gap < 0 && memcmp(g[i], model, 16) == 0) {
+            min_gap = i;
+        }
+    }
+    printf("EX %s %s DATA mac1_min_gap=%d mac1_model_matched_at_g6=%d\n", ex, name, min_gap,
+           memcmp(g[5], model, 16) == 0);
+    print_i16(ex, name, "mac1_model", model, 8);
+    check(ex, name, "mac1_min_gap_found", min_gap >= 0 ? 1 : 0, 1);
+    /* The same MAC with the coefficient in lanes 1, 2 and 3: which operand lane does sel8 broadcast? */
+    ex09_mac1_s1_g4(v8, coef8, got, shift);
+    for (int j = 0; j < 8; j++) {
+        model[j] = sat16((int32_t)v8[j] * coef8[1]);
+    }
+    int s1 = memcmp(got, model, 16) == 0;
+    check(ex, name, "sel1_broadcasts_coefficient_lane1", s1 ? 1 : 0, 1);
+    fail += s1 ? 0 : 1;
+    print_i16(ex, name, "sel1", got, 8);
+    ex09_mac1_s2_g4(v8, coef8, got, shift);
+    for (int j = 0; j < 8; j++) {
+        model[j] = sat16((int32_t)v8[j] * coef8[2]);
+    }
+    int s2 = memcmp(got, model, 16) == 0;
+    check(ex, name, "sel2_broadcasts_coefficient_lane2", s2 ? 1 : 0, 1);
+    fail += s2 ? 0 : 1;
+    ex09_mac1_s3_g4(v8, coef8, got, shift);
+    for (int j = 0; j < 8; j++) {
+        model[j] = sat16((int32_t)v8[j] * coef8[3]);
+    }
+    int s3 = memcmp(got, model, 16) == 0;
+    check(ex, name, "sel3_broadcasts_coefficient_lane3", s3 ? 1 : 0, 1);
+    fail += s3 ? 0 : 1;
+
+    /* 2. the raw accumulator: no readout in between, so this is the lane layout the MACs left behind. */
+    ex09_raw_qacc(v8, coef8, s_qraw, shift);
+    for (int i = 0; i < 10; i++) {
+        printf("EX %s %s DATA qacc_%s_%d=%08" PRIx32 "\n", ex, name, i < 5 ? "L" : "H", i % 5, s_qraw[i]);
+    }
+    int64_t lanes[8];
+    for (int i = 0; i < 4; i++) {
+        lanes[i] = lane40(&s_qraw[0], i);
+        lanes[4 + i] = lane40(&s_qraw[5], i);
+    }
+    int lane_ok = 1;
+    for (int j = 0; j < 8; j++) {
+        int64_t want = (int64_t)v8[j] * coef8[0];
+        printf("EX %s %s DATA qacc_lane%d=%lld want=%lld\n", ex, name, j, (long long)lanes[j],
+               (long long)want);
+        if (lanes[j] != want) {
+            lane_ok = 0;
+        }
+    }
+    check(ex, name, "raw_qacc_lane_layout", lane_ok ? 1 : 0, 1);
+    fail += lane_ok ? 0 : 1;
+
+    /* 3. ZERO.QACC between two MACs: is the zero ordered before the next MAC? */
+    ex09_zero_vis(v8, coef8, got, shift);
+    for (int j = 0; j < 8; j++) {
+        model[j] = sat16((int32_t)v8[j] * coef8[1]);
+    }
+    int zv = memcmp(got, model, 16) == 0;
+    check(ex, name, "zero_qacc_between_macs_is_ordered", zv ? 1 : 0, 1);
+    fail += zv ? 0 : 1;
+    print_i16(ex, name, "zero_vis", got, 8);
+
+    /* 4. four MACs (ex07's row) at readout distances 0, 2 and 4. */
+    int16_t m4[3][8] PIE16;
+    ex09_mac4_g0(coef_rows, v_rows, m4[0], shift);
+    ex09_mac4_g2(coef_rows, v_rows, m4[1], shift);
+    ex09_mac4_g4(coef_rows, v_rows, m4[2], shift);
+    model_mac4(coef_rows, v_rows, model, shift);
+    int m4_hit = 0;
+    for (int i = 0; i < 3; i++) {
+        int match = memcmp(m4[i], model, 16) == 0;
+        m4_hit += match;
+        printf("EX %s %s DATA mac4_gap%d_matches_model=%d\n", ex, name, i * 2, match);
+        print_i16(ex, name, i == 0 ? "mac4_g0" : (i == 1 ? "mac4_g2" : "mac4_g4"), m4[i], 8);
+    }
+    print_i16(ex, name, "mac4_model", model, 8);
+    check(ex, name, "mac4_reaches_the_model_at_some_gap", m4_hit > 0 ? 1 : 0, 1);
+    fail += m4_hit > 0 ? 0 : 1;
+
+    /* 5. the looped version (ex07's actual shape): four rows, readout at gap 0 vs gap 4. */
+    ex09_chain_g0(coef_rows, v_rows, s_out9, shift, 4);
+    ex09_chain_g4(coef_rows, v_rows, s_out9b, shift, 4);
+    for (int r = 0; r < 4; r++) {
+        model_mac4(&coef_rows[r * 8], v_rows, &model[r * 8], shift);
+    }
+    int c0 = 0, c4 = 0;
+    for (int i = 0; i < 32; i++) {
+        c0 += s_out9[i] == model[i];
+        c4 += s_out9b[i] == model[i];
+    }
+    printf("EX %s %s DATA chain_g0_matched=%d chain_g4_matched=%d of=32\n", ex, name, c0, c4);
+    print_i16(ex, name, "chain_g0", s_out9, 32);
+    print_i16(ex, name, "chain_g4", s_out9b, 32);
+    print_i16(ex, name, "chain_model", model, 32);
+    check(ex, name, "chain_variant_matches_the_model", (c0 == 32 || c4 == 32) ? 1 : 0, 1);
+    fail += (c0 == 32 || c4 == 32) ? 0 : 1;
+
+    /* 6. does the readout write the accumulator back? shift_a = 5 first, then shift_b = 0: if it does,
+     * out_b is out_a (already shifted and saturated); if it does not, out_b is the raw accumulator. */
+    ex09_srcmb_wb(v8, coef8, s_wb_a, s_wb_b, 5, 0);
+    for (int j = 0; j < 8; j++) {
+        int64_t acc = sat40((int32_t)v8[j] * coef8[0]);
+        model[j] = sat16(acc >> 5);
+    }
+    int wb_a_ok = memcmp(s_wb_a, model, 16) == 0;
+    check(ex, name, "srcmb_first_readout_is_accx_shift5", wb_a_ok ? 1 : 0, 1);
+    fail += wb_a_ok ? 0 : 1;
+    int wb_rmw = memcmp(s_wb_b, s_wb_a, 16) == 0;
+    int wb_single = 1;
+    for (int j = 0; j < 8; j++) {
+        wb_single &= s_wb_b[j] == sat16(sat40((int32_t)v8[j] * coef8[0]) >> 0);
+    }
+    printf("EX %s %s DATA srcmb_verdict %s\n", ex, name, wb_rmw ? "read_modify_write" : (wb_single ? "single_shot" : "neither"));
+    print_i16(ex, name, "wb_a", s_wb_a, 8);
+    print_i16(ex, name, "wb_b", s_wb_b, 8);
+    print_i16(ex, name, "wb_model_shift_a", model, 8);   /* the shift-5 prediction out_a must match */
+    check(ex, name, "srcmb_second_readout_is_one_of_the_two_models", (wb_rmw || wb_single) ? 1 : 0, 1);
+    fail += (wb_rmw || wb_single) ? 0 : 1;
+
+    /* 7. what the MACs actually consumed, row by row, with the readout out of the picture: the raw
+     * accumulator words, and which coefficient row each one equals. */
+    print_i16(ex, name, "coef_rows", coef_rows, 32);
+    print_i16(ex, name, "v_rows", v_rows, 32);
+    ex09_rows_raw(coef_rows, v_rows, s_qrows, 4);
+    int raw_ok = 0;
+    for (int r = 0; r < 4; r++) {
+        int64_t lanes[8], want[8];
+        for (int i = 0; i < 4; i++) {
+            lanes[i] = lane40(&s_qrows[r * 10], i);
+            lanes[4 + i] = lane40(&s_qrows[r * 10 + 5], i);
+        }
+        model_mac4_raw(&coef_rows[r * 8], v_rows, want);
+        int same = memcmp(lanes, want, sizeof(lanes)) == 0;
+        raw_ok += same;
+        int which = -1;
+        for (int i = 0; i < 4 && which < 0; i++) {
+            int64_t cand[8];
+            model_mac4_raw(&coef_rows[i * 8], v_rows, cand);
+            if (memcmp(lanes, cand, sizeof(cand)) == 0) {
+                which = i;
+            }
+        }
+        printf("EX %s %s DATA raw_row%d_matched_own=%d\n", ex, name, r, same);
+        printf("EX %s %s DATA raw_row%d_equals_coef_row=%d\n", ex, name, r, which);
+        printf("EX %s %s DATA raw_row%d=", ex, name, r);
+        for (int j = 0; j < 8; j++) {
+            printf("%s%04x", j ? "," : "", (unsigned)(uint16_t)(lanes[j] & 0xFFFF));
+        }
+        printf("\n");
+        fflush(stdout);
+    }
+    check(ex, name, "raw_rows_match_their_own_coefficient_row", raw_ok, 4);
+    fail += (raw_ok == 4) ? 0 : 1;
+
+    /* 8. the same four rows with a per-row readout and no loop tail: is the branch part of the effect? */
+    ex09_rows_unrolled(coef_rows, v_rows, s_out9b, 0);
+    for (int r = 0; r < 4; r++) {
+        model_mac4(&coef_rows[r * 8], v_rows, &model[r * 8], 0);
+    }
+    int un = 0;
+    for (int i = 0; i < 32; i++) {
+        un += s_out9b[i] == model[i];
+    }
+    printf("EX %s %s DATA unrolled_matched=%d of=32\n", ex, name, un);
+    print_i16(ex, name, "unrolled", s_out9b, 32);
+
+    /* 9. bisect: the address walk on its own, and the accumulate/readout with the coefficient held in a
+     * register. Whichever of these two reproduces the oddity says where the oddity lives. */
+    ex09_ipwalk(coef_rows, s_out9, 4);          /* 4 iterations x 1 row = 32 int16 */
+    int walk_ok = 1;
+    for (int i = 0; i < 32; i++) {              /* coef_rows[] is 32 int16 (four padded rows) */
+        walk_ok &= s_out9[i] == coef_rows[i];
+    }
+    printf("EX %s %s DATA ipwalk_matched=%d of=32\n", ex, name, walk_ok ? 32 : 31);
+    print_i16(ex, name, "ipwalk_out", s_out9, 32);
+    ex09_ipwalk4(coef_rows, s_out9, 1);         /* 4 back-to-back loads in one iteration */
+    print_i16(ex, name, "ipwalk4_out", s_out9, 32);
+
+    ex09_mac_fixed(coef_rows, v_rows, s_out9, 4, 0);
+    model_mac4(&coef_rows[0], v_rows, model, 0);
+    int fx0 = 0;
+    for (int i = 0; i < 8; i++) {
+        fx0 += s_out9[i] == model[i];
+    }
+    int fx_ident = 1;
+    for (int r = 1; r < 4; r++) {
+        for (int i = 0; i < 8; i++) {
+            fx_ident &= s_out9[r * 8 + i] == s_out9[i];
+        }
+    }
+    printf("EX %s %s DATA mac_fixed_row0_matched=%d of=8 mac_fixed_rows_identical=%d\n", ex, name, fx0,
+           fx_ident);
+    print_i16(ex, name, "mac_fixed", s_out9, 32);
+
+    printf("EX %s %s DATA probe v=1000..-8000 coef_lanes=3,7,5,11 shift=0\n", ex, name);
+    fflush(stdout);
+    section_end(ex, name, (fail == 0) ? 1 : 0, fail);
 }
 
 /* ------------------------------------------------------------------ */
@@ -744,7 +1104,7 @@ void app_main(void)
 
     printf("ENV chip=esp32s3 cores=%d revision=%d.%d idf=%s\n", chip.cores, chip.revision / 100,
            chip.revision % 100, esp_get_idf_version());
-    printf("ENV examples=8 buffers=16-byte-aligned rng_seed=0x1234 c_flags=-O2\n");
+    printf("ENV examples=9 buffers=16-byte-aligned rng_seed=0x1234 c_flags=-O2\n");
     fflush(stdout);
 
     ex01();
@@ -755,6 +1115,7 @@ void app_main(void)
     ex06();
     ex07();
     ex08();
+    ex09();
 
     printf("SUMMARY checks_ok=%d checks_fail=%d\n", s_ok, s_fail);
     printf("END\n");

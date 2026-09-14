@@ -106,14 +106,15 @@ def build_log() -> str:
               f"EX ex06 fft DATA cmul_half1_sar12={hex16(cel.ref_cmul(cel.EX06_U, cel.EX06_V, 12, 1)[4:])}",
               "EX ex06 fft RESULT ok=10 fail=0"]
     # ex07: the transform, with the same saturating-accumulator model the checker uses.
-    mt = [222, 0, 128, 0, 0, 256, 0, 0, -128, 0, 222, 0, 0, 0, 0, 256]
+    mt = [222, 0, 128, 0, 0, 0, 0, 0, 0, 256, 0, 0, 0, 0, 0, 0,
+          -128, 0, 222, 0, 0, 0, 0, 0, 0, 0, 0, 256, 0, 0, 0, 0]   # rows padded to 8 lanes
     v7 = [rng.randint(-256, 256) for _ in range(32)]
     out7 = []
     for r in range(4):
         for j in range(8):
             acc = 0
             for k in range(4):
-                acc += mt[r * 4 + k] * v7[k * 8 + j]
+                acc += mt[r * 8 + k] * v7[k * 8 + j]
                 acc = max(-(1 << 39), min((1 << 39) - 1, acc))
             out7.append(cel.as_i16(acc >> 16))
     lines += [
@@ -134,16 +135,80 @@ def build_log() -> str:
         "EX ex08 media BEGIN",
         f"EX ex08 media DATA a={hex16(pa)}",
         f"EX ex08 media DATA b={hex16(pb)}",
-        f"EX ex08 media DATA half_blend={hex16([cel.as_i16(((x & 0xF7DE) >> 1) + ((y & 0xF7DE) >> 1)) for x, y in zip(pa, pb)])}",
+        f"EX ex08 media DATA half_blend={hex16([cel.as_i16((((x & 0xFFFF) & 0xF7DE) >> 1) + (((y & 0xFFFF) & 0xF7DE) >> 1)) for x, y in zip(pa, pb)])}",
         f"EX ex08 media DATA brightened={hex16([cel.sat16(x + y) for x, y in zip(pa, pb)])}",
         f"EX ex08 media DATA clamped={hex16([max(-1000, min(1000, x)) for x in pa])}",
-        f"EX ex08 media DATA tint32={hex16([cel.as_i32((x * 300) >> 8) for x in pa], 8)}",
+        f"EX ex08 media DATA tint={hex16([cel.as_i16(((x * 300) >> 8) & 0xFFFF) for x in pa])}",
+        f"EX ex08 media DATA shift_in={hex16(pa[:8])}",
+        f"EX ex08 media DATA shift_signed={hex16([cel.as_i16(x >> 1) for x in pa[:8]])}",
+        f"EX ex08 media DATA shift_unsigned={hex16([cel.as_i16((x & 0xFFFF) >> 1) for x in pa[:8]])}",
         "EX ex08 media DATA limits lo=-1000 hi=1000 tint=300 shift=8 pixels=32",
-        "EX ex08 media RESULT ok=4 fail=0",
+        "EX ex08 media RESULT ok=5 fail=0",
         "BENCH half_blend pixels=32768 cycles_pie=200000 cycles_c=600000",
         "BENCH brighten pixels=32768 cycles_pie=100000 cycles_c=250000",
     ]
-    lines += ["SUMMARY checks_ok=37 checks_fail=0", "END", ""]
+    # ex09: the accumulator probe. Every line here is built from the checker's own models, so the synthetic
+    # log is a device log whose answers are already right.
+    v8 = cel.EX09_V8
+    coef8 = cel.EX09_COEF8
+    cro = cel.EX09_COEF_ROWS
+    vrw = cel.EX09_V_ROWS
+    one_mac = [cel.sat16(x * coef8[0]) for x in v8]
+    for i in (1, 2, 3):
+        lines.append(f"EX ex09 qacc DATA sel{i}={hex16([cel.sat16(x * coef8[i]) for x in v8])}")
+    lines += [f"EX ex09 qacc DATA g{k}={hex16(one_mac)}" for k in ("0", "1", "2", "3", "4", "6", "7")]
+    lines += [
+        "EX ex09 qacc DATA mac1_min_gap=0 mac1_model_matched_at_g6=1",
+        f"EX ex09 qacc DATA mac1_model={hex16(one_mac)}",
+        f"EX ex09 qacc DATA zero_vis={hex16([cel.sat16(x * coef8[1]) for x in v8])}",
+        f"EX ex09 qacc DATA v8={hex16(v8)}",
+        f"EX ex09 qacc DATA coef8={hex16(coef8)}",
+        f"EX ex09 qacc DATA coef_rows={hex16([x for row in cro for x in (row + [0, 0, 0, 0])])}",
+        f"EX ex09 qacc DATA v_rows={hex16(vrw)}",
+    ]
+    lanewant = [x * coef8[0] for x in v8]
+    for half in ("L", "H"):
+        big = 0
+        for i, val in enumerate(lanewant[0:4] if half == "L" else lanewant[4:8]):
+            big |= (val & ((1 << 40) - 1)) << (40 * i)
+        for i in range(5):
+            lines.append(f"EX ex09 qacc DATA qacc_{half}_{i}={(big >> (32 * i)) & 0xFFFFFFFF:08x}")
+    for i, val in enumerate(lanewant):
+        lines.append(f"EX ex09 qacc DATA qacc_lane{i}={val} want={val}")
+    for gap in (0, 2, 4):
+        lines.append(f"EX ex09 qacc DATA mac4_gap{gap}_matches_model=1")
+        lines.append(f"EX ex09 qacc DATA mac4_g{gap}={hex16(cel.mac4_readout(cro[0], vrw))}")
+    chain = []
+    for r in range(4):
+        chain += cel.mac4_readout(cro[r], vrw)
+    for key in ("g0", "g4"):
+        lines.append(f"EX ex09 qacc DATA chain_{key}_matched=32 chain_{key[1:]}_matched_extra=0 of=32")
+        lines.append(f"EX ex09 qacc DATA chain_{key}={hex16(chain)}")
+    lines.append(f"EX ex09 qacc DATA chain_model={hex16(chain)}")
+    for r in range(4):
+        lanes = cel.mac4_raw(cro[r], vrw)
+        lines.append(f"EX ex09 qacc DATA raw_row{r}_matched_own=1")
+        lines.append(f"EX ex09 qacc DATA raw_row{r}_equals_coef_row={r}")
+        lines.append(f"EX ex09 qacc DATA raw_row{r}=" + ",".join(f"{x & 0xFFFF:04x}" for x in lanes))
+    lines.append(f"EX ex09 qacc DATA unrolled_matched=32 of=32")
+    lines.append(f"EX ex09 qacc DATA unrolled={hex16(chain)}")
+    padded = [x for row in cro for x in (row + [0, 0, 0, 0])]
+    lines.append(f"EX ex09 qacc DATA ipwalk_matched=32 of=32")
+    lines.append(f"EX ex09 qacc DATA ipwalk_out={hex16(padded)}")
+    lines.append(f"EX ex09 qacc DATA ipwalk4_out={hex16(padded)}")
+    fixed = cel.mac4_readout(cro[0], vrw)
+    lines.append("EX ex09 qacc DATA mac_fixed_row0_matched=8 of=8 mac_fixed_rows_identical=1")
+    lines.append(f"EX ex09 qacc DATA mac_fixed={hex16(fixed * 4)}")
+    wb_a = [cel.sat16(cel.sat40(v8[j] * coef8[0]) >> 5) for j in range(8)]
+    lines += [
+        f"EX ex09 qacc DATA wb_a={hex16(wb_a)}",
+        f"EX ex09 qacc DATA wb_b={hex16(wb_a)}",
+        f"EX ex09 qacc DATA wb_model_shift_a={hex16(wb_a)}",
+        "EX ex09 qacc DATA srcmb_verdict read_modify_write",
+        "EX ex09 qacc DATA probe v=1000..-8000 coef_lanes=3,7,5,11 shift=0",
+        "EX ex09 qacc RESULT ok=1 fail=0",
+    ]
+    lines += ["SUMMARY checks_ok=52 checks_fail=0", "END", ""]
     return "\n".join(lines)
 
 
@@ -177,6 +242,16 @@ MUTATIONS = [
     ("ex01 raw", "EX ex01 encoding DATA raw_field1_ld=", "3"),
     ("ex07 out", "EX ex07 transform3d DATA out=", "0001"),
     ("ex08 half_blend", "EX ex08 media DATA half_blend=", "0000"),
+    ("ex08 shift_unsigned", "EX ex08 media DATA shift_unsigned=", "0000"),
+    ("ex08 tint", "EX ex08 media DATA tint=", "0000"),
+    ("ex07 matrix stride", "EX ex07 transform3d DATA matrix=", "0000"),
+    ("ex09 g0 (the MAC readout at distance 0)", "EX ex09 qacc DATA g0=", "0000"),
+    ("ex09 raw_row1 (which coefficient row the MACs used)", "EX ex09 qacc DATA raw_row1=",
+     "0000,0000,0000,0000,0000,0000,0000,0000"),
+    ("ex09 chain_g0", "EX ex09 qacc DATA chain_g0=", "0000"),
+    ("ex09 ipwalk_out (the .IP walk)", "EX ex09 qacc DATA ipwalk_out=", "0000"),
+    ("ex09 wb_b (the read-modify-write verdict)", "EX ex09 qacc DATA wb_b=", "0000"),
+    ("ex09 qacc_lane3", "EX ex09 qacc DATA qacc_lane3=", "0 want=0"),
 ]
 
 failures = []

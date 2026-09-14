@@ -79,14 +79,53 @@ uint32_t ex07_ccount(void);
 void ex07_transform8(const int16_t *m, const int16_t *v, int16_t *out, uint32_t shift);
 
 /* ex08: framebuffer effects over 128-bit chunks (16-bit lanes). Each has a C equivalent timed in main.c.
- *   half_blend: out[i] = ((a[i] & 0xF7DE) >> 1) + ((b[i] & 0xF7DE) >> 1)
+ *   half_blend: out[i] = ((uint16_t)a[i] & 0xF7DE) >> 1) + (((uint16_t)b[i] & 0xF7DE) >> 1)  (unsigned:
+ *               the kernel uses EE.VMUL.U16 for the shift, so no lane sign-extends)
+ *   shift_sign: the same shift with EE.VMUL.S16 and EE.VMUL.U16 side by side (they differ where bit 15 is set)
  *   brighten  : out[i] = sat16(a[i] + b[i])
  *   clamp     : out[i] = min(max(a[i], lo), hi) with lo/hi given as eight identical lanes
- *   tint      : out32[i] = (a[i] * tint) >> shift  */
+ *   tint      : out[i] = (int16_t)((a[i] * tint) >> shift)  -- truncating, not saturating */
 void ex08_half_blend(const int16_t *a, const int16_t *b, const int16_t *mask8, const int16_t *ones8,
                      int16_t *out, int n_pixels);
+void ex08_shift_sign(const int16_t *a, const int16_t *ones8, int16_t *out_signed, int16_t *out_unsigned,
+                     uint32_t shift);
 void ex08_brighten(const int16_t *a, const int16_t *b, int16_t *out, int n_pixels);
 void ex08_clamp(const int16_t *a, const int16_t *lo8, const int16_t *hi8, int16_t *out, int n_pixels);
-void ex08_tint(const int16_t *a, const int16_t *tint8, int32_t *out32, int n_pixels, uint32_t shift);
+void ex08_tint(const int16_t *a, const int16_t *tint8, int16_t *out, int n_pixels, uint32_t shift);
+
+/* ex09: the QACC accumulate -> readout hazard, probed rather than assumed (see ex09_qacc.S). All of these
+ * take (v8, coef8, out8, shift); `one MAC with the coefficient lane sel8` then the readout after N slots.
+ * The MAC4/CHAIN forms are ex07's row shape (four MACs into the same accumulator). */
+void ex09_mac1_g0(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_g1(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_g2(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_g3(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_g4(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_g6(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_s1_g4(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_s2_g4(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac1_s3_g4(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+void ex09_mac4_g0(const int16_t *coef_row, const int16_t *v4rows, int16_t *out8, uint32_t shift);
+void ex09_mac4_g2(const int16_t *coef_row, const int16_t *v4rows, int16_t *out8, uint32_t shift);
+void ex09_mac4_g4(const int16_t *coef_row, const int16_t *v4rows, int16_t *out8, uint32_t shift);
+void ex09_chain_g0(const int16_t *coefs, const int16_t *v4rows, int16_t *out, uint32_t shift, uint32_t rows);
+void ex09_chain_g4(const int16_t *coefs, const int16_t *v4rows, int16_t *out, uint32_t shift, uint32_t rows);
+/* QACC_L_0..4 then QACC_H_0..4 as raw words: lane i is (QACC_H_i[7:0] << 32) | QACC_L_i. */
+void ex09_raw_qacc(const int16_t *v8, const int16_t *coef8, uint32_t *out10, uint32_t shift);
+/* The row loop with no readout at all: ten raw accumulator words per row (four rows). */
+void ex09_rows_raw(const int16_t *coefs, const int16_t *v4rows, uint32_t *out, uint32_t rows);
+/* The same four rows with a per-row readout and no loop tail. */
+void ex09_rows_unrolled(const int16_t *coefs, const int16_t *v4rows, int16_t *out, uint32_t shift);
+/* The address walk alone (load+store, no MAC) and with four back-to-back loads per iteration. */
+void ex09_ipwalk(const int16_t *src, int16_t *dst, uint32_t rows);
+void ex09_ipwalk4(const int16_t *src, int16_t *dst, uint32_t rows);
+/* The row loop with the coefficient register loaded once, outside the loop. */
+void ex09_mac_fixed(const int16_t *coef_row, const int16_t *v4rows, int16_t *out, uint32_t rows,
+                    uint32_t shift);
+/* QACC zeroed between two MACs: v*coef[1] if the zero is ordered, v*(coef[0]+coef[1]) if it is not. */
+void ex09_zero_vis(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint32_t shift);
+/* SRCMB twice with different shifts: does the readout write the accumulator back (read-modify-write)? */
+void ex09_srcmb_wb(const int16_t *v8, const int16_t *coef8, int16_t *out_a, int16_t *out_b,
+                   uint32_t shift_a, uint32_t shift_b);
 
 #endif

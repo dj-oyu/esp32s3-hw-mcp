@@ -306,12 +306,15 @@ def check_ex07(sec: dict) -> list[tuple[str, bool, str]]:
         return [("ex07 carries matrix, vertices and result", False, "missing DATA lines")]
     m, v = i16_words(d["matrix"]), i16_words(d["vertices_soa"])
     got = i16_words(d["out"])
+    if len(m) < 32 or len(v) < 32:
+        return [("ex07 carries the padded matrix and the eight-vertex rows", False,
+                 f"matrix {len(m)} values, vertices {len(v)} values (expected 32 each)")]
     ref = []
     for r in range(4):
         for j in range(8):
             acc = 0
             for k in range(4):
-                acc += m[r * 4 + k] * v[k * 8 + j]
+                acc += m[r * 8 + k] * v[k * 8 + j]     # matrix rows are padded to eight lanes
                 acc = max(-(1 << 39), min((1 << 39) - 1, acc))
             ref.append(as_i16(acc >> 16))
     bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
@@ -320,7 +323,12 @@ def check_ex07(sec: dict) -> list[tuple[str, bool, str]]:
 
 
 def check_ex08(sec: dict) -> list[tuple[str, bool, str]]:
-    """The framebuffer effects, re-derived from the pixel arrays the log carries."""
+    """The framebuffer effects, re-derived from the pixel arrays the log carries.
+
+    The half blend is UNSIGNED: the lanes are packed RGB565 and the kernel shifts them with EE.VMUL.U16.
+    The first device run of this example used EE.VMUL.S16 there and every lane whose bit 15 was set came
+    back sign-extended -- which is what `shift_signed`/`shift_unsigned` below now pins down in the log.
+    """
     d = sec["data"]
     if not {"a", "b"} <= set(d):
         return [("ex08 carries its pixel rows", False, "missing a/b")]
@@ -328,10 +336,17 @@ def check_ex08(sec: dict) -> list[tuple[str, bool, str]]:
     out = []
     if "half_blend" in d:
         got = i16_words(d["half_blend"])
-        ref = [as_i16(((x & 0xF7DE) >> 1) + ((y & 0xF7DE) >> 1)) for x, y in zip(a, b)]
+        ref = [as_i16((((x & 0xFFFF) & 0xF7DE) >> 1) + (((y & 0xFFFF) & 0xF7DE) >> 1)) for x, y in zip(a, b)]
         bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
-        out.append(("ex08 half_blend (mask-shift-add) matches the Python reference", not bad,
+        out.append(("ex08 half_blend (unsigned mask-shift-add) matches the Python reference", not bad,
                     f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+    if {"shift_in", "shift_signed", "shift_unsigned"} <= set(d):
+        xs = i16_words(d["shift_in"])
+        sg, us = i16_words(d["shift_signed"]), i16_words(d["shift_unsigned"])
+        ref_s = [as_i16(x >> 1) for x in xs]                       # EE.VMUL.S16: arithmetic
+        ref_u = [as_i16((x & 0xFFFF) >> 1) for x in xs]            # EE.VMUL.U16: logical
+        out.append(("ex08 signed multiply shifts in the sign, unsigned does not", sg == ref_s and us == ref_u,
+                    f"signed {sg[:3]} vs {ref_s[:3]}, unsigned {us[:3]} vs {ref_u[:3]}"))
     if "brightened" in d:
         got = i16_words(d["brightened"])
         ref = [sat16(x + y) for x, y in zip(a, b)]
@@ -344,17 +359,182 @@ def check_ex08(sec: dict) -> list[tuple[str, bool, str]]:
         bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
         out.append(("ex08 clamp matches the reference", not bad,
                     f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
-    if "tint32" in d:
-        got = hex_words(d["tint32"])
-        ref = [as_i32((x * 300) >> 8) for x in a]
+    if "tint" in d:
+        got = i16_words(d["tint"])
+        ref = [as_i16(((x * 300) >> 8) & 0xFFFF) for x in a]     # EE.VMUL truncates, it does not saturate
         bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
-        out.append(("ex08 tint (per-lane multiply with a SAR shift) matches the reference", not bad,
-                    f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+        out.append(("ex08 tint (per-lane multiply with a SAR shift, truncating) matches the reference",
+                    not bad, f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+    return out
+
+
+# ------------------------------------------------------------------ ex09: the accumulator probe
+
+EX09_V8 = [1000, -2000, 3000, -4000, 5000, -6000, 7000, -8000]
+EX09_COEF8 = [3, 7, 5, 11, 0, 0, 0, 0]
+EX09_COEF_ROWS = [[3, 7, 5, 11], [0, -2, 0, 4], [1, 0, 0, 2], [0, 0, 4, 0]]
+EX09_V_ROWS = [1000, -2000, 3000, -4000, 5000, -6000, 7000, -8000,
+               500, -500, 500, -500, 250, -250, 250, -250,
+               1000, 1000, -1000, -1000, 1000, 1000, -1000, -1000,
+               3, 5, 7, 11, 13, 17, 19, 23]
+
+
+def sat40(v: int) -> int:
+    return max(-(1 << 39), min((1 << 39) - 1, v))
+
+
+def mac4_raw(coef_row: list[int], v_rows: list[int]) -> list[int]:
+    """The four-MAC row without the readout: lane j accumulates coef[k] * v[k][j], saturating at 40 bits."""
+    acc = []
+    for j in range(8):
+        a = 0
+        for k in range(4):
+            a = sat40(a + coef_row[k] * v_rows[k * 8 + j])
+        acc.append(a)
+    return acc
+
+
+def mac4_readout(coef_row: list[int], v_rows: list[int], shift: int = 0) -> list[int]:
+    return [sat16(a >> shift) for a in mac4_raw(coef_row, v_rows)]
+
+
+def qacc_lane(words: list[int], i: int) -> int:
+    """Lane i of a 160-bit accumulator register held as five 32-bit RUR words."""
+    bit = i * 40
+    pair = words[bit // 32] | (words[bit // 32 + 1] << 32)
+    raw = (pair >> (bit % 32)) & ((1 << 40) - 1)
+    return raw - (1 << 40) if raw >= (1 << 39) else raw
+
+
+def check_ex09(sec: dict) -> list[tuple[str, bool, str]]:
+    """The accumulator probe, re-derived here. Everything the firmware checks is recomputed, and the two
+    questions the manual does not answer (does the readout need spacing, does SRCMB write QACC back) are
+    reported as a decision rather than as a pass/fail of the manual."""
+    d = sec["data"]
+    out: list[tuple[str, bool, str]] = []
+    if not {"g0", "qacc_lane0"} <= set(d):
+        return [("ex09 carries the probe's data lines", False, "missing g0/qacc_lane0")]
+    v8 = i16_words(d["v8"]) if "v8" in d else EX09_V8
+    coef8 = i16_words(d["coef8"]) if "coef8" in d else EX09_COEF8
+    if "coef_rows" in d:
+        flat = i16_words(d["coef_rows"])
+        coef_rows = [flat[r * 8:r * 8 + 4] for r in range(4)]
+    else:
+        coef_rows = EX09_COEF_ROWS
+    v_rows = i16_words(d["v_rows"]) if "v_rows" in d else EX09_V_ROWS
+
+    # 1. one MAC: is the accumulator visible to the readout at issue distance 0?
+    model = [sat16(x * coef8[0]) for x in v8]
+    gaps = [k for k in ("g0", "g1", "g2", "g3", "g4", "g6", "g7") if k in d]
+    wrong = []
+    min_ok = None
+    for k in gaps:
+        same = i16_words(d[k]) == model
+        if not same:
+            wrong.append(k)
+        elif min_ok is None:
+            min_ok = k
+    out.append(("ex09 table 1.7-2 lists no accumulator def, yet the readout at distance 0 is correct",
+                min_ok == "g0", f"first gap that matches the model: {min_ok}; gaps that differ: {wrong}"))
+
+    # 2. which lane sel8 broadcasts
+    for sel, key in ((1, "sel1"), (2, "sel2"), (3, "sel3")):
+        if key in d:
+            want = [sat16(x * coef8[sel]) for x in v8]
+            got = i16_words(d[key])
+            out.append((f"ex09 sel8 = {sel} broadcasts coefficient lane {sel}", got == want,
+                        f"got {got[:4]} want {want[:4]}"))
+
+    # 3. the raw accumulator: lanes 0-3 in QACC_L, 4-7 in QACC_H, 40 bits each
+    if all(f"qacc_{h}_{i}" in d for h in ("L", "H") for i in range(5)):
+        words = {h: [int(d[f"qacc_{h}_{i}"], 16) for i in range(5)] for h in ("L", "H")}
+        lanes = [qacc_lane(words["L"], i) for i in range(4)] + [qacc_lane(words["H"], i) for i in range(4)]
+        want = [x * coef8[0] for x in v8]
+        out.append(("ex09 the raw 40-bit lanes are (QACC_H_i[7:0] << 32) | QACC_L_i", lanes == want,
+                    f"decoded {lanes} want {want}"))
+        # the firmware decodes the same words on the device: two independent readings of one 320-bit value
+        fw = []
+        for i in range(8):
+            text = d.get(f"qacc_lane{i}", "")
+            fw.append(int(text.split("want=")[0]) if "want=" in text else None)
+        out.append(("ex09 the firmware's own lane decode agrees with this one", fw == want,
+                    f"device {fw[:4]} host {want[:4]}"))
+
+    # 4. ZERO.QACC between two MACs
+    if "zero_vis" in d:
+        want = [sat16(x * coef8[1]) for x in v8]
+        got = i16_words(d["zero_vis"])
+        out.append(("ex09 EE.ZERO.QACC between two MACs is ordered", got == want,
+                    f"got {got[:3]} want {want[:3]} (v*(coef[0]+coef[1]) would mean it is not)"))
+
+    # 5. four MACs, at three readout distances
+    m4 = mac4_readout(coef_rows[0], v_rows)
+    for key, gap in (("mac4_g0", 0), ("mac4_g2", 2), ("mac4_g4", 4)):
+        if key in d:
+            got = i16_words(d[key])
+            out.append((f"ex09 four MACs with the readout {gap} slots later match the model", got == m4,
+                        "match" if got == m4 else f"got {got[:3]} want {m4[:3]}"))
+
+    # 6. the looped version, and the model row by row
+    chain_model = []
+    for r in range(4):
+        chain_model += mac4_readout(coef_rows[r], v_rows)
+    for key in ("chain_g0", "chain_g4"):
+        if key in d:
+            got = i16_words(d[key])
+            bad = [i for i in range(len(got)) if got[i] != chain_model[i]]
+            out.append((f"ex09 the looped row sequence ({key[-2:]}) matches the model for all four rows",
+                        not bad, f"{len(bad)} lanes differ, first {bad[:3]}" if bad else "32/32"))
+
+    # 7. what the MACs consumed, row by row (no readout in the picture at all)
+    raw_ok = True
+    raw_detail = []
+    for r in range(4):
+        key = f"raw_row{r}"
+        if key not in d:
+            continue
+        lanes = i16_words(d[key])
+        want = mac4_raw(coef_rows[r], v_rows)
+        own = lanes == want
+        raw_ok &= own
+        which = d.get(f"raw_row{r}_equals_coef_row", "?")
+        raw_detail.append(f"row{r}: " + ("own row" if own else f"equals coef row {which}"))
+    if raw_detail:
+        out.append(("ex09 each raw accumulator row holds its own coefficient row's sums", raw_ok,
+                    " ".join(raw_detail)))
+
+    # 8. the coefficient row layout trap, and the address walk on its own
+    if "ipwalk_out" in d:
+        got = i16_words(d["ipwalk_out"])
+        want = [x for row in coef_rows for x in row] + [0] * 16
+        flat = i16_words(d["coef_rows"]) if "coef_rows" in d else want
+        out.append(("ex09 the 128-bit .IP walk advances 16 bytes per step (padded rows)", got == flat,
+                    "the walk reproduces the padded array" if got == flat else f"got {got[:6]} want {flat[:6]}"))
+
+    # 9. the coefficient register held in a register instead of reloaded per row
+    if "mac_fixed" in d:
+        got = i16_words(d["mac_fixed"])
+        want = mac4_readout(coef_rows[0], v_rows)
+        rows = [got[r * 8:(r + 1) * 8] for r in range(4)]
+        out.append(("ex09 with the coefficient held in a register every row repeats the model",
+                    all(r == want for r in rows), f"rows {rows[0][:3]} ..." if rows else ""))
+
+    # 10. the readout's write-back
+    if {"wb_a", "wb_b"} <= set(d):
+        want_a = [sat16(sat40((v8[j] * coef8[0])) >> 5) for j in range(8)]
+        got_a, got_b = i16_words(d["wb_a"]), i16_words(d["wb_b"])
+        rmw = got_b == got_a
+        single = got_b == [sat16(v8[j] * coef8[0]) for j in range(8)]
+        out.append(("ex09 EE.SRCMB.S16.QACC writes the shifted values back into the accumulator", rmw,
+                    f"second readout = {'the first readout (read-modify-write)' if rmw else ('the raw accumulator (single shot)' if single else 'neither')}"))
+        out.append(("ex09 the first readout is ACCX >> 5 saturated to 16 bits", got_a == want_a,
+                    f"got {got_a[:3]} want {want_a[:3]}"))
     return out
 
 
 CHECKS = {"ex01": check_ex01, "ex02": check_ex02, "ex03": check_ex03, "ex04": check_ex04,
-          "ex05": check_ex05, "ex06": check_ex06, "ex07": check_ex07, "ex08": check_ex08}
+          "ex05": check_ex05, "ex06": check_ex06, "ex07": check_ex07, "ex08": check_ex08,
+          "ex09": check_ex09}
 
 
 def main() -> int:
