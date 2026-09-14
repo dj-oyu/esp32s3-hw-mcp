@@ -49,7 +49,7 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 | `pie_review.json` | マニュアル自身の記述が食い違う行（後述） | 2行 |
 | `registers.json` | TRM の "Register Summary" 表（第2〜39章、41節）: レジスタ名・説明・オフセット・アクセス種別・グループ・節・ページ | **1581レジスタ** |
 | `peripheral_map.json` | Table 4.3-3（p408-409）: ペリフェラル名と境界アドレス・サイズ。オフセットを絶対アドレスに直す基準 | 44行 |
-| `pie_timing_measured.json` | **実機（Cardputer / ESP32-S3）で測った** PIE 命令のインターロック。アンカー（マニュアルが段を明記している5ケース）が全部一致したときだけ `valid: true` になり派生値を出す | 31測定 / 5アンカー |
+| `pie_timing_measured.json` | **実機（Cardputer / ESP32-S3）で測った** PIE 命令のインターロック。アンカー（マニュアルが段を明記している5ケース）が全部一致したときだけ `valid: true` になり派生値を出す | 31測定 / 5アンカー / 派生4件（`valid: true`） |
 | `pie_encoding_errata.json` | マニュアルの命令語図と Espressif アセンブラが**食い違う命令だけ**（下記「アセンブラ照合」） | 220命令中6件 |
 
 `pie_pipeline.json` が本プロジェクトの中核データで、これがあると
@@ -155,7 +155,7 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python server/esp32s3_mcp.py --list      # ツール面を人向けに表示
 .venv/bin/python server/esp32s3_mcp.py             # MCP（stdio）として起動
-.venv/bin/python tools/test_mcp_server.py          # stdio越しに29項目のE2E検査（ツールチェーン検査は無ければ skip）
+.venv/bin/python tools/test_mcp_server.py          # stdio越しに33項目のE2E検査（ツールチェーン検査は無ければ skip）
 ```
 
 クライアントへの登録は各クライアントの流儀に従う（Hermes なら `hermes mcp add` → `hermes mcp test`）。
@@ -169,7 +169,7 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 | `get_register(name, include_base_guess)` | ① | レジスタ名で引く（`_REG` 省略可・部分一致）。`include_base_guess` で Table 4.3-3 からのベースアドレス推定（**推定であることを明示**して返す） |
 | `list_registers(prefix/chapter/section/group)` | ① | 前置き・章・節・グループで一覧 |
 | `get_instruction(name)` | ① | PIE命令のエンコード・構文・説明・操作擬似コード |
-| `instruction_pipeline(name)` | ① | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い」と返す |
+| `instruction_pipeline(name)` | ①③ | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い（found=false）」と返しつつ、**有効性ゲートを通った実測**があれば `measured` として別枠で添える（表の値と混ぜない） |
 | `list_peripherals(target)` | ① | Table 4.3-3 のペリフェラル境界アドレス |
 | `search_manual(query)` / `get_page(page)` | ① | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ作り方を返す） |
 | `analyze_sequence([...])` | ① | 命令列のストール段数を見積もる。TRM 1.7.1 の `D=max(SA-SB+1,0)`／ストール `=max(SA-SB,0)` を Table 1.7-2 の段に適用（根拠と限界は `notes/03-interlock-model.md`）。資源・制御ハザードは「未モデル」として明示して返す |

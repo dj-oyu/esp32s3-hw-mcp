@@ -2,20 +2,20 @@
  "provenance": {
   "kind": "measured_on_hardware",
   "note": "These values come from a run on silicon, not from a document. Every entry keeps the log line basis in `basis`, and the harness anchors are listed so a reader can see whether the method reproduced the manual's own numbers.",
-  "log": "pie-timing-20260914T150410Z.log",
-  "firmware_git_rev": "58091a4",
+  "log": "pie-timing-20260914T171755Z.log",
+  "firmware_git_rev": "dfc4e3b",
   "iterations_per_measurement": 2000,
   "environment": {}
  },
- "valid": false,
+ "valid": true,
  "anchors": [
   {
    "case": "anchor_accx_M_to_E",
    "expected_stall": 1,
-   "measured_stall": 1.0565,
+   "measured_stall": 1.0,
    "ok": true,
    "why": "TRM Table 1.7-2: EE.LD.ACCX.IP defs ACCX at 2 (M), EE.ST.ACCX.IP uses ACCX at 1 (E)",
-   "noise_cycles": 0.7855
+   "noise_cycles": 0.0
   },
   {
    "case": "anchor_qs_M_to_E",
@@ -31,7 +31,7 @@
    "measured_stall": 0.0,
    "ok": true,
    "why": "TRM Table 1.7-2: EE.ANDQ defs qa at 1 (E); reading it in E needs no delay",
-   "noise_cycles": 0.0695
+   "noise_cycles": 0.067
   },
   {
    "case": "native_load_use",
@@ -39,7 +39,7 @@
    "measured_stall": 1.0,
    "ok": true,
    "why": "calibration against the base ISA: a native load consumed by the next instruction costs 1 cycle (forwarding), which is what the harness must be able to resolve",
-   "noise_cycles": 0.842
+   "noise_cycles": 0.0015
   },
   {
    "case": "native_alu_use",
@@ -47,23 +47,23 @@
    "measured_stall": 0.0,
    "ok": true,
    "why": "calibration: back-to-back native ALU with a dependency costs nothing",
-   "noise_cycles": 0.0
+   "noise_cycles": 0.0595
   }
  ],
  "measurements": [
   {
    "case": "anchor_accx_M_to_E",
    "distance": 1,
-   "stall_cycles": 1.0565,
-   "noise_cycles": 0.7855,
-   "min_cycles_dep": 18112,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 17999,
    "min_cycles_indep": 15999
   },
   {
    "case": "anchor_accx_M_to_E",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
+   "noise_cycles": 0.0755,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -71,7 +71,7 @@
    "case": "anchor_accx_M_to_E",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.8415,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -87,7 +87,7 @@
    "case": "anchor_qs_M_to_E",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.841,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -95,191 +95,191 @@
    "case": "anchor_qs_M_to_E",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.842,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "anchor_qr_E_to_E",
-   "distance": 1,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0695,
-   "min_cycles_dep": 15999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "anchor_qr_E_to_E",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.841,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "anchor_qr_E_to_E",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "native_load_use",
-   "distance": 1,
-   "stall_cycles": 1.0,
-   "noise_cycles": 0.842,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "native_load_use",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.051,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "native_load_use",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "native_alu_use",
-   "distance": 1,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0,
-   "min_cycles_dep": 15999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "native_alu_use",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.842,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "LD_QR_def_stage",
-   "distance": 1,
-   "stall_cycles": 1.0,
-   "noise_cycles": 0.841,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "LD_QR_def_stage",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "LD_QR_def_stage",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0625,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "LD_QR_def_stage",
-   "distance": 4,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.842,
-   "min_cycles_dep": 21999,
-   "min_cycles_indep": 21999
-  },
-  {
-   "case": "MV_QR_def_stage",
-   "distance": 1,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
-   "min_cycles_dep": 15999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "MV_QR_def_stage",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "MV_QR_def_stage",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "MV_QR_def_stage",
-   "distance": 4,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.063,
-   "min_cycles_dep": 21999,
-   "min_cycles_indep": 21999
-  },
-  {
-   "case": "ST_QR_use_stage",
-   "distance": 1,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.841,
-   "min_cycles_dep": 15999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "ST_QR_use_stage",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.841,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "ST_QR_use_stage",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "LD_QR_reads_as",
-   "distance": 1,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0,
-   "min_cycles_dep": 15999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "LD_QR_reads_as",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "LD_QR_reads_as",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "QR_load_to_QR_op",
-   "distance": 1,
-   "stall_cycles": 1.0,
    "noise_cycles": 0.055,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.067,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0665,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "anchor_qr_E_to_E",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.056,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "native_load_use",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0015,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "native_load_use",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.05,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "native_load_use",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0505,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "native_alu_use",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0595,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "native_alu_use",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.07,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0755,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0605,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 4,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.062,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.064,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.056,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 4,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.057,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "ST_QR_use_stage",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0615,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "ST_QR_use_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.074,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "ST_QR_use_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0675,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "LD_QR_reads_as",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.112,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "LD_QR_reads_as",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0925,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "LD_QR_reads_as",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0755,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "QR_load_to_QR_op",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 15999
   },
@@ -287,7 +287,7 @@
    "case": "QR_load_to_QR_op",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.076,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -295,12 +295,41 @@
    "case": "QR_load_to_QR_op",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.8425,
+   "noise_cycles": 0.0585,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   }
  ],
- "derived": [],
+ "derived": [
+  {
+   "instruction": "LD.QR",
+   "attribute": "operand def stage",
+   "stage": 2,
+   "basis": "consumer EE.ANDQ reads its operands at stage 1 (E) per Table 1.7-2, measured interlock 1.0 cycles at issue distance 1",
+   "citation": "measured; TRM p301 documents the instruction but Table 1.7-2 omits it"
+  },
+  {
+   "instruction": "MV.QR",
+   "attribute": "operand def stage",
+   "stage": 1,
+   "basis": "consumer EE.ANDQ reads its operands at stage 1 (E) per Table 1.7-2, measured interlock 0.0 cycles at issue distance 1",
+   "citation": "measured; TRM p303 documents the instruction but Table 1.7-2 omits it"
+  },
+  {
+   "instruction": "ST.QR",
+   "attribute": "operand use stage",
+   "stage": 2,
+   "basis": "producer LD.QR writes at stage 2 (measured), measured interlock 0.0 cycles at issue distance 1",
+   "citation": "measured; TRM p302 documents the instruction but Table 1.7-2 omits it"
+  },
+  {
+   "instruction": "LD.QR",
+   "attribute": "address operand (as) use stage",
+   "stage": 1,
+   "basis": "the producer EE.LD.128.USAR.IP writes its address register at stage 1 per Table 1.7-2; measured interlock 0.0 cycles",
+   "citation": "measured"
+  }
+ ],
  "problems": [],
  "caveats": [
   "Adjacent-pair interlocks only; hardware-resource (1.7.2) and control (1.7.3) hazards are untouched.",

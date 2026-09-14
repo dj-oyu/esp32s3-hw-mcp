@@ -303,18 +303,38 @@ def build_server():
             "citation": cite("trm", i["source_page"], f"1.8 {i['name']} (functional description)"),
         } for i in hits]}
 
-    @server.tool(description="Pipeline staging (use/def stages) and hazard facts for a PIE instruction.")
+    @server.tool(description="Pipeline staging (use/def stages) and hazard facts for a PIE instruction. "
+                             "When Table 1.7-2 does not list the instruction, any staging measured on real "
+                             "silicon is reported separately, labelled as measured rather than tabulated.")
     def instruction_pipeline(name: str) -> dict:
         q = name.upper().strip()
         row = next((p for p in pipelines() if p["instruction"] == q), None)
         if row is None:
             row = next((p for p in pipelines() if q in p["instruction"]), None)
+
+        # Measured staging for the three instructions the table omits (LD.QR / ST.QR / MV.QR), only ever
+        # from a run that passed its own validity gate, and never mixed into the table's numbers.
+        measured_rows = []
+        m = measured() or {}
+        if m.get("valid"):
+            for d in m.get("derived", []):
+                if q and (q in d.get("instruction", "").upper()):
+                    measured_rows.append({"instruction": d["instruction"], "attribute": d["attribute"],
+                                          "stage": d["stage"], "basis": d.get("basis"),
+                                          "citation": d.get("citation"),
+                                          "provenance": {"kind": "measured_on_hardware",
+                                                         "log": (m.get("provenance") or {}).get("log")}})
         if row is None:
-            return {"found": False, "query": name,
-                    "hint": "Table 1.7-2 covers 217 of the 220 instructions; LD.QR/ST.QR/MV.QR (p301-303) "
-                            "are absent from it, so their staging has no primary source."}
+            out = {"found": False, "query": name,
+                   "hint": "Table 1.7-2 covers 217 of the 220 instructions; LD.QR/ST.QR/MV.QR (p301-303) "
+                           "are absent from it, so their staging has no primary source."}
+            if measured_rows:
+                out["measured"] = measured_rows
+                out["hint"] += " A run on real silicon did pass its anchors for these, so `measured` is " \
+                               "what they are -- quote it as a measurement, not as the manual."
+            return out
         stages = {"1": "E (execute)", "2": "M (memory access)"}
-        return {
+        out = {
             "found": True,
             "instruction": row["instruction"],
             "operands_use": row["operands_use"], "operands_def": row["operands_def"],
@@ -326,6 +346,9 @@ def build_server():
             "hazard_rules": "TRM 1.7.1 data hazard (D = max(SA - SB + 1, 0)), 1.7.2 hardware resource "
                             "hazard, 1.7.3 control hazard (2-cycle branch penalty) — pages 65-75.",
         }
+        if measured_rows:
+            out["measured"] = measured_rows
+        return out
 
     @server.tool(description="Peripheral address ranges (Table 4.3-3) used to turn register offsets "
                              "into absolute addresses.")

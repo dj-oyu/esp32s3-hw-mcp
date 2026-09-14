@@ -208,6 +208,32 @@ async def main() -> int:
                   "valid" in r and "anchors" in r and r.get("provenance", {}).get("kind")
                   == "measured_on_hardware", json.dumps(r)[:160])
 
+            # The device run that passed its anchors is what makes the three untabulated instructions
+            # answerable at all; these values must stay tied to it and stay labelled as measured.
+            r = payload(await session.call_tool("instruction_pipeline", {"name": "LD.QR"}))
+            got = sorted((m["attribute"], m["stage"]) for m in r.get("measured", []))
+            check("instruction_pipeline: LD.QR has no tabulated staging, and the measured one is offered "
+                  "separately (def at M, address read at E)",
+                  r["found"] is False and "no primary source" in r["hint"]
+                  and got == [("address operand (as) use stage", 1), ("operand def stage", 2)]
+                  and all(m["provenance"]["kind"] == "measured_on_hardware" for m in r["measured"]),
+                  json.dumps(r)[:240])
+
+            r = payload(await session.call_tool("instruction_pipeline", {"name": "MV.QR"}))
+            check("instruction_pipeline: MV.QR measured def stage is 1 (a register move needs no interlock)",
+                  [(m["attribute"], m["stage"]) for m in r.get("measured", [])] == [("operand def stage", 1)],
+                  json.dumps(r)[:200])
+
+            r = payload(await session.call_tool("instruction_pipeline", {"name": "ST.QR"}))
+            check("instruction_pipeline: ST.QR measured operand use stage is 2",
+                  [(m["attribute"], m["stage"]) for m in r.get("measured", [])] == [("operand use stage", 2)],
+                  json.dumps(r)[:200])
+
+            r = payload(await session.call_tool("instruction_pipeline", {"name": "EE.ANDQ"}))
+            check("instruction_pipeline: a tabulated instruction still answers from the table",
+                  r["found"] is True and r["citation"]["page"] == 66 and "measured" not in r,
+                  json.dumps(r)[:160])
+
             r = payload(await session.call_tool("manual_errata", {}))
             check("manual_errata lists the six disagreements and says how to read the statuses",
                   r["summary"]["checked"] == 220 and r["summary"]["disagreeing"] == 6

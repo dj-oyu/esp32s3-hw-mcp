@@ -15,7 +15,38 @@
 CI（`.github/workflows/verify.yml`）は 取得→コーパス→2種の抽出→2種の検証→生成物の鮮度→パーサ自己検査→MCP E2E→
 「ゼロから再生成して `data/` とバイト一致」まで全部通る状態。
 
-## 次にやること: 実機で測る（**ポッド再起動が必要**な状態）
+## 実測は完了（2026-09-14 17:17、ホスト側から）
+
+`tools/host_flash_and_log.sh` を WSL ホストで実行して **計測が通った（`valid: true`）**。
+ログ `pie-timing-20260914T171755Z.log`（コンテナ側 `/workspace/backups/`）、結果は
+`data/pie_timing_measured.json`。アンカー5件はノイズ床 0.000〜0.067 サイクルで全部一致
+（ティック割込みの痕跡は消えた）。得られた段:
+
+| 命令 | 属性 | 段 |
+|---|---|---|
+| `LD.QR` | operand def stage | **2 (M)** |
+| `LD.QR` | address operand (as) use stage | **1 (E)** |
+| `MV.QR` | operand def stage | **1 (E)** |
+| `ST.QR` | operand use stage | **2 (M)** |
+
+**残っている作業: デバイスをユーザーのファームに戻す**（今は計測ファームが焼かれたまま）。コンテナの
+`/dev/ttyACM0` はまだ死んでいるので、ホスト側で:
+
+```bash
+bash /home/exe/m5_workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh \
+  --restore /workspace/backups/cardputer-s3-20260914T150410Z.bin
+```
+
+### 分かったこと（次のファームに効かせる）
+
+- ハンドシェイクを入れても**先頭はまだ落ちる**: 今回のログも `ENV`/`HOST`/`ROUND`/`BEGIN` が無く、
+  repeat 0 の途中から始まっている（反復数が 9 の群と 8 の群が混在）。ラウンド後半は完全に取れている
+  ので解釈は通るが、`ENV`（in_iram など）は証跡として欲しい。→ **各ラウンドの END 直前にも
+  `report_environment()` を出す**のが次の一手（どの完全なラウンドにも ENV が乗る）
+- それでも今回の証跡は十分: ホスト側でアプリ区間を読み戻して**ビルド済み `.bin` と sha256 一致**を
+  確認しており、flash 時の HEAD（`dfc4e3b`）も `provenance.firmware_git_rev` に残っている
+
+## 旧: 実機で測る（ポッド再起動が必要なときの手順）
 
 **今はデバイスに触れない。** 2026-09-14 16:42 に USB-Serial-JTAG が再列挙し、コンテナ側の
 `/dev/ttyACM0` が再び削除済み inode を指したまま（`mountinfo` が `/ttyACM0//deleted`、`c---------`、
