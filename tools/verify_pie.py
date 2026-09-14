@@ -164,6 +164,33 @@ def main() -> int:
     else:
         r.ok("all 220 sections carry instruction word, syntax, description, operation")
 
+    print("4b. no field body leaks the next section")
+    leaks = []
+    for n, e in insts.items():
+        for f in ("instruction_word", "assembler_syntax", "description", "operation"):
+            body = e[f] or ""
+            if re.search(r"^1\.8\.\d+\s*$", body, re.M) or body.count("Assembler Syntax") >= 1 \
+                    or body.count("Instruction Word") >= 1 or re.search(r"^Operation\s*$", body, re.M):
+                leaks.append((n, f))
+    if leaks:
+        r.bad(f"field bodies containing another section's text: {leaks[:6]}")
+    else:
+        r.ok("no 1.8 section's field body contains another section's heading or field label")
+
+    print("4c. the syntax line names its own instruction")
+    mismatched_mnemonic = []
+    for n, e in insts.items():
+        syn = (e["assembler_syntax"] or "").split("\n")[0].strip()
+        if syn and syn.split(" ")[0] != n:
+            mismatched_mnemonic.append((n, syn))
+    if mismatched_mnemonic:
+        # e.g. ST.QR is printed with LD.QR's mnemonic in its own documentation (p302) -- a manual typo,
+        # recorded rather than "fixed", because the extraction must mirror the source.
+        r.note(f"{len(mismatched_mnemonic)} section(s) whose syntax line opens with another mnemonic: "
+               f"{mismatched_mnemonic}")
+    else:
+        r.ok("every syntax line opens with its own mnemonic")
+
     print("5. spot checks against the printed page")
     for name, page, use, deff, sru, srd in SPOT:
         row = table.get(name)

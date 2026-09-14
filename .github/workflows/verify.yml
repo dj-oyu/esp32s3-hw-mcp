@@ -34,6 +34,10 @@ jobs:
         run: python tools/verify_pie.py
       - name: Verify registers (coverage / shape / collisions / spot checks)
         run: python tools/verify_registers.py
+      - name: Generated firmware assembly is up to date
+        run: python tools/gen_pie_timing_asm.py --check
+      - name: Timing-log parser self-test
+        run: python tools/selftest_pie_timing_parser.py
       - name: MCP server end-to-end test (stdio)
         run: python tools/test_mcp_server.py
       - name: Committed data must match a fresh extraction

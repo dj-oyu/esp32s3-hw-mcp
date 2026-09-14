@@ -1,0 +1,267 @@
+{
+  "why": [
+    "Measure the PIE interlock behaviour on silicon, so that (a) the TRM-derived model in data/pie_pipeline.json",
+    "can be checked against the chip, and (b) the three instructions Table 1.7-2 omits (LD.QR, ST.QR, MV.QR,",
+    "p301-303) get a measured staging instead of no information at all.",
+    "Anchors are cases where the TRM states the stages: if they do not reproduce, the measurement method is",
+    "wrong and no result from this run may be used."
+  ],
+  "iterations": 2000,
+  "repeats": 5,
+  "register_notes": {
+    "qr": "QR registers are q0-q7 in the assembler; the TRM's role names (qx, qy, qa, qz, qm, qu, qv, qs, qs0, qs1) are NOT accepted by this binutils, so each role is mapped to a concrete q number here and the mapping is what makes a case dependent or independent.",
+    "as": "The TRM's 'as' is the address operand slot of a PIE memory instruction: whatever AR is passed there.",
+    "filler": "add a14, a13, a12 is a native 1-cycle instruction, independent of every PIE register, used as issue-distance filler. It cancels between the dependent and independent variants of a case."
+  },
+  "cases": [
+    {
+      "id": "anchor_accx_M_to_E",
+      "expect": {
+        "stall_cycles": 1,
+        "why": "TRM Table 1.7-2: EE.LD.ACCX.IP defs ACCX at 2 (M), EE.ST.ACCX.IP uses ACCX at 1 (E)"
+      },
+      "producer": [
+        "EE.LD.ACCX.IP a3, 0"
+      ],
+      "consumer_dep": [
+        "EE.ST.ACCX.IP a3, 16"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q2, q0, q1"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "anchor_qs_M_to_E",
+      "expect": {
+        "stall_cycles": 1,
+        "why": "TRM Table 1.7-2: EE.VRELU.S16 defs qs at 2 (M), EE.MOV.S16.QACC uses qs at 1 (E)"
+      },
+      "producer": [
+        "EE.VRELU.S16 q0, a3, a4"
+      ],
+      "consumer_dep": [
+        "EE.MOV.S16.QACC q0"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q2, q4, q5"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "anchor_qr_E_to_E",
+      "expect": {
+        "stall_cycles": 0,
+        "why": "TRM Table 1.7-2: EE.ANDQ defs qa at 1 (E); reading it in E needs no delay"
+      },
+      "producer": [
+        "EE.ANDQ q2, q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.ANDQ q3, q2, q1"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q3, q4, q1"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "native_load_use",
+      "expect": {
+        "stall_cycles": 1,
+        "why": "calibration against the base ISA: a native load consumed by the next instruction costs 1 cycle (forwarding), which is what the harness must be able to resolve"
+      },
+      "producer": [
+        "l32i a4, a3, 0"
+      ],
+      "consumer_dep": [
+        "add a5, a4, a4"
+      ],
+      "consumer_indep": [
+        "add a5, a10, a10"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "native_alu_use",
+      "expect": {
+        "stall_cycles": 0,
+        "why": "calibration: back-to-back native ALU with a dependency costs nothing"
+      },
+      "producer": [
+        "add a4, a3, a3"
+      ],
+      "consumer_dep": [
+        "add a5, a4, a4"
+      ],
+      "consumer_indep": [
+        "add a5, a10, a10"
+      ],
+      "distances": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "LD_QR_def_stage",
+      "question": "At which stage does LD.QR (p301, absent from Table 1.7-2) make qu available?",
+      "producer": [
+        "LD.QR q0, a3, 0"
+      ],
+      "consumer_dep": [
+        "EE.ANDQ q3, q0, q1"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q3, q4, q1"
+      ],
+      "distances": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "MV_QR_def_stage",
+      "question": "At which stage does MV.QR (p303) make qu available?",
+      "producer": [
+        "MV.QR q2, q0"
+      ],
+      "consumer_dep": [
+        "EE.ANDQ q3, q2, q1"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q3, q4, q1"
+      ],
+      "distances": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "ST_QR_use_stage",
+      "question": "At which stage does ST.QR (p302) read qs? (producer is LD.QR, whose stage the case above measures)",
+      "producer": [
+        "LD.QR q0, a3, 0"
+      ],
+      "consumer_dep": [
+        "ST.QR q0, a3, 16"
+      ],
+      "consumer_indep": [
+        "ST.QR q1, a3, 16"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "LD_QR_reads_as",
+      "question": "Does LD.QR read its address operand (as) early enough that an instruction writing the AR costs nothing?",
+      "producer": [
+        "EE.LD.128.USAR.IP q0, a3, 16"
+      ],
+      "consumer_dep": [
+        "LD.QR q1, a3, 0"
+      ],
+      "consumer_indep": [
+        "LD.QR q1, a4, 0"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "QR_load_to_QR_op",
+      "question": "Cost of feeding a freshly loaded QR register into a vector op (the pattern real kernels use)",
+      "producer": [
+        "LD.QR q0, a3, 0"
+      ],
+      "consumer_dep": [
+        "EE.ANDQ q3, q0, q1"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q3, q4, q1"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    }
+  ],
+  "alone": [
+    {
+      "id": "alone_LD_QR",
+      "body": [
+        "LD.QR q0, a3, 0"
+      ]
+    },
+    {
+      "id": "alone_ST_QR",
+      "body": [
+        "ST.QR q0, a3, 16"
+      ]
+    },
+    {
+      "id": "alone_MV_QR",
+      "body": [
+        "MV.QR q2, q0"
+      ]
+    },
+    {
+      "id": "alone_EE_ANDQ",
+      "body": [
+        "EE.ANDQ q2, q0, q1"
+      ]
+    },
+    {
+      "id": "alone_EE_VMULAS_S16_QACC",
+      "body": [
+        "EE.VMULAS.S16.QACC q0, q1"
+      ]
+    },
+    {
+      "id": "alone_EE_LD_128_USAR_IP",
+      "body": [
+        "EE.LD.128.USAR.IP q0, a3, 16"
+      ]
+    },
+    {
+      "id": "alone_native_l32i",
+      "body": [
+        "l32i a4, a3, 0"
+      ]
+    },
+    {
+      "id": "alone_native_add",
+      "body": [
+        "add a4, a13, a12"
+      ]
+    }
+  ],
+  "filler": [
+    "add a14, a13, a12"
+  ]
+}

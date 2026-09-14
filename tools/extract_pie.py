@@ -58,6 +58,10 @@ def items_of(page) -> list[tuple[float, float, str]]:
 
 INSTRUCTION_RE = re.compile(r"^(EE\.[A-Z0-9_.]+|(?:LD|ST|MV)\.QR)$")
 
+HEAD_RE = re.compile(r"^(Chapter \d+|GoBack)")
+FOOTER_MARK_RE = re.compile(r"^(Espressif Systems|Submit Documentation Feedback|"
+                            r"ESP32-S3 TRM \(Version)")
+
 # Running heads/footers that repeat on every page of the manual.
 FOOTER = re.compile(r"^(Espressif Systems \d+|Submit Documentation Feedback|"
                     r"ESP32-S3 TRM \(Version [\d.]+\)|"
@@ -194,45 +198,91 @@ NOISE = re.compile(r"^(Chapter 1 Processor Instruction Extensions \(PIE\) GoBack
                    r"ESP32-S3 TRM \(Version 1\.8\))$")
 
 
+def section_number(name: str, secs: list[tuple[int, str]], idx: int) -> str:
+    return f"1.8.{idx + 1}"
+
+
+FIELD_LABEL_RE = re.compile(r"\b(Instruction Word|Assembler Syntax|Description|Operation)\b")
+
+
 def extract_instructions(pages: list[str], secs: list[tuple[int, str]], diag: bool = False) -> list[dict]:
+    """One entry per 1.8 section, splitting the section's text into its four labelled blocks.
+
+    Labels are located as *words inside lines*, not as whole lines: the text layer glues a label onto the end
+    of the previous paragraph where the two nearly share a baseline (p88: "...value in register ad. Operation"),
+    and a whole-line match silently drops that field.
+    """
     out = []
     for idx, (pno, name) in enumerate(secs):
-        end = secs[idx + 1][0] if idx + 1 < len(secs) else SEC_LAST
-        chunks = []
-        for p in range(pno, end + 1):
-            for line in pages[p - 1].split("\n"):
+        end_page = secs[idx + 1][0] if idx + 1 < len(secs) else SEC_LAST
+        streams: list[tuple[int, str, str]] = []      # (page, "label:<field>" | "body", text)
+        stop = False
+        for p in range(pno, end_page + 1):
+            lines = pages[p - 1].split("\n")
+            # Page furniture: the running head opens the page and the footer closes it, so cut the head lines
+            # and truncate at the first footer marker. This drops the page number without touching bit-field
+            # digits ("0100") that a number-shaped filter would destroy.
+            while lines and (HEAD_RE.match(lines[0].strip()) or not lines[0].strip()):
+                lines.pop(0)
+            for i, line in enumerate(lines):
+                if FOOTER_MARK_RE.match(line.strip()):
+                    lines = lines[:i]
+                    break
+            expect_heading_name = False
+            for line in lines:
                 s = line.rstrip()
                 if NOISE.match(s.strip()):
                     continue
-                chunks.append((p, s))
-        # drop the section heading line itself
-        chunks = [(p, s) for p, s in chunks if not re.match(rf"^1\.8\.\d+\s+{re.escape(name)}\s*$", s.strip())]
+                if expect_heading_name and s.strip() == name:
+                    expect_heading_name = False
+                    continue
+                if s.strip() == section_number(name, secs, idx):
+                    expect_heading_name = True
+                    continue
+                if re.match(r"^1\.8\.\d+$", s.strip()) and s.strip() != section_number(name, secs, idx):
+                    stop = True                            # the next section starts (sections share pages)
+                    break
+                stripped = s.strip()
+                if (re.match(rf"^1\.8\.\d+\s+{re.escape(name)}\s*$", stripped)
+                        or stripped == "1.8 Extended Instruction Functional Description"):
+                    continue                               # this section's own heading / the 1.8 title
+                pos = 0
+                for m in FIELD_LABEL_RE.finditer(s):
+                    # A label counts only at a line start or after a sentence end: "1.8 Extended Instruction
+                    # Functional Description" contains the word Description and would otherwise open the
+                    # Description field on the chapter's intro page (p76).
+                    before = s[:m.start()]
+                    if before.strip(" \t") and not before.rstrip().endswith((".", ":", "?", "!")):
+                        continue
+                    if m.start() > pos:
+                        streams.append((p, "body", s[pos:m.start()]))
+                    streams.append((p, "label:" + m.group(1), ""))
+                    pos = m.end()
+                if pos < len(s):
+                    streams.append((p, "body", s[pos:]))
+            if stop:
+                break
 
-        heads = []  # (field, index in chunks)
-        for i, (p, s) in enumerate(chunks):
-            for field, rx in FIELD_RE.items():
-                if rx.match(s.strip()) and not any(h[0] == field for h in heads):
-                    heads.append((field, i))
-        heads.sort(key=lambda h: h[1])
-        entry = {"name": name, "source_page": pno, "sections_page_range": [pno, end],
-                 "instruction_word": None, "assembler_syntax": None, "description": None,
-                 "operation": None, "raw_pages": [pno, end]}
-        pages_of: dict[str, int] = {}
-        for j, (field, i) in enumerate(heads):
-            stop = heads[j + 1][1] if j + 1 < len(heads) else len(chunks)
-            body_lines = []
-            for p, s in chunks[i + 1:stop]:
-                body_lines.append(s)
-                pages_of.setdefault(field, p)
-            entry[field] = "\n".join(body_lines).strip("\n")
-            entry[field + "_page"] = pages_of.get(field)
-        for f in FIELD_RE:
+        entry: dict = {"name": name, "source_page": pno, "sections_page_range": [pno, end_page],
+                       "instruction_word": None, "assembler_syntax": None, "description": None,
+                       "operation": None, "raw_pages": [pno, end_page]}
+        field = None
+        for page, kind, text in streams:
+            if kind.startswith("label:"):
+                field = kind.split(":", 1)[1].lower().replace(" ", "_")
+                if entry.get(field) is None:
+                    entry[field] = ""
+                    entry[field + "_page"] = page
+                continue
+            if field and entry.get(field) is not None:
+                entry[field] += ("\n" if entry[field] else "") + text
+        for f in ("instruction_word", "assembler_syntax", "description", "operation"):
+            if entry.get(f) is not None:
+                entry[f] = entry[f].strip("\n") or None
             entry.setdefault(f + "_page", None)
-        if entry["operation"] is None:
-            # one instruction (see verify) carries no Operation block; keep the trailing prose as description
-            pass
         if diag:
-            missing = [f for f in FIELD_RE if not entry[f]]
+            missing = [f for f in ("instruction_word", "assembler_syntax", "description", "operation")
+                       if not entry.get(f)]
             if missing:
                 print(f"  [diag] {name} (p{pno}) missing: {missing}", file=sys.stderr)
         out.append(entry)

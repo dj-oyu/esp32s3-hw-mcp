@@ -6,3 +6,8 @@ corpus/
 __pycache__/
 *.pyc
 .scratch/
+
+# Firmware build output and hardware experiment artifacts (device dumps stay out of the repo).
+experiments/pie-timing/firmware/build_*/
+experiments/pie-timing/firmware/sdkconfig
+experiments/pie-timing/firmware/sdkconfig.old
