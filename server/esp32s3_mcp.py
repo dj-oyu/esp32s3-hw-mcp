@@ -146,6 +146,49 @@ def guess_base(r: dict) -> dict | None:
             "other_candidates": [c["target"] for c in cands[1:4]]}
 
 
+def pie_lookup(name: str) -> tuple[dict | None, str]:
+    """(pipeline row, status) for one instruction name.
+
+    status: "ok" | "no_primary_source" (1.8 documents it, Table 1.7-2 does not) | "not_in_table" |
+    "not_a_pie_instruction" (native Xtensa, whose timing the TRM does not state).
+    """
+    key = name.strip().upper().split()[0] if name.strip() else ""
+    row = next((p for p in pipelines() if p["instruction"] == key), None)
+    if row:
+        return row, "ok"
+    if key in {i["name"] for i in instructions()}:
+        return None, "no_primary_source"
+    return None, "not_a_pie_instruction" if not key.startswith("EE.") else "not_in_table"
+
+
+def unit_of(seq: str) -> list[str]:
+    """Instruction names of a sequence, tolerating 'EE.ANDQ qa, qx, qy' entries."""
+    out = []
+    for item in seq:
+        name = item.strip().upper().split()[0] if item.strip() else ""
+        if name:
+            out.append(name)
+    return out
+
+
+PIPELINE_RULE = {
+    "formula": "D = max(SA - SB + 1, 0)",
+    "reading": "SA is the pipeline stage at which the producing instruction writes its result, SB the stage "
+               "at which the consuming instruction reads it (TRM 1.7.1, p65). D is the minimum issue "
+               "distance in cycles; the interlock (stall) is D - 1 = max(SA - SB, 0).",
+    "stage_numbers": {"1": "E (execute)", "2": "M (memory access)"},
+    "citation": cite("trm", 65, "1.7.1 Data Hazard"),
+    "manual_inconsistency": "The worked example on p65 computes D = max(2-1+1,0) = 2 for SA = W, i.e. it "
+                            "treats W as stage 2, while Table 1.7-1 numbers W as 3. Table 1.7-2's cells only "
+                            "ever use 1 (E) and 2 (M) for both use and def, so the discrepancy does not reach "
+                            "this computation -- but it is unresolved in the manual.",
+}
+
+
+def base_server_helpers() -> None:
+    return None
+
+
 def build_server():
     from mcp.server.mcpserver import MCPServer
 
@@ -282,6 +325,85 @@ def build_server():
         if not 1 <= page <= len(ps):
             return {"error": "page_out_of_range", "pages": len(ps)}
         return {"page": page, "text": ps[page - 1]["text"], "citation": cite("trm", page)}
+
+    @server.tool(description="Estimate interlock (stall) cycles for a sequence of PIE instructions, using "
+                              "TRM Table 1.7-2 stages and the 1.7.1 rule. Models adjacent-pair data hazards "
+                              "only; resource/control hazards are reported as unmodelled.")
+    def analyze_sequence(instructions: list[str], include_pairs: bool = True) -> dict:
+        names = unit_of(instructions)
+        if not names:
+            return {"error": "empty_sequence"}
+        records, unmodelled_seen = [], []
+        for name in names:
+            row, status = pie_lookup(name)
+            rec = {"instruction": name, "status": status}
+            if row:
+                rec.update({
+                    "operands_use": row["operands_use"], "operands_def": row["operands_def"],
+                    "special_regs_use": row["special_regs_use"], "special_regs_def": row["special_regs_def"],
+                    "citation": cite("trm", row["source_page"],
+                                     f"Table 1.7-2 row for {row['instruction']}"),
+                })
+            elif status == "no_primary_source":
+                rec["note"] = ("Table 1.7-2 does not list this instruction, so its operand staging has no "
+                               "primary source and it is excluded from the cycle estimate.")
+                rec["citation"] = cite("trm", 301, "1.8.218-1.8.220 (LD.QR/ST.QR/MV.QR, p301-303)")
+                unmodelled_seen.append(f"{name}: absent from Table 1.7-2")
+            else:
+                rec["note"] = ("Not a PIE extended instruction, so the TRM gives no staging for it; its own "
+                               "timing is not modelled here (the TRM does not define the base Xtensa ISA).")
+                unmodelled_seen.append(f"{name}: not a PIE instruction")
+            records.append(rec)
+
+        pairs, total = [], 0
+        for a, b in zip(records, records[1:]):
+            if not (a.get("operands_use") is not None and b.get("operands_use") is not None):
+                pairs.append({"from": a["instruction"], "to": b["instruction"], "stall_cycles": None,
+                              "reason": "one of the two has no tabulated staging"})
+                continue
+            defs = {o["reg"]: o["stage"] for o in a["operands_def"] + a["special_regs_def"]
+                    if o.get("reg") and o.get("stage")}
+            uses = {o["reg"]: o["stage"] for o in b["operands_use"] + b["special_regs_use"]
+                    if o.get("reg") and o.get("stage")}
+            conflicts = []
+            for reg, sa in defs.items():
+                sb = uses.get(reg)
+                if sb is None:
+                    continue
+                d = max(sa - sb + 1, 0)
+                conflicts.append({"register": reg, "producer_def_stage": sa, "consumer_use_stage": sb,
+                                  "min_issue_distance": d, "stall_cycles": max(sa - sb, 0)})
+            conflicts.sort(key=lambda c: (-c["stall_cycles"], c["register"]))
+            stall = max([c["stall_cycles"] for c in conflicts], default=0)
+            total += stall
+            pairs.append({"from": a["instruction"], "to": b["instruction"], "stall_cycles": stall,
+                          "conflicts": conflicts})
+        if not include_pairs:
+            for p in pairs:
+                p.pop("conflicts", None)
+
+        return {
+            "sequence": names,
+            "stall_cycles_total": total,
+            "issue_cycles_estimate": len(names) + total,
+            "records": records,
+            "pairs": pairs,
+            "rule": PIPELINE_RULE,
+            "unmodelled": {
+                "items": unmodelled_seen,
+                "hardware_resource_hazard": "TRM 1.7.2 delays an instruction that collides on a shared "
+                                            "resource (e.g. the eight 16-bit multipliers). Per-instruction "
+                                            "resource occupancy is not tabulated, so this is not computed.",
+                "hardware_resource_citation": cite("trm", 74, "1.7.2 Hardware Resource Hazard"),
+                "control_hazard": "A taken branch discards the R and E stage instructions (2 cycles). PIE has "
+                                  "no branches, so this applies only when native Xtensa branches are in the "
+                                  "sequence, which are outside this model.",
+                "control_hazard_citation": cite("trm", 74, "1.7.3 Control Hazard"),
+                "model_scope": "Adjacent-pair data hazards, first-order: each pair's interlock is counted "
+                               "independently and longer dependence chains are not simulated. Sub-register "
+                               "names are matched exactly as tabulated (qz1/fu0.. are distinct operands).",
+            },
+        }
 
     @server.resource("esp32s3://trm/pie-hazards", title="TRM 1.7 Instruction Performance (verbatim)",
                      mime_type="text/markdown")

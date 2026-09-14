@@ -139,6 +139,7 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 | `instruction_pipeline(name)` | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い」と返す |
 | `list_peripherals(target)` | Table 4.3-3 のペリフェラル境界アドレス |
 | `search_manual(query)` / `get_page(page)` | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ作り方を返す） |
+| `analyze_sequence([...])` | 命令列のストール段数を見積もる。TRM 1.7.1 の `D=max(SA-SB+1,0)`／ストール `=max(SA-SB,0)` を Table 1.7-2 の段に適用（根拠と限界は `notes/03-interlock-model.md`）。資源・制御ハザードは「未モデル」として明示して返す |
 
 リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256）。
 
@@ -149,6 +150,16 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 - 推定値（レジスタのベースアドレス）は `confidence: heuristic` と候補列を付けて返す。
 - 応答に必ず `citation`（文書名・版・ページ・sha256）を付ける。
 
+## ストール見積りの中身（`analyze_sequence`）
+
+- 規則: `D = max(SA - SB + 1, 0)`（SA=書く段, SB=読む段）／インターロックは `D - 1 = max(SA - SB, 0)`。
+- **マニュアル自身の矛盾を記録**: p65 の計算例は `SA=W` を **2** として `D=max(2-1+1,0)=2` と書くが、
+  Table 1.7-1 は **W=3**。ただし Table 1.7-2 は use/def とも 1(E)/2(M) しか使わず W は現れないため、
+  表から駆動する計算には波及しない（応答の `rule.manual_inconsistency` にも明記して返す）。
+- 表から導かれる「1ストールを生みうるレジスタ」は **ACCX / QACC_H / QACC_L / UA_STATE / as0 / qs** の6つ。
+- ハードウェア資源ハザード（1.7.2）と制御ハザード（1.7.3）は表から計算できないので**計算せず**、根拠ページ付きで
+  「未モデル」として返す。
+
 ## 予定している MCP のサーフェス（未実装分の設計案）
 
 ツール（すべて回答に TRM/Datasheet のページを付ける）:
@@ -157,9 +168,7 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 - `get_instruction(name)` — エンコード・構文・説明・操作・ページ
 - `list_instructions(class?)` — 1.6 の分類（Read/Write/DataExchange/Arithmetic/Comparison/…）で絞る
 - `instruction_pipeline(name)` — use/def 段とハザード則（`pie_pipeline.json`）
-- `analyze_sequence([...])` — **命令列のストール段数を見積もる決定論的ツール**（1.7.1 の D=max(SA-SB+1,0) など）
-  ※着手前に 1.7.1 の段番号の使い方（Table 1.7-1 の R0/E1/M2/W3 と、本文の例が W を 2 として計算している
-  点）を読み切る必要がある。ここを曖昧なまま実装すると「それらしい嘘」を作るので、まだ実装していない。
+- （実装済み: `analyze_sequence`。上記の節を参照）
 - `get_field(reg, field)` — レジスタのビット範囲。**一次情報では図版に描かれている**ため、図形座標からの
   復元か ESP-IDF `soc/*_reg.h` との突き合わせが要る（未実装）
 - `memory_map()` / `clock_tree()` — Ch.4 (p400-409) / Ch.7 (p526-533)

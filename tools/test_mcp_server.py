@@ -57,7 +57,7 @@ async def main() -> int:
 
             tools = await session.list_tools()
             names = sorted(t.name for t in tools.tools)
-            check("7 tools advertised", len(names) == 7, str(names))
+            check("8 tools advertised", len(names) == 8, str(names))
 
             r = payload(await session.call_tool("get_register", {"name": "GDMA_IN_CONF0_CH0_REG"}))
             g = r["registers"][0]
@@ -123,6 +123,40 @@ async def main() -> int:
             check("search_manual finds the pipeline description with a page",
                   r["pages_with_match"] >= 1 and r["hits"][0]["citation"]["page"] == 65,
                   json.dumps(r)[:160])
+
+            r = payload(await session.call_tool("analyze_sequence",
+                                                 {"instructions": ["EE.LD.ACCX.IP", "EE.SRS.ACCX"]}))
+            check("analyze_sequence: ACCX written at M, read at E -> 1 stall (p65 rule, p66 table)",
+                  r["stall_cycles_total"] == 1 and r["issue_cycles_estimate"] == 3
+                  and r["pairs"][0]["conflicts"][0]["register"] == "ACCX"
+                  and r["pairs"][0]["conflicts"][0]["producer_def_stage"] == 2
+                  and r["pairs"][0]["conflicts"][0]["consumer_use_stage"] == 1,
+                  json.dumps(r["pairs"][0])[:200])
+            check("analyze_sequence carries the rule and flags the W=2/W=3 inconsistency",
+                  r["rule"]["citation"]["page"] == 65 and "W as stage 2" in r["rule"]["manual_inconsistency"],
+                  json.dumps(r["rule"])[:120])
+
+            r = payload(await session.call_tool("analyze_sequence",
+                                                 {"instructions": ["EE.ANDQ", "EE.ANDQ", "EE.XORQ"]}))
+            check("analyze_sequence: E->E pairs with no overlap cost nothing",
+                  r["stall_cycles_total"] == 0 and r["issue_cycles_estimate"] == 3, "")
+
+            r = payload(await session.call_tool("analyze_sequence",
+                                                 {"instructions": ["EE.VRELU.S16", "EE.MOV.S16.QACC"]}))
+            check("analyze_sequence: qs written at M then read at E -> 1 stall",
+                  r["stall_cycles_total"] == 1, json.dumps(r["pairs"][0])[:160])
+
+            r = payload(await session.call_tool("analyze_sequence",
+                                                 {"instructions": ["LD.QR", "ADD", "EE.ANDQ"]}))
+            statuses = [x["status"] for x in r["records"]]
+            check("analyze_sequence: untabulated (LD.QR) and non-PIE (ADD) instructions are excluded, "
+                  "not guessed",
+                  statuses[0] == "no_primary_source" and statuses[1] == "not_a_pie_instruction"
+                  and r["stall_cycles_total"] == 0 and len(r["unmodelled"]["items"]) == 2,
+                  json.dumps(statuses))
+            check("analyze_sequence: resource/control hazards are reported as unmodelled with citations",
+                  r["unmodelled"]["hardware_resource_citation"]["page"] == 74
+                  and r["unmodelled"]["control_hazard_citation"]["page"] == 74, "")
 
             r = payload(await session.call_tool("get_page", {"page": 66}))
             check("get_page(66) returns Table 1.7-2's page",
