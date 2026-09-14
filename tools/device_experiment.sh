@@ -32,10 +32,15 @@ if [ ! -e "$PORT" ]; then
 fi
 
 echo "== 1/5 identify =="
-esptool --chip esp32s3 --port "$PORT" flash_id | tee "$BACKUP_DIR/flash_id-$STAMP.txt"
+# --after no-reset: the chip is left in the loader so the next step does not have to reset it again.
+# Every reset is a chance for the USB-Serial-JTAG device to re-enumerate, which on this pod can leave
+# /dev/ttyACM0 pointing at a deleted inode (see notes/05-resume.md). Fewer resets, fewer chances.
+esptool --chip esp32s3 --port "$PORT" --before default-reset --after no-reset flash_id \
+  | tee "$BACKUP_DIR/flash_id-$STAMP.txt"
 
 echo "== 2/5 backup ($FLASH_SIZE bytes -> $DUMP) =="
-esptool --chip esp32s3 --port "$PORT" --baud "$BAUD" read_flash 0 "$FLASH_SIZE" "$DUMP"
+esptool --chip esp32s3 --port "$PORT" --baud "$BAUD" --before default-reset --after no-reset \
+  read_flash 0 "$FLASH_SIZE" "$DUMP"
 sha256sum "$DUMP" | tee "$DUMP.sha256"
 python3 tools/check_flash_dump.py "$DUMP" --expected-size "$FLASH_SIZE"
 
