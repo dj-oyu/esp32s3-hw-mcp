@@ -40,6 +40,8 @@ jobs:
         run: python tools/selftest_pie_timing_parser.py
       - name: Flash-dump gate self-test (accepts a good dump, rejects each kind of broken one)
         run: python tools/selftest_check_flash_dump.py
+      - name: Manual-vs-assembler self-test (skips itself when no Espressif toolchain is installed)
+        run: python tools/selftest_asm_toolchain.py
       - name: MCP server end-to-end test (stdio)
         run: python tools/test_mcp_server.py
       - name: Committed data must match a fresh extraction

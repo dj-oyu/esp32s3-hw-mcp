@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """ESP32-S3 hardware knowledge MCP server (stdio).
 
-Serves the knowledge extracted from Espressif's own PDFs by tools/extract_*.py, and nothing else: every
-reply carries the document, its version and the printed page it came from, so a caller can always check the
-claim instead of trusting it.
+Serves three layers, kept apart on purpose:
+
+1. knowledge extracted from Espressif's own PDFs by tools/extract_*.py -- every reply carries the document,
+   its version and the printed page, so a caller can check the claim instead of trusting it;
+2. what the toolchain actually encodes (tools/asm_toolchain.py): the same Espressif binutils that builds
+   firmware assembles a snippet or a reconstructed instruction word, so "what does this mnemonic encode to"
+   is answered by the assembler, not by a reading of the manual;
+3. what the device did (data/pie_timing_measured.json, produced by experiments/pie-timing on a real
+   ESP32-S3) and where the manual and the assembler disagree (data/pie_encoding_errata.json).
 
 The manual's full text is *not* in this repository (only the extracted facts are), so `search_manual` and
 `get_page` need a local corpus:
@@ -26,6 +32,14 @@ from functools import lru_cache
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.environ.get("ESP32S3_DATA_DIR", os.path.join(ROOT, "data"))
 CORPUS = os.environ.get("ESP32S3_CORPUS_DIR", os.path.join(ROOT, "corpus"))
+TOOLS = os.path.join(ROOT, "tools")
+if TOOLS not in sys.path:
+    sys.path.insert(0, TOOLS)
+try:                                        # the toolchain bridge is optional: it needs Espressif binutils
+    import asm_toolchain                     # noqa: E402
+except Exception as _exc:                    # pragma: no cover - environment
+    asm_toolchain = None
+    _TOOLCHAIN_IMPORT_ERROR = str(_exc)
 
 # The documents the data was extracted from. Digests match tools/fetch_sources.sh, so a caller can tell
 # whether a claim was built from the revision it has.
@@ -72,6 +86,30 @@ def pages() -> list[dict] | None:
     if not os.path.exists(path):
         return None
     return [json.loads(line) for line in open(path, encoding="utf-8")]
+
+
+@lru_cache(maxsize=1)
+def measured() -> dict | None:
+    """Timings measured on a real ESP32-S3 by experiments/pie-timing (see notes/04)."""
+    path = os.path.join(DATA, "pie_timing_measured.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        return json.load(open(path, encoding="utf-8"))
+    except Exception:
+        return None
+
+
+@lru_cache(maxsize=1)
+def errata() -> dict | None:
+    """Instructions where the manual's printed diagram and the Espressif assembler disagree."""
+    path = os.path.join(DATA, "pie_encoding_errata.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        return json.load(open(path, encoding="utf-8"))
+    except Exception:
+        return None
 
 
 CORPUS_HINT = ("The manual's page text is not part of this repository. Build it once:\n"
@@ -197,12 +235,16 @@ def build_server():
         title="ESP32-S3 hardware knowledge (Espressif TRM/Datasheet)",
         version="0.1.0",
         instructions=(
-            "Answers about the ESP32-S3: PIE (EE.*) instructions, register maps and offsets, pipeline "
-            "staging/hazards, and peripheral address ranges. Everything comes from Espressif's ESP32-S3 "
-            "Technical Reference Manual v1.8 and Datasheet v2.2, and every reply carries the printed page "
-            "it came from — quote that page when you pass an answer on. Facts the manual does not state "
-            "(e.g. base addresses for a register family, field bit ranges) are reported as absent or "
-            "heuristic, never invented."),
+            "Answers about the ESP32-S3, from three layers that are deliberately kept apart. (1) "
+            "Espressif's own documents (TRM v1.8, Datasheet v2.2): register maps, PIE instructions, "
+            "pipeline stages, addresses — every reply carries the printed page it came from, so quote "
+            "that page when you pass an answer on. (2) The toolchain: check_asm, instruction_encoding "
+            "and decode_instruction run the same Espressif binutils that builds firmware, so what a "
+            "mnemonic encodes to is reported from the assembler rather than from a reading of the "
+            "manual. (3) The device: measured_timing serves timings measured on real silicon, and "
+            "manual_errata lists the instructions where the manual and the assembler disagree. Facts "
+            "that no layer states (e.g. base addresses for a register family, field bit ranges) are "
+            "reported as absent or heuristic, never invented."),
     )
 
     @server.tool(description="Look up an ESP32-S3 register by name (exact, or substring matches).")
@@ -404,6 +446,123 @@ def build_server():
                                "names are matched exactly as tabulated (qz1/fu0.. are distinct operands).",
             },
         }
+
+    # ---------------------------------------------------------------------------------------------
+    # Toolchain-backed verification. The manual's diagrams are read by tools/extract_pie.py, and the
+    # same diagrams are what firmware gets generated from -- so every claim they carry is checked
+    # against the Espressif assembler here rather than trusted. These tools answer "what does this
+    # actually encode to on the toolchain that builds the firmware?".
+    # ---------------------------------------------------------------------------------------------
+
+    def toolchain_guard() -> dict:
+        if asm_toolchain is None:
+            return {"error": "toolchain_bridge_unavailable",
+                    "detail": globals().get("_TOOLCHAIN_IMPORT_ERROR")}
+        info = asm_toolchain.toolchain_info()
+        if not info.get("available"):
+            return {"error": "toolchain_missing", **info}
+        return {}
+
+    @server.tool(description="Assemble Xtensa/PIE assembly with the Espressif binutils that builds the "
+                             "firmware and report what it encoded. expected_words, if given, is compared "
+                             "with the encodings in order, so an encoding claim is checked, not believed.")
+    def check_asm(snippet: str, expected_words: list[str] | None = None, raw: bool = False) -> dict:
+        guard = toolchain_guard()
+        if guard:
+            return guard
+        assert asm_toolchain is not None
+        result = asm_toolchain.assemble(snippet, raw=raw)
+        if expected_words:
+            body = result.get("body_instructions") or []
+            checks = [{"expected": want, "actual": body[i]["word"] if i < len(body) else None,
+                       "assembly_source": body[i]["source"] if i < len(body) else None}
+                      for i, want in enumerate(expected_words)]
+            for c in checks:
+                c["match"] = bool(c["actual"]) and c["expected"].lower().lstrip("0x") == c["actual"].lower()
+            result["expected_word_checks"] = checks
+            result["all_expected_matched"] = bool(checks) and all(c["match"] for c in checks)
+        result.pop("source", None)          # the generated wrapper is noise for a caller
+        return result
+
+    @server.tool(description="Turn an instruction word (hex, most significant bit first) back into a "
+                             "mnemonic with the disassembler.")
+    def decode_instruction(word: str) -> dict:
+        guard = toolchain_guard()
+        if guard:
+            return guard
+        assert asm_toolchain is not None
+        return asm_toolchain.decode(word)
+
+    @server.tool(description="Check one PIE instruction's encoding: substitute operands into the manual's "
+                             "own instruction-word diagram and compare with what the assembler emits. "
+                             "Reports the first differing bit when they disagree.")
+    def instruction_encoding(name: str) -> dict:
+        guard = toolchain_guard()
+        if guard:
+            return guard
+        assert asm_toolchain is not None
+        table = {i["name"]: i for i in instructions()}
+        key = name.upper().strip()
+        if key not in table:
+            near = [n for n in table if key in n][:8]
+            return {"found": False, "query": name, "near_matches": near}
+        out = asm_toolchain.check_instruction(table[key])
+        out["found"] = True
+        out["manual_instruction_word"] = table[key]["instruction_word"]
+        return out
+
+    @server.tool(description="Which assembler/objdump backs the encoding checks, and their version. "
+                             "Absent toolchain means the encoding tools report that instead of guessing.")
+    def toolchain_status() -> dict:
+        if asm_toolchain is None:
+            return {"available": False, "error": "toolchain_bridge_unavailable",
+                    "detail": globals().get("_TOOLCHAIN_IMPORT_ERROR")}
+        return asm_toolchain.toolchain_info()
+
+    @server.tool(description="Timings measured on real ESP32-S3 silicon (experiments/pie-timing), not "
+                             "manual text: includes whether the run passed its own validity gate, the "
+                             "anchors that test the method, and the caveats.")
+    def measured_timing(instruction: str = "") -> dict:
+        m = measured()
+        if m is None:
+            return {"error": "no_measurements",
+                    "hint": "Run experiments/pie-timing on a device (tools/device_experiment.sh); the "
+                            "result lands in data/pie_timing_measured.json."}
+        q = instruction.upper().strip()
+        rows = m.get("measurements", [])
+        derived = m.get("derived", [])
+        if q:
+            rows = [r for r in rows if q in r["case"].upper()]
+            derived = [d for d in derived if q in d["instruction"].upper()]
+        out = {"valid": m.get("valid"), "provenance": m.get("provenance"), "anchors": m.get("anchors"),
+               "derived": derived, "measurements": rows, "caveats": m.get("caveats"),
+               "problems": m.get("problems")}
+        if not m.get("valid"):
+            out["warning"] = ("This run did not pass its validity gate, so no derived stage numbers are "
+                              "offered. The anchors and the measured stalls are still reported, because "
+                              "they are what says the method itself is not yet trustworthy.")
+        return out
+
+    @server.tool(description="Instructions where the manual's printed instruction-word diagram and the "
+                             "Espressif assembler disagree, with the evidence for each. Generated by "
+                             "tools/asm_toolchain.py --errata over every PIE instruction.")
+    def manual_errata(instruction: str = "") -> dict:
+        e = errata()
+        if e is None:
+            return {"error": "no_errata_file",
+                    "hint": "Regenerate with: .venv/bin/python tools/asm_toolchain.py --errata "
+                            "data/pie_encoding_errata.json"}
+        q = instruction.upper().strip()
+        items = e.get("instructions", [])
+        if q:
+            items = [i for i in items if q in i["instruction"].upper()]
+        return {"provenance": e.get("provenance"), "summary": e.get("summary"),
+                "instructions": items,
+                "how_to_read": "status=assembler_rejected: the manual's own syntax line cannot be assembled "
+                               "with the documented operand; mismatch: the diagram's bits do not reproduce "
+                               "the emitted word; syntax_names_other_instruction: the syntax line names a "
+                               "different instruction; layout_not_machine_readable: the extracted diagram "
+                               "is not a field list, so the extraction needs fixing."}
 
     @server.resource("esp32s3://trm/pie-hazards", title="TRM 1.7 Instruction Performance (verbatim)",
                      mime_type="text/markdown")

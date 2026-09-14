@@ -49,9 +49,40 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 | `pie_review.json` | マニュアル自身の記述が食い違う行（後述） | 2行 |
 | `registers.json` | TRM の "Register Summary" 表（第2〜39章、41節）: レジスタ名・説明・オフセット・アクセス種別・グループ・節・ページ | **1581レジスタ** |
 | `peripheral_map.json` | Table 4.3-3（p408-409）: ペリフェラル名と境界アドレス・サイズ。オフセットを絶対アドレスに直す基準 | 44行 |
+| `pie_timing_measured.json` | **実機（Cardputer / ESP32-S3）で測った** PIE 命令のインターロック。アンカー（マニュアルが段を明記している5ケース）が全部一致したときだけ `valid: true` になり派生値を出す | 31測定 / 5アンカー |
+| `pie_encoding_errata.json` | マニュアルの命令語図と Espressif アセンブラが**食い違う命令だけ**（下記「アセンブラ照合」） | 220命令中6件 |
 
 `pie_pipeline.json` が本プロジェクトの中核データで、これがあると
 **「この命令列は何サイクルストールするか」を決定論的に計算できる**（LLMの推定に頼らない）。
+
+### アセンブラ照合（マニュアルの読み取りは信用しない）
+
+TRM の命令語は**ビットフィールド図**で書かれており、これを目で読むと1ビットの取り違えが
+「それらしい別の命令」として通ってしまう。そこでファームを実際にビルドするのと同じ
+Espressif binutils に答えさせ、図から再構成した命令語と突き合わせる（`tools/asm_toolchain.py`）。
+
+```bash
+.venv/bin/python tools/asm_toolchain.py --check-asm "ld.qr q0, a3, 0"   # 符号化をアセンブラに答えさせる
+.venv/bin/python tools/asm_toolchain.py --decode cd2034                 # 命令語 → ニーモニック
+.venv/bin/python tools/asm_toolchain.py --check-instruction EE.ANDQ     # 図 vs アセンブラ
+.venv/bin/python tools/asm_toolchain.py --check-all                     # 全220命令
+.venv/bin/python tools/asm_toolchain.py --errata data/pie_encoding_errata.json
+.venv/bin/python tools/selftest_asm_toolchain.py                        # 門の自己検査（ツールチェーンが無ければ skip）
+```
+
+結果は **220命令中 214命令がビット単位で一致**。残り6件が不一致で、それが成果物
+（`data/pie_encoding_errata.json`、詳細と解釈は `notes/06-encoding-verification.md`）:
+
+| 命令 | 何が食い違うか |
+|---|---|
+| `MV.QR` | 印刷された図は合計23ビット（命令は24ビット）。`qs[2:1]` と `qs[0]` の間の定数は実際には `0000` |
+| `EE.VLDBC.32.IP` | 構文行の即値 `-256..252`（刻み2）に対し、アセンブラは `-512..508`（刻み4） |
+| `EE.ST.ACCX.IP` | 構文行の `-512..508`（刻み4）に対し、アセンブラは8の倍数のみ・`-1024..1016` |
+| `ST.QR` | 構文行のニーモニックが `LD.QR` と印字（誤植） |
+| `EE.SRC.Q.LD.IP` / `EE.VMULAS.S8.QACC.LD.IP` | 抽出した図がフィールド列になっていない（抽出器の要修正） |
+
+即値の「刻み」はマニュアルの範囲幅とフィールド幅から出る（`LD.QR` の `-128..112` ÷ 4ビット = 16刻み、
+`-128` は −8 の2の補数で `1000`）。この規則もアセンブラ出力と突き合わせて検証している。
 
 ### 検証
 
@@ -124,22 +155,30 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python server/esp32s3_mcp.py --list      # ツール面を人向けに表示
 .venv/bin/python server/esp32s3_mcp.py             # MCP（stdio）として起動
-.venv/bin/python tools/test_mcp_server.py          # stdio越しに15項目のE2E検査
+.venv/bin/python tools/test_mcp_server.py          # stdio越しに29項目のE2E検査（ツールチェーン検査は無ければ skip）
 ```
 
 クライアントへの登録は各クライアントの流儀に従う（Hermes なら `hermes mcp add` → `hermes mcp test`）。
 
-実装済みツール（すべて応答に文書・版・印字ページを添える）:
+実装済みツール（14ツール）。**3つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
+②ツールチェーン（アセンブラ）は「実際に何に符号化されるか」を答える、③実機（計測）は測った値とその
+有効性検査の結果を返す。
 
-| ツール | 内容 |
-|---|---|
-| `get_register(name, include_base_guess)` | レジスタ名で引く（`_REG` 省略可・部分一致）。`include_base_guess` で Table 4.3-3 からのベースアドレス推定（**推定であることを明示**して返す） |
-| `list_registers(prefix/chapter/section/group)` | 前置き・章・節・グループで一覧 |
-| `get_instruction(name)` | PIE命令のエンコード・構文・説明・操作擬似コード |
-| `instruction_pipeline(name)` | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い」と返す |
-| `list_peripherals(target)` | Table 4.3-3 のペリフェラル境界アドレス |
-| `search_manual(query)` / `get_page(page)` | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ作り方を返す） |
-| `analyze_sequence([...])` | 命令列のストール段数を見積もる。TRM 1.7.1 の `D=max(SA-SB+1,0)`／ストール `=max(SA-SB,0)` を Table 1.7-2 の段に適用（根拠と限界は `notes/03-interlock-model.md`）。資源・制御ハザードは「未モデル」として明示して返す |
+| ツール | 層 | 内容 |
+|---|---|---|
+| `get_register(name, include_base_guess)` | ① | レジスタ名で引く（`_REG` 省略可・部分一致）。`include_base_guess` で Table 4.3-3 からのベースアドレス推定（**推定であることを明示**して返す） |
+| `list_registers(prefix/chapter/section/group)` | ① | 前置き・章・節・グループで一覧 |
+| `get_instruction(name)` | ① | PIE命令のエンコード・構文・説明・操作擬似コード |
+| `instruction_pipeline(name)` | ① | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い」と返す |
+| `list_peripherals(target)` | ① | Table 4.3-3 のペリフェラル境界アドレス |
+| `search_manual(query)` / `get_page(page)` | ① | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ作り方を返す） |
+| `analyze_sequence([...])` | ① | 命令列のストール段数を見積もる。TRM 1.7.1 の `D=max(SA-SB+1,0)`／ストール `=max(SA-SB,0)` を Table 1.7-2 の段に適用（根拠と限界は `notes/03-interlock-model.md`）。資源・制御ハザードは「未モデル」として明示して返す |
+| `check_asm(snippet, expected_words)` | ② | アセンブルして符号化を返す。`expected_words` を渡せば**主張を検査**する（不一致は不一致として返る） |
+| `instruction_encoding(name)` | ② | マニュアルの図にオペランドを代入した語と、アセンブラが出した語を比較。不一致なら最初に違うビット位置を返す |
+| `decode_instruction(word)` | ② | 命令語 → ニーモニック（逆方向の照合） |
+| `toolchain_status()` | ② | どの as/objdump を使っているか（版つき）。無ければ「無い」と言う |
+| `measured_timing(instruction)` | ③ | 実機で測ったストール。`valid`（有効性ゲート通過）とアンカー、限界を併せて返す |
+| `manual_errata(instruction)` | ②③ | マニュアルとアセンブラが食い違う命令の一覧（`data/pie_encoding_errata.json`） |
 
 リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256）。
 
@@ -149,6 +188,8 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
   推定せず absent を返す。フィールドのビット範囲も未抽出なので返さない。
 - 推定値（レジスタのベースアドレス）は `confidence: heuristic` と候補列を付けて返す。
 - 応答に必ず `citation`（文書名・版・ページ・sha256）を付ける。
+- **マニュアルの図と実際のアセンブラ出力が違うときは、両方をそのまま返す**（どちらが正かを勝手に決めない）。
+  その一覧が `manual_errata`。
 
 ## ストール見積りの中身（`analyze_sequence`）
 

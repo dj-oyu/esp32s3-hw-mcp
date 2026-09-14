@@ -1,0 +1,142 @@
+{
+ "provenance": {
+  "kind": "manual_vs_toolchain",
+  "note": "Each entry is an instruction whose extracted instruction-word diagram does not reproduce what the Espressif assembler emits. An entry means the two disagree -- usually the manual -- never that this repository has decided which is right.",
+  "toolchain": {
+   "assembler": "/root/.espressif/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/bin/xtensa-esp32s3-elf-as",
+   "version": "GNU assembler (crosstool-NG esp-15.2.0_20251204) 2.45"
+  },
+  "generated_by": "tools/asm_toolchain.py --errata",
+  "scope": "every PIE instruction in data/pie_instructions.json that can be expressed as assembly, checked with two operand sets"
+ },
+ "summary": {
+  "checked": 220,
+  "matched": 214,
+  "disagreeing": 6,
+  "by_status": {
+   "assembler_rejected": 1,
+   "layout_not_machine_readable": 2,
+   "mismatch": 2,
+   "syntax_names_other_instruction": 1
+  }
+ },
+ "instructions": [
+  {
+   "instruction": "EE.SRC.Q.LD.IP",
+   "status": "layout_not_machine_readable",
+   "citation": {
+    "page": 126,
+    "what": "1.8 EE.SRC.Q.LD.IP instruction word"
+   },
+   "unsupported_tokens": [
+    "111000 imm16[7:6] imm16[2] qs1[2:0] imm16[5] qu[2:0] qs0[1:0] imm16[4:3] 00 imm16[1:0] as[3:0] 111 qs0[2]"
+   ],
+   "note": "the extracted instruction-word diagram is not a pure field list, so no encoding can be derived from it; fix the extraction for this instruction"
+  },
+  {
+   "instruction": "EE.ST.ACCX.IP",
+   "status": "assembler_rejected",
+   "citation": {
+    "page": 135,
+    "what": "1.8 EE.ST.ACCX.IP instruction word"
+   },
+   "assembly": "EE.ST.ACCX.IP a2, 508",
+   "errors": [
+    "/tmp/tmpobic1d74/snippet.S:6: Error: operand 2 of 'ee.st.accx.ip' has invalid value '508'"
+   ]
+  },
+  {
+   "instruction": "EE.VLDBC.32.IP",
+   "status": "mismatch",
+   "citation": {
+    "page": 174,
+    "what": "1.8 EE.VLDBC.32.IP instruction word"
+   },
+   "comparisons": [
+    {
+     "assembly": "EE.VLDBC.32.IP q5, a6, -256",
+     "manual_word": "a2ff64",
+     "toolchain_word": "e2c064",
+     "bit_width_manual": 24,
+     "bit_width_toolchain": 24,
+     "differing_bit_indexes_from_lsb": [
+      22,
+      13,
+      12,
+      11,
+      10,
+      9,
+      8
+     ]
+    },
+    {
+     "assembly": "EE.VLDBC.32.IP q2, a3, 252",
+     "manual_word": "927e34",
+     "toolchain_word": "923f34",
+     "bit_width_manual": 24,
+     "bit_width_toolchain": 24,
+     "differing_bit_indexes_from_lsb": [
+      14,
+      8
+     ]
+    }
+   ]
+  },
+  {
+   "instruction": "EE.VMULAS.S8.QACC.LD.IP",
+   "status": "layout_not_machine_readable",
+   "citation": {
+    "page": 228,
+    "what": "1.8 EE.VMULAS.S8.QACC.LD.IP instruction word"
+   },
+   "unsupported_tokens": [
+    "This instruction divides registers qx and qy into 16 data segments by 8 bits. Then, the signed multiplication",
+    "result of the 16 sets of segments is added to the corresponding 20-bit data segment in special registers",
+    "QACC_H and QACC_L respectively. The calculated result is saturated to a 20-bit signed number and then",
+    "stored to the corresponding 20-bit data segment in QACC_H and QACC_L.",
+    "During the operation, the lower 4 bits of the access address in register as are forced to be 0, and then the",
+    "16-byte data is loaded from the memory to register qu. After the access is completed, the value in register as",
+    "is incremented by 6-bit sign-extended constant in the instruction code segment left-shifted by 4."
+   ],
+   "note": "the extracted instruction-word diagram is not a pure field list, so no encoding can be derived from it; fix the extraction for this instruction"
+  },
+  {
+   "instruction": "ST.QR",
+   "status": "syntax_names_other_instruction",
+   "citation": {
+    "page": 302,
+    "what": "1.8 ST.QR instruction word"
+   },
+   "syntax_mnemonic": "LD.QR",
+   "syntax_page": 302
+  },
+  {
+   "instruction": "MV.QR",
+   "status": "mismatch",
+   "citation": {
+    "page": 303,
+    "what": "1.8 MV.QR instruction word"
+   },
+   "comparisons": [
+    {
+     "assembly": "MV.QR q5, q6",
+     "manual_word": "57c604",
+     "toolchain_word": "af8c04",
+     "bit_width_manual": 23,
+     "bit_width_toolchain": 24,
+     "differing_bit_indexes_from_lsb": [],
+     "note": "the diagram's fields add up to 23 bits; this instruction is 24 bits wide, so the extracted diagram is missing or duplicating part of a field"
+    },
+    {
+     "assembly": "MV.QR q2, q3",
+     "manual_word": "4f8224",
+     "toolchain_word": "9f0424",
+     "bit_width_manual": 23,
+     "bit_width_toolchain": 24,
+     "differing_bit_indexes_from_lsb": [],
+     "note": "the diagram's fields add up to 23 bits; this instruction is 24 bits wide, so the extracted diagram is missing or duplicating part of a field"
+    }
+   ]
+  }
+ ]
+}

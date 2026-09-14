@@ -17,6 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 FAILED: list[str] = []
 CHECKED = 0
+SKIPPED: list[str] = []
 
 
 def check(label: str, ok: bool, detail: str = "") -> None:
@@ -27,6 +28,11 @@ def check(label: str, ok: bool, detail: str = "") -> None:
     else:
         FAILED.append(label)
         print(f"  FAIL  {label} {detail}")
+
+
+def skip(label: str) -> None:
+    SKIPPED.append(label)
+    print(f"  skip  {label}")
 
 
 def payload(result) -> dict:
@@ -57,7 +63,7 @@ async def main() -> int:
 
             tools = await session.list_tools()
             names = sorted(t.name for t in tools.tools)
-            check("8 tools advertised", len(names) == 8, str(names))
+            check("14 tools advertised", len(names) == 14, str(names))
 
             r = payload(await session.call_tool("get_register", {"name": "GDMA_IN_CONF0_CH0_REG"}))
             g = r["registers"][0]
@@ -162,7 +168,58 @@ async def main() -> int:
             check("get_page(66) returns Table 1.7-2's page",
                   "Extended Instruction Pipeline Stages" in r["text"], r["text"][:80])
 
-    print(f"\n{'FAILED' if FAILED else 'PASSED'}: {len(FAILED)} failure(s) of {CHECKED} checks")
+            # Toolchain-backed verification. These call the real Espressif binutils, so on a machine that
+            # has none they are skipped rather than failed -- the tool itself reports toolchain_missing.
+            ts = payload(await session.call_tool("toolchain_status", {}))
+            if not ts.get("available"):
+                skip("toolchain-backed checks (no Espressif assembler on this machine)")
+            else:
+                r = payload(await session.call_tool("check_asm",
+                                                    {"snippet": "ld.qr q0, a3, 0\n    ee.andq q3, q0, q1",
+                                                     "expected_words": ["cd2034", "ddb024"]}))
+                check("check_asm confirms two claimed encodings",
+                      r["accepted"] and r["all_expected_matched"] is True, json.dumps(r)[:200])
+
+                r = payload(await session.call_tool("check_asm",
+                                                    {"snippet": "ld.qr q0, a3, 0",
+                                                     "expected_words": ["deadbe"]}))
+                check("check_asm reports a wrong encoding claim instead of accepting it",
+                      r["all_expected_matched"] is False
+                      and r["expected_word_checks"][0]["actual"] == "cd2034", json.dumps(r)[:200])
+
+                r = payload(await session.call_tool("decode_instruction", {"word": "cd2034"}))
+                check("decode_instruction round-trips the word to its mnemonic",
+                      (r.get("disassembly") or "").replace("\t", " ") == "ld.qr q0, a3, 0", json.dumps(r))
+
+                r = payload(await session.call_tool("instruction_encoding", {"name": "EE.ANDQ"}))
+                check("instruction_encoding reproduces the manual's diagram for EE.ANDQ",
+                      r["status"] == "match" and all(c["manual_word"] == c["toolchain_word"]
+                                                     for c in r["comparisons"]), json.dumps(r)[:160])
+
+                r = payload(await session.call_tool("instruction_encoding", {"name": "MV.QR"}))
+                check("instruction_encoding reports MV.QR's printed diagram as one bit short of the "
+                      "instruction, not as a match",
+                      r["status"] == "mismatch"
+                      and all(c["bit_width_manual"] == 23 and c["bit_width_toolchain"] == 24
+                              for c in r["comparisons"]), json.dumps(r)[:200])
+
+            r = payload(await session.call_tool("measured_timing", {"instruction": "LD_QR"}))
+            check("measured_timing reports the hardware run with its validity and anchors",
+                  "valid" in r and "anchors" in r and r.get("provenance", {}).get("kind")
+                  == "measured_on_hardware", json.dumps(r)[:160])
+
+            r = payload(await session.call_tool("manual_errata", {}))
+            check("manual_errata lists the six disagreements and says how to read the statuses",
+                  r["summary"]["checked"] == 220 and r["summary"]["disagreeing"] == 6
+                  and len(r["instructions"]) == 6 and "how_to_read" in r, json.dumps(r["summary"]))
+
+            r = payload(await session.call_tool("manual_errata", {"instruction": "MV.QR"}))
+            check("manual_errata can be asked about one instruction",
+                  len(r["instructions"]) == 1 and r["instructions"][0]["status"] == "mismatch",
+                  json.dumps(r["instructions"])[:200])
+
+    print(f"\n{'FAILED' if FAILED else 'PASSED'}: {len(FAILED)} failure(s) of {CHECKED} checks"
+          + (f", {len(SKIPPED)} skipped" if SKIPPED else ""))
     return 1 if FAILED else 0
 
 
