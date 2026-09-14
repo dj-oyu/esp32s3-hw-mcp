@@ -1,0 +1,42 @@
+[
+ {
+  "instruction": "EE.BITREV",
+  "source_page": 66,
+  "registers_not_in_syntax": [
+   "ax"
+  ],
+  "syntax_operands": [
+   "as",
+   "qa"
+  ],
+  "cells": {
+   "operands_use": "ax 1",
+   "operands_def": "qa 1, ax 1",
+   "special_regs_use": "FFT_BIT_WIDTH 1",
+   "special_regs_def": "—"
+  }
+ },
+ {
+  "instruction": "EE.FFT.AMS.S16.ST.INCP",
+  "source_page": 66,
+  "registers_not_in_syntax": [
+   "as0"
+  ],
+  "syntax_operands": [
+   "as",
+   "at",
+   "qm",
+   "qv",
+   "qx",
+   "qy",
+   "qz1",
+   "sel2"
+  ],
+  "cells": {
+   "operands_use": "qv2,as01,as1, qx 1, qy 1, qm 1",
+   "operands_def": "qz1 2, as0 2, as 1",
+   "special_regs_use": "SAR 1",
+   "special_regs_def": "—"
+  }
+ }
+]

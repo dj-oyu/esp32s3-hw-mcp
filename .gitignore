@@ -1,0 +1,8 @@
+# Fetched vendor PDFs are not redistributed here: get them with tools/fetch_sources.sh.
+sources/*.pdf
+# Derived artifacts, rebuilt with tools/build_corpus.py.
+corpus/
+.venv/
+__pycache__/
+*.pyc
+.scratch/

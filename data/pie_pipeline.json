@@ -1,0 +1,8089 @@
+[
+ {
+  "instruction": "EE.ANDQ",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.BITREV",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "ax",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "ax 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   },
+   {
+    "reg": "ax",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1, ax 1",
+  "special_regs_use": [
+   {
+    "reg": "FFT_BIT_WIDTH",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "FFT_BIT_WIDTH 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.CLR_BIT_GPIO_OUT",
+  "source_page": 66,
+  "operands_use": [],
+  "operands_use_text": "—",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "GPIO_OUT",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "GPIO_OUT 1",
+  "special_regs_def": [
+   {
+    "reg": "GPIO_OUT",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "GPIO_OUT 1"
+ },
+ {
+  "instruction": "EE.CMUL.S16",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.CMUL.S16.LD.INCP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.CMUL.S16.ST.INCP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 2, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.AMS.S16.LD.INCP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qm",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qm 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   },
+   {
+    "reg": "qz1",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2, qz1 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.AMS.S16.LD.INCP.UAUP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qm",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qm 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   },
+   {
+    "reg": "qz1",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2, qz1 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   },
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "UA_STATE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1, SAR_BYTE 1, UA_STATE 1",
+  "special_regs_def": [
+   {
+    "reg": "UA_STATE",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "UA_STATE 1"
+ },
+ {
+  "instruction": "EE.FFT.AMS.S16.LD.R32.DECP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qm",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qm 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   },
+   {
+    "reg": "qz1",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2, qz1 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.AMS.S16.ST.INCP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 2
+   },
+   {
+    "reg": "as0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qm",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv2,as01,as1, qx 1, qy 1, qm 1",
+  "operands_def": [
+   {
+    "reg": "qz1",
+    "stage": 2
+   },
+   {
+    "reg": "as0",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qz1 2, as0 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.CMUL.S16.LD.XP",
+  "source_page": 66,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.CMUL.S16.ST.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qv",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1, qv 2, as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.R2BF.S16",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa0",
+    "stage": 1
+   },
+   {
+    "reg": "qa1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa0 1, qa1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.R2BF.S16.ST.INCP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1, as 1",
+  "operands_def": [
+   {
+    "reg": "qa0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa0 1, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.FFT.VST.R32.DECP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 2, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.GET_GPIO_IN",
+  "source_page": 67,
+  "operands_use": [],
+  "operands_use_text": "—",
+  "operands_def": [
+   {
+    "reg": "au",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "au 1",
+  "special_regs_use": [
+   {
+    "reg": "GPIO_IN",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "GPIO_IN 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.LD.128.USAR.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "SAR_BYTE 1"
+ },
+ {
+  "instruction": "EE.LD.128.USAR.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "SAR_BYTE 1"
+ },
+ {
+  "instruction": "EE.LD.ACCX.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.LD.QACC_H.H.32.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_H 1",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2"
+ },
+ {
+  "instruction": "EE.LD.QACC_H.L.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_H 1",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2"
+ },
+ {
+  "instruction": "EE.LD.QACC_L.H.32.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_L 1",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2"
+ },
+ {
+  "instruction": "EE.LD.QACC_L.L.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_L 1",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2"
+ },
+ {
+  "instruction": "EE.LD.UA_STATE.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "UA_STATE",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "UA_STATE 2"
+ },
+ {
+  "instruction": "EE.LDF.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "fu3",
+    "stage": 2
+   },
+   {
+    "reg": "fu2",
+    "stage": 2
+   },
+   {
+    "reg": "fu1",
+    "stage": 2
+   },
+   {
+    "reg": "fu0",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "fu3 2, fu2 2, fu1 2, fu0 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.LDF.128.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "fu3",
+    "stage": 2
+   },
+   {
+    "reg": "fu2",
+    "stage": 2
+   },
+   {
+    "reg": "fu1",
+    "stage": 2
+   },
+   {
+    "reg": "fu0",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "fu3 2, fu2 2, fu1 2, fu0 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.LDF.64.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "fu1",
+    "stage": 2
+   },
+   {
+    "reg": "fu0",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "fu12,fu02,as1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.LDF.64.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "fu1",
+    "stage": 2
+   },
+   {
+    "reg": "fu0",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "fu12,fu02,as1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.LDQA.S16.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.S16.128.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.S8.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.S8.128.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.U16.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.U16.128.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.U8.128.IP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDQA.U8.128.XP",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.LDXQ.32",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1, as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.MOV.S16.QACC",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_L 1, QACC_H 1"
+ },
+ {
+  "instruction": "EE.MOV.S8.QACC",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_L 1, QACC_H 1"
+ },
+ {
+  "instruction": "EE.MOV.U16.QACC",
+  "source_page": 67,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_L 1, QACC_H 1"
+ },
+ {
+  "instruction": "EE.MOV.U8.QACC",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_L 1, QACC_H 1"
+ },
+ {
+  "instruction": "EE.MOVI.32.A",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [
+   {
+    "reg": "au",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "au 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.MOVI.32.Q",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.NOTQ",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ORQ",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SET_BIT_GPIO_OUT",
+  "source_page": 68,
+  "operands_use": [],
+  "operands_use_text": "—",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "GPIO_OUT",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "GPIO_OUT 1",
+  "special_regs_def": [
+   {
+    "reg": "GPIO_OUT",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "GPIO_OUT 1"
+ },
+ {
+  "instruction": "EE.SLCI.2Q",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs1 1, qs0 1",
+  "operands_def": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs1 1, qs0 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SLCXXP.2Q",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs11,qs01,as1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs1 1, qs0 1, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRC.Q",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRC.Q.LD.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRC.Q.LD.XP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRC.Q.QUP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRCI.2Q",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs1 1, qs0 1",
+  "operands_def": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs1 1, qs0 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRCMB.S16.QACC",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_H 1, QACC_L 1",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_H 1, QACC_L 1"
+ },
+ {
+  "instruction": "EE.SRCMB.S8.QACC",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_H 1, QACC_L 1",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_H 1, QACC_L 1"
+ },
+ {
+  "instruction": "EE.SRCQ.128.ST.INCP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRCXXP.2Q",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs11,qs01,as1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qs1",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs1 1, qs0 1, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.SRS.ACCX",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "au",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "au 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "ACCX 1",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "ACCX 1"
+ },
+ {
+  "instruction": "EE.ST.ACCX.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "ACCX 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ST.QACC_H.H.32.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_H 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ST.QACC_H.L.128.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_H 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ST.QACC_L.H.32.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_L 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ST.QACC_L.L.128.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "QACC_L 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ST.UA_STATE.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [
+   {
+    "reg": "UA_STATE",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "UA_STATE 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.STF.128.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "fv3",
+    "stage": 1
+   },
+   {
+    "reg": "fv2",
+    "stage": 1
+   },
+   {
+    "reg": "fv1",
+    "stage": 1
+   },
+   {
+    "reg": "fv0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "fv31,fv21,fv11, fv0 1, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.STF.128.XP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "fv3",
+    "stage": 1
+   },
+   {
+    "reg": "fv2",
+    "stage": 1
+   },
+   {
+    "reg": "fv1",
+    "stage": 1
+   },
+   {
+    "reg": "fv0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "fv31,fv21,fv11, fv0 1, as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.STF.64.IP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "fv1",
+    "stage": 1
+   },
+   {
+    "reg": "fv0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "fv1 1, fv0 1, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.STF.64.XP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "fv1",
+    "stage": 1
+   },
+   {
+    "reg": "fv0",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "fv1 1, fv0 1, as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.STXQ.32",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "qs",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, qs 1, as 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S16",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S16.LD.INCP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S16.ST.INCP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S32",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S32.LD.INCP",
+  "source_page": 68,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S32.ST.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S8",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S8.LD.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VADDS.S8.ST.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.EQ.S16",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.EQ.S32",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.EQ.S8",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.GT.S16",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.GT.S32",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.GT.S8",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.LT.S16",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.LT.S32",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VCMP.LT.S8",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLD.128.IP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLD.128.XP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLD.H.64.IP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLD.H.64.XP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLD.L.64.IP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLD.L.64.XP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.16",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.16.IP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.16.XP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.32",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.32.IP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.32.XP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.8",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.8.IP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDBC.8.XP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VLDHBC.16.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "qu1",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, qu1 2, as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S16",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S16.LD.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S16.ST.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S32",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S32.LD.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S32.ST.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S8",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S8.LD.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMAX.S8.ST.INCP",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S16",
+  "source_page": 69,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S16.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S16.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S32",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S32.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S32.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S8",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S8.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMIN.S8.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.S16",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.S16.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.S16.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.S8",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.S8.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.S8.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.U16",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.U16.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.U16.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.U8",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.U8.LD.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMUL.U8.ST.INCP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "as 1, qz 2",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.ACCX",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.ACCX.LD.IP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.ACCX.LD.IP.QUP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.ACCX.LD.XP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.ACCX.LD.XP.QUP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC.LD.IP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC.LD.IP.QUP",
+  "source_page": 70,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC.LD.XP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC.LD.XP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC.LDBC.INCP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S16.QACC.LDBC.INCP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.ACCX",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.ACCX.LD.IP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.ACCX.LD.IP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.ACCX.LD.XP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.ACCX.LD.XP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC.LD.IP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC.LD.IP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC.LD.XP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC.LD.XP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC.LDBC.INCP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.S8.QACC.LDBC.INCP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.ACCX",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.ACCX.LD.IP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.ACCX.LD.IP.QUP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.ACCX.LD.XP",
+  "source_page": 71,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.ACCX.LD.XP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC.LD.IP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC.LD.IP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC.LD.XP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC.LD.XP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC.LDBC.INCP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U16.QACC.LDBC.INCP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.ACCX",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.ACCX.LD.IP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.ACCX.LD.IP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.ACCX.LD.XP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.ACCX.LD.XP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, ACCX 2",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "ACCX 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC.LD.IP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC.LD.IP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC.LD.XP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC.LD.XP.QUP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ad 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC.LDBC.INCP",
+  "source_page": 72,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR_BYTE",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "SAR_BYTE 1, QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VMULAS.U8.QACC.LDBC.INCP.QUP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1, qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qs0",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qs0 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VPRELU.S16",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "ay",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1, ay 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VPRELU.S8",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   },
+   {
+    "reg": "ay",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1, ay 1",
+  "operands_def": [
+   {
+    "reg": "qz",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qz 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VRELU.S16",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   },
+   {
+    "reg": "ax",
+    "stage": 1
+   },
+   {
+    "reg": "ay",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1, ax 1, ay 1",
+  "operands_def": [
+   {
+    "reg": "qs",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qs 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VRELU.S8",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   },
+   {
+    "reg": "ax",
+    "stage": 1
+   },
+   {
+    "reg": "ay",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1, ax 1, ay 1",
+  "operands_def": [
+   {
+    "reg": "qs",
+    "stage": 2
+   }
+  ],
+  "operands_def_text": "qs 2",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSL.32",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSMULAS.S16.QACC",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VSMULAS.S16.QACC.LD.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VSMULAS.S8.QACC",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_L 2, QACC_H 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_L 2, QACC_H 2"
+ },
+ {
+  "instruction": "EE.VSMULAS.S8.QACC.LD.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1",
+  "special_regs_use": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_use_text": "QACC_H 2, QACC_L 2",
+  "special_regs_def": [
+   {
+    "reg": "QACC_H",
+    "stage": 2
+   },
+   {
+    "reg": "QACC_L",
+    "stage": 2
+   }
+  ],
+  "special_regs_def_text": "QACC_H 2, QACC_L 2"
+ },
+ {
+  "instruction": "EE.VSR.32",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [
+   {
+    "reg": "SAR",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "SAR 1",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VST.128.IP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VST.128.XP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VST.H.64.IP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VST.H.64.XP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VST.L.64.IP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VST.L.64.XP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ad",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, ad 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S16",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S16.LD.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S16.ST.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S32",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S32.LD.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S32.ST.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S8",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S8.LD.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qu",
+    "stage": 2
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qu 2, as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VSUBS.S8.ST.INCP",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qv",
+    "stage": 1
+   },
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qv 1, as 1, qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "as 1, qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VUNZIP.16",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs0 1, qs1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VUNZIP.32",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs0 1, qs1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VUNZIP.8",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs0 1, qs1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VZIP.16",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs0 1, qs1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VZIP.32",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs0 1, qs1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.VZIP.8",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qs0 1, qs1 1",
+  "operands_def": [
+   {
+    "reg": "qs0",
+    "stage": 1
+   },
+   {
+    "reg": "qs1",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qs0 1, qs1 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.WR_MASK_GPIO_OUT",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "as",
+    "stage": 1
+   },
+   {
+    "reg": "ax",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "as 1, ax 1",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [
+   {
+    "reg": "GPIO_OUT",
+    "stage": 1
+   }
+  ],
+  "special_regs_use_text": "GPIO_OUT 1",
+  "special_regs_def": [
+   {
+    "reg": "GPIO_OUT",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "GPIO_OUT 1"
+ },
+ {
+  "instruction": "EE.XORQ",
+  "source_page": 73,
+  "operands_use": [
+   {
+    "reg": "qx",
+    "stage": 1
+   },
+   {
+    "reg": "qy",
+    "stage": 1
+   }
+  ],
+  "operands_use_text": "qx 1, qy 1",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ZERO.ACCX",
+  "source_page": 73,
+  "operands_use": [],
+  "operands_use_text": "—",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "ACCX",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "ACCX 1"
+ },
+ {
+  "instruction": "EE.ZERO.Q",
+  "source_page": 74,
+  "operands_use": [],
+  "operands_use_text": "—",
+  "operands_def": [
+   {
+    "reg": "qa",
+    "stage": 1
+   }
+  ],
+  "operands_def_text": "qa 1",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [],
+  "special_regs_def_text": "—"
+ },
+ {
+  "instruction": "EE.ZERO.QACC",
+  "source_page": 74,
+  "operands_use": [],
+  "operands_use_text": "—",
+  "operands_def": [],
+  "operands_def_text": "—",
+  "special_regs_use": [],
+  "special_regs_use_text": "—",
+  "special_regs_def": [
+   {
+    "reg": "QACC_L",
+    "stage": 1
+   },
+   {
+    "reg": "QACC_H",
+    "stage": 1
+   }
+  ],
+  "special_regs_def_text": "QACC_L 1, QACC_H 1"
+ }
+]
