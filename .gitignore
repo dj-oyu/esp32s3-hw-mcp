@@ -11,3 +11,6 @@ __pycache__/
 experiments/pie-timing/firmware/build_*/
 experiments/pie-timing/firmware/sdkconfig
 experiments/pie-timing/firmware/sdkconfig.old
+examples/firmware/build_*/
+examples/firmware/sdkconfig
+examples/firmware/sdkconfig.old

@@ -133,9 +133,33 @@ Espressif binutils に答えさせ、図から再構成した命令語と突き�
 sources/          取得したPDF（git管理外。tools/fetch_sources.sh で再取得）
 corpus/           ページ単位JSONL＋ブックマーク（git管理外。tools/build_corpus.py で再生成）
 data/             抽出済み知識（git管理。MCPサーバーが読む）
-tools/            取得・コーパス・抽出・検証のスクリプト
+examples/         PIE実用サンプル（手書きアセンブリ＋自己採点。examples/README.md）
+experiments/      実機実験（段・ハザードの測定、flash退避）
+tools/            取得・コーパス・抽出・検証・ビルド・実機実行のスクリプト
 notes/            調査メモ
 ```
+
+## PIE 実用サンプル（`examples/`）
+
+`data/` の知識だけを使って書いた手書き PIE アセンブリの例題集。どの例も「手書き asm / ファーム内 C 参照 /
+ホスト側 Python 参照」の三重で答え合わせをし、マニュアルとアセンブラが食い違う箇所は**どちらの文書に
+シリコンが従ったかを判定**して出す。詳細と例題一覧は `examples/README.md`。
+
+```bash
+bash tools/build_examples.sh                                        # ビルド
+bash tools/host_flash_and_log.sh --examples                         # 焼く＋ログ＋自動判定（ホスト側）
+.venv/bin/python tools/check_examples_log.py /workspace/backups/pie-examples-<stamp>.log
+.venv/bin/python tools/selftest_examples_checker.py                 # チェッカー自身の検査
+```
+
+| 例 | 内容 |
+|---|---|
+| ex01 | メモリ系命令のアドレス後置インクリメントの刻み（文書が 3 通りに割れている 2 件の決着）、`EE.SRS.ACCX`、`EE.BITREV` |
+| ex02 | 16×16 int16 行列積（`EE.VMULAS.S16.ACCX` は 8 レーンを合算） |
+| ex03 | 16tap Q15 FIR（スライディング窓＋レジスタ渡しシフト） |
+| ex04 | `LD.QR`/`ST.QR`/`MV.QR` と、実測段に基づく `LD.QR` インターロックの追試 |
+| ex05 | 40bit ACCX と `EE.SRS.ACCX` の飽和（数学的和との比較） |
+| ex06 | `EE.FFT.R2BF.S16` / `EE.CMUL.S16` のレーン対応（多段 FFT の前段） |
 
 ## 使い方
 

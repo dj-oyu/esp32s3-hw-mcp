@@ -9,6 +9,8 @@
 #   bash ... --uv                                                            # force the uv-managed interpreter
 #   PORT=/dev/ttyACM1 bash ...                                               # if the port number moved
 #
+#   bash /workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --examples        # the PIE examples firmware
+#
 # Dependencies: esptool + pyserial, and nothing else -- the firmware is already built in this repository, so
 # no ESP-IDF is needed here. Three ways to provide them, tried in this order:
 #
@@ -32,6 +34,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$REPO/experiments/pie-timing/firmware/build_pietiming"
+LABEL="pie-timing"                      # names the log, and picks the post-processing
 OUT_DIR="${OUT_DIR:-$(dirname "$REPO")/backups}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 
@@ -51,10 +54,13 @@ while [ $# -gt 0 ]; do
     --no-parse) DO_PARSE=0 ;;
     --dry-run)  DRY_RUN=1 ;;
     --uv)       FORCE_UV=1 ;;
+    --examples) BUILD="$REPO/examples/firmware/build_examples"; LABEL="pie-examples" ;;
+    --build)    BUILD="${2:?--build needs a build directory}"; shift ;;
+    --label)    LABEL="${2:?--label needs a name}"; shift ;;
     --port)     PORT="${2:?--port needs a device path}"; shift ;;
     --restore)  RESTORE="${2:?--restore needs a dump path}"; shift ;;
     --out-dir)  OUT_DIR="${2:?--out-dir needs a path}"; shift ;;
-    -h|--help)  sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)  sed -n '2,34p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
   shift
@@ -232,7 +238,7 @@ fi
 
 # ---------------------------------------------------------------- 3. flash
 if [ "$DO_FLASH" = 1 ]; then
-  step "3/5 flash the measurement firmware (--after no-reset: the chip stays in the loader)"
+  step "3/5 flash the firmware in $LABEL (--after no-reset: the chip stays in the loader)"
   run "${ESPTOOL_CMD[@]}" --chip esp32s3 --port "$PORT" --baud 921600 --before default-reset --after no-reset \
       write_flash --flash-mode dio --flash-freq 80m --flash-size 8MB "${FLASH_PAIRS[@]}"
 
@@ -258,7 +264,7 @@ fi
 
 # ---------------------------------------------------------------- 5. capture
 step "5/5 reset into the application and capture the serial report"
-LOG="$OUT_DIR/pie-timing-$STAMP.log"
+LOG="$OUT_DIR/$LABEL-$STAMP.log"
 reset_into_app() {
   # One explicit reset leaves the loader and starts the application. On the host this costs a USB
   # re-enumeration, which is harmless here (the kernel re-creates /dev/ttyACM0) -- it is the container that
@@ -312,8 +318,19 @@ if [ "$DO_PARSE" = 1 ]; then
   REV="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   say "firmware   : $REV"
   say ""
-  "${PY_CMD[@]}" "$REPO/tools/parse_pie_timing.py" "$LOG" --firmware-rev "$REV" \
-      --out "$REPO/data/pie_timing_measured.json" || true
+  case "$LABEL" in
+    pie-examples)
+      # The examples firmware checks itself in C; this is the independent second opinion, re-derived in
+      # Python from the inputs the log carries. It also prints which document the silicon matched where the
+      # manual and the assembler disagree, which is the finding rather than a pass/fail.
+      "${PY_CMD[@]}" "$REPO/tools/check_examples_log.py" "$LOG" \
+          --json "$OUT_DIR/$LABEL-report-$STAMP.json" || true
+      ;;
+    *)
+      "${PY_CMD[@]}" "$REPO/tools/parse_pie_timing.py" "$LOG" --firmware-rev "$REV" \
+          --out "$REPO/data/pie_timing_measured.json" || true
+      ;;
+  esac
 fi
 say ""
 say "first lines of the report:"
