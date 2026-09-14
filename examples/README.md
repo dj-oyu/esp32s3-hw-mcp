@@ -40,6 +40,8 @@ bash /workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --examples
 | `ex04` qr | `LD.QR` / `ST.QR` / `MV.QR` の往復と、**`LD.QR` のインターロック** | Table 1.7-2 に無い命令。実測で確定した段（LD.QR の def は M）から、距離 0 で 1 サイクル、距離 1 以上で 0 | 実測段の裏付けが装置上で取れる（計測ファームの結論の追試） |
 | `ex05` saturation | ACCX は 40bit で**飽和**する、`EE.SRS.ACCX` も 32bit で飽和する | 32000×32000 を 200 回。数学的和 1.6e12 に対し 40bit 上限 2^39-1 で頭打ち | 飽和の丸め位置（積ごと / 和ごと）と範囲の確定 |
 | `ex06` fft | `EE.FFT.R2BF.S16`（レーン並列バタフライ、sel2 で並び替え）と `EE.CMUL.S16`（(re,im) ペアの複素乗算、SAR シフト） | 疑似コードの op_a/op_b 構成を Python でそのまま実装して一致を要求 | レーンの対応（sel2 / sel4 の意味）が確定する |
+| `ex07` transform3d | 4×4 頂点変換（Q8、8 頂点並列）。`EE.VSMULAS.S16.QACC` の broadcast 積和＋`EE.SRCMB.S16.QACC` の飽和読み出し | 32 座標が C 参照と Python 参照の両方に一致。`BENCH transform8` で **頂点あたりのサイクル数**を C(-O2) と比較 | 3D の内側ループが組めるか、SIMD が何倍効くかが数字で出る |
+| `ex08` media | フレームバッファ効果を 128bit 単位で: RGB565 ハーフブレンド（`ANDQ`+`VMUL`+`VADDS`）、飽和加算グロー、`VMIN/VMAX` クランプ、`VMUL`+SAR のティント | 1024 px の配列を C 参照と Python 参照で全数照合。`BENCH` で **ピクセルあたりのサイクル数**と C との比 | メディア表現（合成・残像・明るさ）のコストが見える |
 
 ## ログの書式
 
@@ -54,6 +56,8 @@ END
 SUMMARY checks_ok=N checks_fail=0
 ```
 
+`BENCH <カーネル> <要素>=<個数> cycles_pie=<N> cycles_c=<N>` は性能行で、チェッカーが
+`cycles/要素` と C(-O2) との比を出す（正しさの合否には影響させない — 遅いのは失敗ではなく測定値）。
 `DATA` は実測・入出力、`CHECK` はファーム内 C 参照との比較、`RESULT` は例ごとの自己採点。ホスト側の
 チェッカーは `DATA` から入力と結果を取り出し、Python で三度目の計算をして `FAIL` を出します。
 `FAIL` が出た例では、`DATA first_mismatch ...`（先頭 3 件）で最初に食い違った位置が分かります。

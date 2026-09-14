@@ -72,4 +72,21 @@ void ex06_r2bf_sel1(const int16_t *x8, int16_t *out8);
 void ex06_cmul_half0(const int16_t *x, const int16_t *y, int16_t *out, uint32_t sar);
 void ex06_cmul_half1(const int16_t *x, const int16_t *y, int16_t *out, uint32_t sar);
 
+/* ex07: cycles per element, and a 4x4 transform of eight vertices at once. VSMULAS.S16.QACC broadcasts one
+ * lane of the coefficient register and accumulates eight vertices in parallel; SRCMB.S16.QACC is the
+ * saturating readout. out[r][j] = sat16((sum_k m[r][k]*v[k][j]) >> shift), v/w/out in SoA (8 lanes a row). */
+uint32_t ex07_ccount(void);
+void ex07_transform8(const int16_t *m, const int16_t *v, int16_t *out, uint32_t shift);
+
+/* ex08: framebuffer effects over 128-bit chunks (16-bit lanes). Each has a C equivalent timed in main.c.
+ *   half_blend: out[i] = ((a[i] & 0xF7DE) >> 1) + ((b[i] & 0xF7DE) >> 1)
+ *   brighten  : out[i] = sat16(a[i] + b[i])
+ *   clamp     : out[i] = min(max(a[i], lo), hi) with lo/hi given as eight identical lanes
+ *   tint      : out32[i] = (a[i] * tint) >> shift  */
+void ex08_half_blend(const int16_t *a, const int16_t *b, const int16_t *mask8, const int16_t *ones8,
+                     int16_t *out, int n_pixels);
+void ex08_brighten(const int16_t *a, const int16_t *b, int16_t *out, int n_pixels);
+void ex08_clamp(const int16_t *a, const int16_t *lo8, const int16_t *hi8, int16_t *out, int n_pixels);
+void ex08_tint(const int16_t *a, const int16_t *tint8, int32_t *out32, int n_pixels, uint32_t shift);
+
 #endif

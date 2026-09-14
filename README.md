@@ -137,7 +137,7 @@ data/             抽出済み知識（git管理。MCPサーバーが読む）
 examples/         PIE実用サンプル（手書きアセンブリ＋自己採点。examples/README.md）
 experiments/      実機実験（段・ハザードの測定、flash退避）
 tools/            取得・コーパス・抽出・検証・ビルド・実機実行のスクリプト
-notes/            調査メモ
+notes/            調査メモ（08 に Cardputer ADV のメディア/3D 性能の物差しと量産リスト）
 ```
 
 ## PIE 実用サンプル（`examples/`）
@@ -161,6 +161,8 @@ bash tools/host_flash_and_log.sh --examples                         # 焼く＋�
 | ex04 | `LD.QR`/`ST.QR`/`MV.QR` と、実測段に基づく `LD.QR` インターロックの追試 |
 | ex05 | 40bit ACCX と `EE.SRS.ACCX` の飽和（数学的和との比較） |
 | ex06 | `EE.FFT.R2BF.S16` / `EE.CMUL.S16` のレーン対応（多段 FFT の前段） |
+| ex07 | 4×4 頂点変換を 8 頂点並列で（`EE.VSMULAS.S16.QACC` + `EE.SRCMB.S16.QACC`）。頂点あたりのサイクル数を C(-O2) と比較 |
+| ex08 | フレームバッファ効果（RGB565 ハーフブレンド、飽和グロー、クランプ、ティント）。ピクセルあたりのサイクル数を C と比較 |
 
 第1回ラン（`pie-examples-20260914T174138Z.log`）で ex01/ex02/ex04/ex05 と ex06 の測定済みレーンは一致し、
 失敗した2件はどちらも**こちら側の思い違い**が原因と判明した（ex03 は 2 バイトずつ滑らせた窓が

@@ -42,6 +42,21 @@ static int32_t s_y_ref[64] __attribute__((aligned(16)));
 static uint8_t s_src[BUF_BYTES] __attribute__((aligned(16)));
 static uint8_t s_dst[BUF_BYTES] __attribute__((aligned(16)));
 static int16_t s_window[16] __attribute__((aligned(16)));
+#define PIXELS 1024
+static int16_t s_v[32] __attribute__((aligned(16)));
+static int16_t s_vout[32] __attribute__((aligned(16)));
+static int16_t s_vref[32] __attribute__((aligned(16)));
+static int16_t s_pa[PIXELS] __attribute__((aligned(16)));
+static int16_t s_pb[PIXELS] __attribute__((aligned(16)));
+static int16_t s_po[PIXELS] __attribute__((aligned(16)));
+static int16_t s_pref[PIXELS] __attribute__((aligned(16)));
+static int32_t s_po32[PIXELS] __attribute__((aligned(16)));
+static int32_t s_p32ref[PIXELS] __attribute__((aligned(16)));
+static int16_t s_lo8[8] __attribute__((aligned(16)));
+static int16_t s_hi8[8] __attribute__((aligned(16)));
+static int16_t s_tint8[8] __attribute__((aligned(16)));
+static int16_t s_mask8[8] __attribute__((aligned(16)));
+static int16_t s_ones8[8] __attribute__((aligned(16)));
 static int32_t s_out2[2] __attribute__((aligned(16)));
 static int16_t s_lanes8[8] __attribute__((aligned(16)));
 static uint32_t s_words[4] __attribute__((aligned(16)));
@@ -108,6 +123,55 @@ static int32_t sat32(int64_t v)
         return -2147483648;
     }
     return (int32_t)v;
+}
+
+static int16_t sat16(int64_t v)
+{
+    if (v > 32767) {
+        return 32767;
+    }
+    if (v < -32768) {
+        return -32768;
+    }
+    return (int16_t)v;
+}
+
+/* The C reference implementations the examples are timed against. They are deliberately not `static`: a
+ * non-static function writing to a global cannot be reasoned away by the optimiser, so the timed loop is
+ * actually executed instead of being hoisted out of the measurement. */
+void c_transform8(const int16_t *m, const int16_t *v, int16_t *out, uint32_t shift)
+{
+    for (int r = 0; r < 4; r++) {
+        for (int j = 0; j < 8; j++) {
+            int64_t acc = 0;
+            for (int k = 0; k < 4; k++) {
+                acc += (int32_t)m[r * 4 + k] * (int32_t)v[k * 8 + j];
+            }
+            out[r * 8 + j] = sat16(acc >> shift);
+        }
+    }
+}
+
+void c_half_blend(const int16_t *a, const int16_t *b, int16_t *out, int n)
+{
+    for (int i = 0; i < n; i++) {
+        out[i] = (int16_t)(((a[i] & 0xF7DE) >> 1) + ((b[i] & 0xF7DE) >> 1));
+    }
+}
+
+void c_brighten(const int16_t *a, const int16_t *b, int16_t *out, int n)
+{
+    for (int i = 0; i < n; i++) {
+        out[i] = sat16((int32_t)a[i] + (int32_t)b[i]);
+    }
+}
+
+void c_clamp(const int16_t *a, int16_t lo, int16_t hi, int16_t *out, int n)
+{
+    for (int i = 0; i < n; i++) {
+        int16_t v = a[i];
+        out[i] = v < lo ? lo : (v > hi ? hi : v);
+    }
 }
 
 /* ------------------------------------------------------------------ ex01: address steps and accumulator readout */
@@ -508,6 +572,164 @@ static void ex06(void)
     section_end(ex, name, ok, fail);
 }
 
+/* ------------------------------------------------------------------ ex07: 3D vertex transform */
+
+static void ex07(void)
+{
+    const char *ex = "ex07", *name = "transform3d";
+    section_begin(ex, name);
+
+    /* Eight cube corners of side 1.0 in Q8 (1.0 = 256), and a rotation about Y by 30 degrees: cos = 0.866
+     * -> 222 and sin = 0.5 -> 128, also Q8, so each product carries 2^16 and the readout shifts by 16. */
+    static const int16_t m[16] = {222, 0, 128, 0,
+                                  0, 256, 0, 0,
+                                  -128, 0, 222, 0,
+                                  0, 0, 0, 256};
+    static const int16_t verts[8][4] = {
+        {-128, -128, -128, 256}, {128, -128, -128, 256}, {128, 128, -128, 256}, {-128, 128, -128, 256},
+        {-128, -128, 128, 256}, {128, -128, 128, 256}, {128, 128, 128, 256}, {-128, 128, 128, 256}};
+    for (int k = 0; k < 4; k++) {
+        for (int j = 0; j < 8; j++) {
+            s_v[k * 8 + j] = verts[j][k];        /* structure of arrays: what the vector kernel wants */
+        }
+    }
+
+    ex07_transform8(m, s_v, s_vout, 16);
+    c_transform8(m, s_v, s_vref, 16);
+
+    int ok = 0, fail = 0;
+    for (int i = 0; i < 32; i++) {
+        if (s_vout[i] == s_vref[i]) {
+            ok++;
+        } else {
+            fail++;
+            if (fail <= 3) {
+                printf("EX %s %s DATA first_mismatch index=%d pie=%d ref=%d\n", ex, name, i,
+                       s_vout[i], s_vref[i]);
+            }
+        }
+    }
+    print_i16(ex, name, "matrix", m, 16);
+    print_i16(ex, name, "vertices_soa", s_v, 32);
+    print_i16(ex, name, "out", s_vout, 32);
+    print_i16(ex, name, "ref", s_vref, 32);
+    check(ex, name, "all_32_transformed_coordinates_match_C", ok, 32);
+
+    /* Cycles per vertex: the assembly against the same arithmetic in C, built at -O2 (main/CMakeLists.txt)
+     * so the comparison is instruction set against instruction set rather than against a debug build. */
+    const int reps = 500;
+    uint32_t t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex07_transform8(m, s_v, s_vout, 16);
+    }
+    uint32_t pie_cycles = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        c_transform8(m, s_v, s_vref, 16);
+    }
+    uint32_t c_cycles = ex07_ccount() - t0;
+    printf("BENCH transform8 vertices=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * 8,
+           pie_cycles, c_cycles);
+    fflush(stdout);
+    section_end(ex, name, fail == 0 ? 1 : 0, fail);
+}
+
+/* ------------------------------------------------------------------ ex08: framebuffer effects */
+
+static void ex08(void)
+{
+    const char *ex = "ex08", *name = "media";
+    section_begin(ex, name);
+
+    s_rng = 0x5150;
+    for (int i = 0; i < PIXELS; i++) {
+        s_pa[i] = rnd16(0, 0x7fff);
+        s_pb[i] = rnd16(0x2000, 0x7fff);        /* big enough that the saturating add has to clamp */
+    }
+    for (int i = 0; i < PIXELS; i += 7) {       /* give the clamp something to clamp */
+        s_pa[i] = 30000;
+        if (i + 1 < PIXELS) {
+            s_pa[i + 1] = -30000;
+        }
+    }
+    for (int i = 0; i < 8; i++) {
+        s_lo8[i] = -1000;
+        s_hi8[i] = 1000;
+        s_tint8[i] = 300;                       /* Q8 tint: 300/256 = 1.17x */
+        s_mask8[i] = (int16_t)0xF7DE;            /* the RGB565 half-blend mask */
+        s_ones8[i] = 1;                          /* with SAR = 1, EE.VMUL by ones is a >>1 */
+    }
+
+    const int reps = 32;
+    uint32_t t0;
+    int fail = 0;
+
+    /* half blend: the classic RGB565 mask-shift-add, five vector ops per eight pixels */
+    ex08_half_blend(s_pa, s_pb, s_mask8, s_ones8, s_po, PIXELS);
+    c_half_blend(s_pa, s_pb, s_pref, PIXELS);
+    int hb = memcmp(s_po, s_pref, PIXELS * 2) == 0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex08_half_blend(s_pa, s_pb, s_mask8, s_ones8, s_po, PIXELS);
+    }
+    uint32_t hb_pie = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        c_half_blend(s_pa, s_pb, s_pref, PIXELS);
+    }
+    uint32_t hb_c = ex07_ccount() - t0;
+    printf("BENCH half_blend pixels=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * PIXELS,
+           hb_pie, hb_c);
+    check(ex, name, "half_blend_matches_C", hb ? 1 : 0, 1);
+    fail += hb ? 0 : 1;
+    print_i16(ex, name, "half_blend", s_po, PIXELS);
+
+    /* brighten: saturating add, one vector op per eight pixels */
+    ex08_brighten(s_pa, s_pb, s_po, PIXELS);
+    c_brighten(s_pa, s_pb, s_pref, PIXELS);
+    int br = memcmp(s_po, s_pref, PIXELS * 2) == 0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex08_brighten(s_pa, s_pb, s_po, PIXELS);
+    }
+    uint32_t br_pie = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        c_brighten(s_pa, s_pb, s_pref, PIXELS);
+    }
+    uint32_t br_c = ex07_ccount() - t0;
+    printf("BENCH brighten pixels=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * PIXELS,
+           br_pie, br_c);
+    check(ex, name, "brighten_matches_the_saturating_C_reference", br ? 1 : 0, 1);
+    fail += br ? 0 : 1;
+    print_i16(ex, name, "brightened", s_po, PIXELS);
+
+    /* clamp: two vector ops per eight pixels */
+    ex08_clamp(s_pa, s_lo8, s_hi8, s_po, PIXELS);
+    c_clamp(s_pa, -1000, 1000, s_pref, PIXELS);
+    int cl = memcmp(s_po, s_pref, PIXELS * 2) == 0;
+    check(ex, name, "clamp_matches_C", cl ? 1 : 0, 1);
+    fail += cl ? 0 : 1;
+    print_i16(ex, name, "clamped", s_po, PIXELS);
+
+    /* tint: per-lane multiply with a SAR shift (kept 32-bit: the product needs the room) */
+    ex08_tint(s_pa, s_tint8, s_po32, PIXELS, 8);
+    for (int i = 0; i < PIXELS; i++) {
+        s_p32ref[i] = (int32_t)(((int32_t)s_pa[i] * 300) >> 8);
+    }
+    int ti = memcmp(s_po32, s_p32ref, PIXELS * 4) == 0;
+    check(ex, name, "tint_matches_the_reference", ti ? 1 : 0, 1);
+    fail += ti ? 0 : 1;
+
+    print_i16(ex, name, "a", s_pa, PIXELS);
+    print_i16(ex, name, "b", s_pb, PIXELS);
+    print_i32(ex, name, "tint32", s_po32, PIXELS);
+    printf("EX %s %s DATA limits lo=%d hi=%d tint=%d shift=%d pixels=%d\n", ex, name, -1000, 1000, 300,
+           8, PIXELS);
+    fflush(stdout);
+    section_end(ex, name, fail == 0 ? 1 : 0, fail);
+}
+
 /* ------------------------------------------------------------------ */
 
 void app_main(void)
@@ -522,7 +744,7 @@ void app_main(void)
 
     printf("ENV chip=esp32s3 cores=%d revision=%d.%d idf=%s\n", chip.cores, chip.revision / 100,
            chip.revision % 100, esp_get_idf_version());
-    printf("ENV examples=6 buffers=16-byte-aligned rng_seed=0x1234\n");
+    printf("ENV examples=8 buffers=16-byte-aligned rng_seed=0x1234 c_flags=-O2\n");
     fflush(stdout);
 
     ex01();
@@ -531,6 +753,8 @@ void app_main(void)
     ex04();
     ex05();
     ex06();
+    ex07();
+    ex08();
 
     printf("SUMMARY checks_ok=%d checks_fail=%d\n", s_ok, s_fail);
     printf("END\n");

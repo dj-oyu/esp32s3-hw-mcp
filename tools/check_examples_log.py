@@ -26,6 +26,7 @@ CHECK_RE = re.compile(r"^EX (\S+) (\S+) CHECK (\S+) pie=(-?\d+) ref=(-?\d+) (ok|
 RESULT_RE = re.compile(r"^EX (\S+) (\S+) RESULT ok=(\d+) fail=(\d+)$")
 INTERLOCK_RE = re.compile(
     r"^EX (\S+) (\S+) DATA interlock_(\S+) stall=([-\d.]+) dep=(\d+) ind=(\d+) iters=(\d+)$")
+BENCH_RE = re.compile(r"^BENCH (\S+) (\S+)=(\d+) cycles_pie=(\d+) cycles_c=(\d+)$")
 
 
 def parse(path: str) -> dict:
@@ -33,10 +34,19 @@ def parse(path: str) -> dict:
     sections: dict[str, dict] = {}
     for line in open(path, encoding="utf-8", errors="replace"):
         line = line.strip()
-        if not line.startswith("EX "):
+        if not line.startswith(("EX ", "BENCH ")):
+            continue
+        m = BENCH_RE.match(line)
+        if m:
+            kernel = m.group(1)
+            sec = sections.setdefault("__bench__", {"data": {}, "checks": [], "results": [],
+                                                    "interlock": {}, "bench": {}})
+            sec["bench"][kernel] = {"elements": int(m.group(3)), "cycles_pie": int(m.group(4)),
+                                    "cycles_c": int(m.group(5))}
             continue
         ex = line.split()[1]
-        sec = sections.setdefault(ex, {"data": {}, "checks": [], "results": [], "interlock": {}})
+        sec = sections.setdefault(ex, {"data": {}, "checks": [], "results": [], "interlock": {},
+                                      "bench": {}})
         m = INTERLOCK_RE.match(line)
         if m:
             sec["interlock"][m.group(3)] = {"stall": float(m.group(4)), "dep": int(m.group(5)),
@@ -69,6 +79,10 @@ def as_i32(x: int) -> int:
 
 def sat32(v: int) -> int:
     return max(-0x80000000, min(0x7FFFFFFF, v))
+
+
+def sat16(v: int) -> int:
+    return max(-0x8000, min(0x7FFF, v))
 
 
 def hex_words(text: str) -> list[int]:
@@ -284,8 +298,63 @@ def check_ex06(sec: dict) -> list[tuple[str, bool, str]]:
     return out
 
 
+def check_ex07(sec: dict) -> list[tuple[str, bool, str]]:
+    """The 4x4 transform: eight vertices at once, against a Python model of the same arithmetic (including
+    the saturating 40-bit accumulator the VSMULAS family documents)."""
+    d = sec["data"]
+    if not {"matrix", "vertices_soa", "out"} <= set(d):
+        return [("ex07 carries matrix, vertices and result", False, "missing DATA lines")]
+    m, v = i16_words(d["matrix"]), i16_words(d["vertices_soa"])
+    got = i16_words(d["out"])
+    ref = []
+    for r in range(4):
+        for j in range(8):
+            acc = 0
+            for k in range(4):
+                acc += m[r * 4 + k] * v[k * 8 + j]
+                acc = max(-(1 << 39), min((1 << 39) - 1, acc))
+            ref.append(as_i16(acc >> 16))
+    bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
+    return [("ex07 all 32 transformed coordinates match the Python model", not bad,
+             f"{len(bad)} mismatches, first {bad[:3]}" if bad else "32/32")]
+
+
+def check_ex08(sec: dict) -> list[tuple[str, bool, str]]:
+    """The framebuffer effects, re-derived from the pixel arrays the log carries."""
+    d = sec["data"]
+    if not {"a", "b"} <= set(d):
+        return [("ex08 carries its pixel rows", False, "missing a/b")]
+    a, b = i16_words(d["a"]), i16_words(d["b"])
+    out = []
+    if "half_blend" in d:
+        got = i16_words(d["half_blend"])
+        ref = [as_i16(((x & 0xF7DE) >> 1) + ((y & 0xF7DE) >> 1)) for x, y in zip(a, b)]
+        bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
+        out.append(("ex08 half_blend (mask-shift-add) matches the Python reference", not bad,
+                    f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+    if "brightened" in d:
+        got = i16_words(d["brightened"])
+        ref = [sat16(x + y) for x, y in zip(a, b)]
+        bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
+        out.append(("ex08 brighten saturates exactly like the reference", not bad,
+                    f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+    if "clamped" in d:
+        got = i16_words(d["clamped"])
+        ref = [max(-1000, min(1000, x)) for x in a]
+        bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
+        out.append(("ex08 clamp matches the reference", not bad,
+                    f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+    if "tint32" in d:
+        got = hex_words(d["tint32"])
+        ref = [as_i32((x * 300) >> 8) for x in a]
+        bad = [(i, got[i], ref[i]) for i in range(len(got)) if got[i] != ref[i]]
+        out.append(("ex08 tint (per-lane multiply with a SAR shift) matches the reference", not bad,
+                    f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(got)}/{len(got)}"))
+    return out
+
+
 CHECKS = {"ex01": check_ex01, "ex02": check_ex02, "ex03": check_ex03, "ex04": check_ex04,
-          "ex05": check_ex05, "ex06": check_ex06}
+          "ex05": check_ex05, "ex06": check_ex06, "ex07": check_ex07, "ex08": check_ex08}
 
 
 def main() -> int:
@@ -300,7 +369,10 @@ def main() -> int:
         return 2
 
     failures, checks = [], []
+    bench = sections.get("__bench__", {}).get("bench", {})
     for ex in sorted(sections):
+        if ex == "__bench__":
+            continue
         fn = CHECKS.get(ex)
         if fn is None:
             continue
@@ -315,7 +387,17 @@ def main() -> int:
             if res["fail"]:
                 failures.append(f"{ex}: the firmware's own self-check reported {res['fail']} failures")
 
-    report = {"log": os.path.basename(a.log), "checks": checks, "failures": failures}
+    report = {"log": os.path.basename(a.log), "checks": checks, "failures": failures,
+              "bench": bench}
+
+    if bench:
+        print("\n== performance (single run, cycles per element; the C baseline is built at -O2) ==")
+        for kernel, b in sorted(bench.items()):
+            per_pie = b["cycles_pie"] / b["elements"]
+            per_c = b["cycles_c"] / b["elements"]
+            print(f"  {kernel:<12} elements={b['elements']:6d}  pie={per_pie:7.3f} c/elem  "
+                  f"c={per_c:7.3f} c/elem  ratio={per_c / per_pie:5.2f}x")
+
     if a.json:
         json.dump(report, open(a.json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 

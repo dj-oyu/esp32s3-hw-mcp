@@ -2,23 +2,43 @@
  "provenance": {
   "kind": "measured_on_hardware",
   "note": "Silicon answers, not document text. Every entry here was produced by examples/firmware on a real ESP32-S3, where the same code that ran also compared its result against a scalar C reference written from the TRM pseudo-code, and tools/check_examples_log.py re-derived the values a third time in Python from the log's own inputs. Keep this tier separate from data/pie_instructions.json (PDF-derived) and data/pie_timing_measured.json (stage measurements): the point of the split is that a claim here is reproducible from the log, not quoted from a page.",
-  "log": "pie-examples-20260914T174138Z.log",
-  "report": "pie-examples-report-20260914T174138Z.json",
+  "log": "pie-examples-20260914T174958Z.log",
+  "report": "pie-examples-report-20260914T174958Z.json",
   "firmware_git_rev": "af06feb",
   "device": "M5Stack Cardputer / ESP32-S3 (QFN56, revision v0.2), serial AC:A7:04:01:2E:80",
   "date": "2026-09-14",
-  "run_summary": "checks_ok=21 checks_fail=85 at first run; the two failing examples were the ones whose kernel/expectation was wrong (ex03's sliding window, ex06's sel2 operand order). Both were diagnosed from the log alone and the hardware side of each is recorded below. The four examples whose expectation came straight from the manual (ex01/ex02/ex04/ex05) passed."
+  "run_summary": "The second run passes every check the manual can predict (24/24). Two of its examples exist because the first run failed: ex03's alignment probe and ex06's sel2 model. Everything measured below is reproducible from the logs in /workspace/backups.",
+  "runs": [
+   "pie-examples-20260914T174138Z.log: 21 ok / 85 fail in the firmware, 17 of 22 host checks -- the two failures were this side's errors (a sliding window off the 16-byte grid, and R2BF sel2 read LSB-first)",
+   "pie-examples-20260914T174958Z.log: 24 of 24 host checks pass after fixing both; the hardware side of every claim below now comes from this run"
+  ]
  },
  "findings": [
   {
    "id": "post_increment_step_accx_forms",
-   "instructions": ["EE.LD.ACCX.IP", "EE.ST.ACCX.IP", "EE.LD.128.USAR.IP", "EE.VLD.128.IP"],
+   "instructions": [
+    "EE.LD.ACCX.IP",
+    "EE.ST.ACCX.IP",
+    "EE.LD.128.USAR.IP",
+    "EE.VLD.128.IP"
+   ],
    "claim": "The post-increment amount is {20{imm16[7]}, imm16[7:0], 4{0}} for the 128-bit forms and {21{imm8[7]}, imm8[7:0], 3{0}} for the ACCX forms: the printed immediate is added verbatim, i.e. the assembler's scale is the hardware's scale.",
    "method": "Each form ran once in a tiny function that returned address_after - address_before; for the disputed EE.ST.ACCX.IP the instruction was emitted as raw bytes from the manual's own instruction-word diagram with field = 1, a value the assembler refuses.",
    "evidence": {
-    "printed_immediate_16": {"ld_accx": 16, "st_accx": 16, "ld128_usar": 16, "vld128": 16},
-    "raw_field_1_bytes": {"EE.LD.ACCX.IP": 8, "EE.ST.ACCX.IP": 8},
-    "raw_words": {"EE.LD.ACCX.IP a3, field=1": "0x0E0134 (.byte 34 01 0e)", "EE.ST.ACCX.IP a3, field=1": "0x020134 (.byte 34 01 02)"}
+    "printed_immediate_16": {
+     "ld_accx": 16,
+     "st_accx": 16,
+     "ld128_usar": 16,
+     "vld128": 16
+    },
+    "raw_field_1_bytes": {
+     "EE.LD.ACCX.IP": 8,
+     "EE.ST.ACCX.IP": 8
+    },
+    "raw_words": {
+     "EE.LD.ACCX.IP a3, field=1": "0x0E0134 (.byte 34 01 0e)",
+     "EE.ST.ACCX.IP a3, field=1": "0x020134 (.byte 34 01 02)"
+    }
    },
    "status": "confirmed",
    "resolves": "data/pie_encoding_errata.json :: EE.ST.ACCX.IP",
@@ -26,26 +46,49 @@
   },
   {
    "id": "srs_accx_shift_and_saturation",
-   "instructions": ["EE.SRS.ACCX"],
+   "instructions": [
+    "EE.SRS.ACCX"
+   ],
    "claim": "au = saturate_to_int32(ACCX >> as[5:0]), and the shift amount comes from a register operand, not an immediate.",
    "evidence": {
-    "ACCX=2^38+12345 shift=0": {"got": 2147483647, "expected": 2147483647, "note": "saturated into 32 bits"},
-    "ACCX=2^38+12345 shift=8": {"got": 1073741872, "expected": 1073741872, "note": "exact, no saturation"},
-    "ACCX=-(2^38+999) shift=5": {"got": -2147483648, "expected": -2147483648, "note": "saturated negative"}
+    "ACCX=2^38+12345 shift=0": {
+     "got": 2147483647,
+     "expected": 2147483647,
+     "note": "saturated into 32 bits"
+    },
+    "ACCX=2^38+12345 shift=8": {
+     "got": 1073741872,
+     "expected": 1073741872,
+     "note": "exact, no saturation"
+    },
+    "ACCX=-(2^38+999) shift=5": {
+     "got": -2147483648,
+     "expected": -2147483648,
+     "note": "saturated negative"
+    }
    },
    "status": "confirmed"
   },
   {
    "id": "vmulas_s16_accx_sums_the_lanes",
-   "instructions": ["EE.VMULAS.S16.ACCX"],
+   "instructions": [
+    "EE.VMULAS.S16.ACCX"
+   ],
    "claim": "EE.VMULAS.S16.ACCX qx, qy sums the eight 16x16 lane products into the single 40-bit ACCX (as opposed to EE.VMULAS.S16.QACC, which keeps eight independent lane accumulators), so two of them plus EE.SRS.ACCX are a complete 16-tap dot product.",
    "method": "A 16x16 int16 matrix multiply (two VMULAS per output element, B transposed so both operands are contiguous 128-bit chunks) against a scalar C reference in the firmware and the same reference again in Python.",
-   "evidence": {"products_matching": "256 of 256", "cycles_us_measured": 30},
+   "evidence": {
+    "products_matching": "256 of 256",
+    "cycles_us_measured": 30
+   },
    "status": "confirmed"
   },
   {
    "id": "accx_is_a_saturating_40_bit_accumulator",
-   "instructions": ["EE.VMULAS.S16.ACCX", "EE.SRS.ACCX", "EE.ZERO.ACCX"],
+   "instructions": [
+    "EE.VMULAS.S16.ACCX",
+    "EE.SRS.ACCX",
+    "EE.ZERO.ACCX"
+   ],
    "claim": "ACCX saturates at 2^39-1 / -2^39 rather than wrapping, so an overflowing accumulation silently stops growing instead of producing a wrapped value.",
    "method": "32000x32000 per lane, 8 lanes per instruction, 200 instructions: the mathematical sum is 1.6384e12, well past the 40-bit range, and the accumulator's value was read out twice, once where it saturates (shift 0 -> sat32) and once where it does not (shift 9).",
    "evidence": {
@@ -59,13 +102,42 @@
   },
   {
    "id": "r2bf_operand_lists_are_msb_first",
-   "instructions": ["EE.FFT.R2BF.S16"],
+   "instructions": [
+    "EE.FFT.R2BF.S16"
+   ],
    "claim": "The manual writes R2BF's operand lists MSB first: for {qy[95:64], qy[31:0], qx[95:64], qx[31:0]} the leftmost 32-bit field occupies the highest lane pair. With qx = qy = eight int16 samples, sel2=0 yields [x0+x4, x1+x5, x2+x6, x3+x7, x0-x4, x1-x5, x2-x6, x3-x7] and sel2=1 yields [x0+x2, x1+x3, x4+x6, x5+x7, x0-x2, x1-x3, x4-x6, x5-x7] in qa0.",
    "method": "One R2BF per call with known 8-lane input, compared against the pseudo-code transcribed twice, once with each field ordering.",
    "evidence": {
-    "input_x": [100, -200, 300, -400, 500, -600, 700, -800],
-    "sel2_0_hardware": [600, -800, 1000, -1200, -400, 400, -400, 400],
-    "sel2_1_hardware": [400, -600, 1200, -1400, -200, 200, -200, 200],
+    "input_x": [
+     100,
+     -200,
+     300,
+     -400,
+     500,
+     -600,
+     700,
+     -800
+    ],
+    "sel2_0_hardware": [
+     600,
+     -800,
+     1000,
+     -1200,
+     -400,
+     400,
+     -400,
+     400
+    ],
+    "sel2_1_hardware": [
+     400,
+     -600,
+     1200,
+     -1400,
+     -200,
+     200,
+     -200,
+     200
+    ],
     "lsb_first_reading_of_sel2_1": "predicts [1200, -1400, 400, -600, -200, 200, -200, 200]: refuted, the two halves of qa0 swap"
    },
    "status": "confirmed",
@@ -73,20 +145,45 @@
   },
   {
    "id": "cmul_complex_multiply_with_sar_shift",
-   "instructions": ["EE.CMUL.S16"],
+   "instructions": [
+    "EE.CMUL.S16"
+   ],
    "claim": "EE.CMUL.S16 qz, qx, qy, sel4 does two complex multiplies on interleaved (re, im) lane pairs (re = ac - bd, im = ad + bc) and shifts the result arithmetically right by SAR[5:0], with sel4 selecting lanes 0..3 or 4..7.",
    "evidence": {
-    "sel4_0_sar_0": [-3936, 6784, -8416, -6784],
-    "sel4_1_sar_0": [-13152, -3392, 10976, -3392],
-    "sel4_0_sar_12": [415, 97, 1293, -98],
-    "sel4_1_sar_12": [-3492, -49, 5346, -49]
+    "sel4_0_sar_0": [
+     -3936,
+     6784,
+     -8416,
+     -6784
+    ],
+    "sel4_1_sar_0": [
+     -13152,
+     -3392,
+     10976,
+     -3392
+    ],
+    "sel4_0_sar_12": [
+     415,
+     97,
+     1293,
+     -98
+    ],
+    "sel4_1_sar_12": [
+     -3492,
+     -49,
+     5346,
+     -49
+    ]
    },
    "status": "confirmed",
    "note": "SAR was set with the native `ssr` instruction. No saturation was observed at these magnitudes; whether the shift saturates is untested."
   },
   {
    "id": "vld128_drops_the_low_address_bits",
-   "instructions": ["EE.VLD.128.IP", "EE.VST.128.IP"],
+   "instructions": [
+    "EE.VLD.128.IP",
+    "EE.VST.128.IP"
+   ],
    "claim": "A 128-bit PIE access forms its address as {as[31:4], 4{0}}: the low four address bits are dropped, not honoured, so an access off the 16-byte grid silently reads a different 16 bytes (and does not fault).",
    "method": "A 16-tap sliding FIR written the obvious way (EE.VLD.128.IP from x + 2*n) was run against a scalar reference; afterwards the same log was checked against a model that rounds every window down to the 16-byte grid.",
    "evidence": {
@@ -95,20 +192,83 @@
     "rounded_window_model_reproduces_the_hardware": "49 of 49 outputs"
    },
    "status": "confirmed",
-   "citation": {"document": "ESP32-S3 TRM v1.8", "page": 49, "what": "figure 1.7-1 / the address formation of the PIE memory accesses"}
+   "citation": {
+    "document": "ESP32-S3 TRM v1.8",
+    "page": 49,
+    "what": "figure 1.7-1 / the address formation of the PIE memory accesses"
+   }
   },
   {
    "id": "ld_qr_interlock_second_harness",
-   "instructions": ["LD.QR", "ST.QR", "MV.QR"],
+   "instructions": [
+    "LD.QR",
+    "ST.QR",
+    "MV.QR"
+   ],
    "claim": "LD.QR's operand interlock costs one cycle when its consumer is the very next instruction and nothing once one instruction separates them -- the same conclusion data/pie_timing_measured.json reached from the other direction (LD.QR def = stage M, consumer reads at stage E).",
    "method": "2000 iterations of [LD.QR q0, buf; 0..2 filler instructions; consumer], once with the consumer reading q0 and once with it reading an unrelated q4, differenced.",
    "evidence": {
-    "distance_0": {"cycles_per_iteration": 1.0, "dep": 15999, "ind": 13999},
-    "distance_1": {"cycles_per_iteration": 0.0, "dep": 15999, "ind": 15999},
-    "distance_2": {"cycles_per_iteration": 0.042, "note": "within the noise of this harness"}
+    "distance_0": {
+     "cycles_per_iteration": 1.0,
+     "dep": 15999,
+     "ind": 13999
+    },
+    "distance_1": {
+     "cycles_per_iteration": 0.0,
+     "dep": 15999,
+     "ind": 15999
+    },
+    "distance_2": {
+     "cycles_per_iteration": 0.042,
+     "note": "within the noise of this harness"
+    }
    },
    "status": "confirmed",
    "note": "Also confirmed on this run: LD.QR/ST.QR copy 256 bytes correctly and MV.QR moves a 128-bit register, so the three instructions Table 1.7-2 omits are usable as documented."
+  },
+  {
+   "id": "src_q_operand_order_and_the_funnel_path",
+   "instructions": [
+    "EE.SRC.Q",
+    "EE.LD.128.USAR.IP"
+   ],
+   "claim": "EE.SRC.Q qz, qa, qb computes qz = {qb, qa} >> (SAR_BYTE*8): the FIRST operand is qs0 (the low 128 bits) and the second is qs1 (the high half). Combined with EE.LD.128.USAR.IP -- which loads the aligned chunk and parks the dropped address bits in SAR_BYTE -- this reads a 16-byte window that starts off the 16-byte grid, with no staging copy.",
+   "method": "SRC.Q ran twice in one call, once with (q0=aligned chunk, q1=next chunk) and once with the operands swapped, from a pointer 2 bytes off the grid; the two outputs differ and one of them equals the window starting at byte offset 2 (x[1..8]).",
+   "evidence": {
+    "window_at_byte_2": [
+     628,
+     -759,
+     1924,
+     -452,
+     1299,
+     -2815,
+     -2611,
+     2184
+    ],
+    "EE.SRC.Q q3, q0, q1": [
+     628,
+     -759,
+     1924,
+     -452,
+     1299,
+     -2815,
+     -2611,
+     2184
+    ],
+    "EE.SRC.Q q4, q1, q0": [
+     755,
+     2663,
+     -993,
+     1250,
+     24,
+     -1674,
+     320,
+     2745
+    ],
+    "verdict": "ab=1 ba=0, so the first operand is qs0"
+   },
+   "status": "confirmed",
+   "note": "Also confirmed by the same probe: EE.LD.128.USAR.IP loads the aligned chunk (its q0 equals the bytes at x) while recording SAR_BYTE = 2."
   }
  ],
  "printed_not_interpreted": [
@@ -117,16 +277,26 @@
    "instruction": "EE.BITREV",
    "what": "Four words for two different operand values, raw, because the expected value cannot be constructed: the result is gated by the special register FFT_BIT_WIDTH, and no instruction that sets it appears in the PIE instruction list.",
    "evidence": {
-    "operand_0x3fc94040": ["0x00820040", "0x00c20042", "0x00a20044", "0x00e20062"],
-    "operand_0x3fc94050": ["0x008a0050", "0x00ca0052", "0x00aa0054", "0x00ea006a"]
+    "operand_0x3fc94040": [
+     "0x00820040",
+     "0x00c20042",
+     "0x00a20044",
+     "0x00e20062"
+    ],
+    "operand_0x3fc94050": [
+     "0x008a0050",
+     "0x00ca0052",
+     "0x00aa0054",
+     "0x00ea006a"
+    ]
    },
    "note": "The two calls differ only in the operand (16 bytes apart) and their results differ, so the operand does influence the result; which reading (address of the data, or the value itself) is still open. TRM 1.8 lists the operand as `as`, Table 1.7-2 as `ax`."
   }
  ],
  "open_after_this_run": [
-  "EE.SRC.Q's operand order (qs0 first or second) and whether EE.LD.128.USAR.IP+EE.SRC.Q reproduces a window off the grid: the next firmware run carries ex03_funnel_probe, which prints both operand orders for a window at byte offset 2.",
   "EE.SRCMB.S16.QACC's packing of the eight 40-bit lanes into one 128-bit register (needed for the eight-parallel QACC path).",
   "Whether EE.VMULAS's accumulator write should count as a stage-2 def: Table 1.7-2 does not list it, so the stall model predicts zero cycles between VMULAS and its consumer. The matmul's whole-kernel time was measured (30 us), not the pair in isolation.",
-  "A multi-stage real FFT: sel2=0 and sel2=1 are now both pinned down, so the stage-to-stage lane layout can be written and checked stage by stage."
+  "A multi-stage real FFT: sel2=0 and sel2=1 are now both pinned down, so the stage-to-stage lane layout can be written and checked stage by stage.",
+  "The media/3D samples (ex07 4x4 vertex transform over eight vertices, ex08 framebuffer effects with a C baseline) are written, built and their references offline-checked, but they have not been run on the device yet: the next run reports cycles per vertex and cycles per pixel against C at -O2."
  ]
 }

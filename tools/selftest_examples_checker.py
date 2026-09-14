@@ -104,8 +104,46 @@ def build_log() -> str:
               f"EX ex06 fft DATA cmul_half1_sar0={hex16(cel.ref_cmul(cel.EX06_U, cel.EX06_V, 0, 1)[4:])}",
               f"EX ex06 fft DATA cmul_half0_sar12={hex16(cel.ref_cmul(cel.EX06_U, cel.EX06_V, 12, 0)[:4])}",
               f"EX ex06 fft DATA cmul_half1_sar12={hex16(cel.ref_cmul(cel.EX06_U, cel.EX06_V, 12, 1)[4:])}",
-              "EX ex06 fft RESULT ok=10 fail=0",
-              "SUMMARY checks_ok=35 checks_fail=0", "END", ""]
+              "EX ex06 fft RESULT ok=10 fail=0"]
+    # ex07: the transform, with the same saturating-accumulator model the checker uses.
+    mt = [222, 0, 128, 0, 0, 256, 0, 0, -128, 0, 222, 0, 0, 0, 0, 256]
+    v7 = [rng.randint(-256, 256) for _ in range(32)]
+    out7 = []
+    for r in range(4):
+        for j in range(8):
+            acc = 0
+            for k in range(4):
+                acc += mt[r * 4 + k] * v7[k * 8 + j]
+                acc = max(-(1 << 39), min((1 << 39) - 1, acc))
+            out7.append(cel.as_i16(acc >> 16))
+    lines += [
+        "EX ex07 transform3d BEGIN",
+        f"EX ex07 transform3d DATA matrix={hex16(mt)}",
+        f"EX ex07 transform3d DATA vertices_soa={hex16(v7)}",
+        f"EX ex07 transform3d DATA out={hex16(out7)}",
+        f"EX ex07 transform3d DATA ref={hex16(out7)}",
+        "EX ex07 transform3d CHECK all_32_transformed_coordinates_match_C pie=32 ref=32 ok",
+        "EX ex07 transform3d RESULT ok=1 fail=0",
+        "BENCH transform8 vertices=4000 cycles_pie=120000 cycles_c=300000",
+    ]
+    # ex08: the framebuffer effects. The synthetic log is smaller than the device's 1024 pixels, which is
+    # fine: the checker re-derives from whatever the log carries.
+    pa = [rng.randint(0, 0x7FFF) for _ in range(32)]
+    pb = [rng.randint(0x2000, 0x7FFF) for _ in range(32)]
+    lines += [
+        "EX ex08 media BEGIN",
+        f"EX ex08 media DATA a={hex16(pa)}",
+        f"EX ex08 media DATA b={hex16(pb)}",
+        f"EX ex08 media DATA half_blend={hex16([cel.as_i16(((x & 0xF7DE) >> 1) + ((y & 0xF7DE) >> 1)) for x, y in zip(pa, pb)])}",
+        f"EX ex08 media DATA brightened={hex16([cel.sat16(x + y) for x, y in zip(pa, pb)])}",
+        f"EX ex08 media DATA clamped={hex16([max(-1000, min(1000, x)) for x in pa])}",
+        f"EX ex08 media DATA tint32={hex16([cel.as_i32((x * 300) >> 8) for x in pa], 8)}",
+        "EX ex08 media DATA limits lo=-1000 hi=1000 tint=300 shift=8 pixels=32",
+        "EX ex08 media RESULT ok=4 fail=0",
+        "BENCH half_blend pixels=32768 cycles_pie=200000 cycles_c=600000",
+        "BENCH brighten pixels=32768 cycles_pie=100000 cycles_c=250000",
+    ]
+    lines += ["SUMMARY checks_ok=37 checks_fail=0", "END", ""]
     return "\n".join(lines)
 
 
@@ -137,6 +175,8 @@ MUTATIONS = [
     ("ex03 funnel", "EX ex03 fir16 DATA funnel_ab=", "0000,0000,0000,0000,0000,0000,0000,0000"),
     ("ex04 interlock", "EX ex04 qr DATA interlock_d0 ", "stall=0.000"),
     ("ex01 raw", "EX ex01 encoding DATA raw_field1_ld=", "3"),
+    ("ex07 out", "EX ex07 transform3d DATA out=", "0001"),
+    ("ex08 half_blend", "EX ex08 media DATA half_blend=", "0000"),
 ]
 
 failures = []

@@ -2,6 +2,19 @@
 
 作業場所: `/workspace/esp32s3-hw-mcp`（git は `main`、リモート https://github.com/dj-oyu/esp32s3-hw-mcp と同期済み）
 
+## コンテナ再作成後のチェックリスト
+
+1. `ls -l /dev/ttyACM0` → `crw-rw-rw- ... 166, 0` なら**コンテナから直接**焼ける。判定は
+   `.venv/bin/python -c "import os;os.open('/dev/ttyACM0',os.O_RDWR|os.O_NONBLOCK)"` が例外を出さないこと。
+   以前は `c---------`（削除済み inode への bind mount）で EACCES だったので、ここが通ればホスト往復が
+   不要になる（ポッド起動時に `-v /dev:/dev` で作ってあれば再列挙にも追随する）。
+2. 焼く＋ログ＋判定は 1 本: `bash tools/host_flash_and_log.sh --examples`
+   （コンテナ内からでも同じコマンドでよい。esptool/pyserial は IDF の python env にある）。
+3. ツール確認: `. /opt/esp-idf/export.sh && idf.py --version`（v6.0.1）、`xtensa-esp32s3-elf-as` が使えること。
+   `uv` はこの環境に無い（あればスクリプトが自動で使う）。
+4. **未実施のまま残っている作業**: 実機をユーザーのファームに戻す
+   （`--restore /workspace/backups/cardputer-s3-20260914T150410Z.bin`。いまは例題ファームが焼かれたまま）。
+
 ## いまの状態
 
 | 段階 | 内容 | 検証 |
@@ -24,17 +37,32 @@ bash /home/exe/m5_workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --example
 # ログ /workspace/backups/pie-examples-<stamp>.log ＋ 判定レポート report.json
 ```
 
-第1回ラン（2026-09-14 17:41、`pie-examples-20260914T174138Z.log`）は 17/22 チェック通過。失敗2件はどちらも
-こちらの誤りで、原因は特定・修正済み（**次のランで未検証**）:
+第2回ラン（2026-09-14 17:49、`pie-examples-20260914T174958Z.log`）は **24/24 全チェック通過**。前回失敗した
+2件を直した結果:
 
-- ex03: 2バイトずつ滑らせた窓が、128bit アクセスの下位4bit丸め（TRM p49）で8サンプル連続同じ16バイトを読んでいた
-  → 境界に揃えた窓を渡す形に書き直し、丸めを可視化するプローブと `EE.SRC.Q` ファネル経路のプローブを追加
-- ex06: `EE.FFT.R2BF.S16` のオペランド列は MSB 先（左が上位レーン）だった → C 参照と Python 参照を修正
-  （実機の値と完全一致を確認済み）
+- ex03: 境界に揃えた窓で 49/49 一致。丸めプローブも `x+2` のロードが `x` のバイトを返すことを確認
+- ex06: sel2=0/1 の両方が実機のレーンと一致（MSB 先の読みで確定）
+- 新たに確定: **`EE.SRC.Q qz, qa, qb` は第1オペランドが qs0**（＝下位 128bit）。`LD.128.USAR.IP` の
+  `SAR_BYTE` と組み合わせれば、**コピー無しで**16バイト境界に乗らない窓が読める（funnel_ab が期待値、
+  funnel_ba は別の値）
 
 確定した知見は `data/pie_examples_measured.json`（MCP の `example_measured_semantics` が返す）と
-`notes/07-pie-examples.md`。**次の一手**: 修正済み ex03 を流して `EE.SRC.Q` のオペランド順を決める →
-`EE.FFT.*` の多段（8点→32点）を段ごとに検証しながら書く。
+`notes/07-pie-examples.md`。
+
+## メディア/3D の性能トラック（`notes/08-media-3d-perf.md`）
+
+Cardputer ADV でメディア表現と 3D を回すための物差しを用意した。フレーム予算（30fps なら 1 px あたり
+67 サイクル）、パイプライン各段の担当命令、量産リスト（透視除算、ラスタライザ、非整列転送、QACC 8並列、
+音声ミキサ、FFT 多段、スプライト合成、LCD 転送実測）と、**サンプル1本を足す手順**を書いてある。
+
+新規サンプル（**ビルド済み・未実機**）:
+
+- **ex07 transform3d**: 4×4 頂点変換を 8 頂点並列（`VSMULAS.S16.QACC` の broadcast 積和＋`SRCMB.S16.QACC`
+  の飽和読み出し）。`BENCH transform8` で頂点あたりのサイクル数を C(-O2) と比較
+- **ex08 media**: RGB565 ハーフブレンド（`ANDQ`+`VMUL`+`VADDS`）、飽和グロー、クランプ、ティント。
+  1024px を C/Python 両参照と全数照合し、`BENCH` で px あたりのサイクル数と C との比を出す
+
+**次の一手**: この 2 本を実機で流して性能の数字を取る → 数字を見て ex09（透視除算＋逆数表）以降を積む。
 
 ## 実測は完了（2026-09-14 17:17、ホスト側から）
 
