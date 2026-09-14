@@ -106,14 +106,20 @@ def ref_accx(iterations: int, lane_value: int) -> tuple[int, int]:
 
 
 def ref_r2bf(x: list[int], sel2: int) -> list[int]:
-    """The manual's op_a/op_b construction for EE.FFT.R2BF.S16, with qx = qy = x (8 lanes)."""
+    """The manual's op_a/op_b construction for EE.FFT.R2BF.S16, with qx = qy = x (8 lanes).
+
+    The operand lists are written MSB first: for {qy[95:64], qy[31:0], qx[95:64], qx[31:0]} the leftmost
+    32-bit field lands in the *highest* lanes. Reading them the other way round swaps the two halves of qa0,
+    which is what the first silicon run (log pie-examples-20260914T174138Z) showed, and with the MSB-first
+    reading the hardware's lanes come out exactly as this function predicts.
+    """
     qx, qy = x[:8], x[:8]
     if sel2 == 0:
         op_a = [qx[0], qx[1], qx[2], qx[3], qy[0], qy[1], qy[2], qy[3]]
         op_b = [qx[4], qx[5], qx[6], qx[7], qy[4], qy[5], qy[6], qy[7]]
     else:
-        op_a = [qy[4], qy[5], qx[0], qx[1], qy[4], qy[5], qx[0], qx[1]]
-        op_b = [qy[6], qy[7], qx[2], qx[3], qy[6], qy[7], qx[2], qx[3]]
+        op_a = [qx[0], qx[1], qx[4], qx[5], qy[0], qy[1], qy[4], qy[5]]
+        op_b = [qx[2], qx[3], qx[6], qx[7], qy[2], qy[3], qy[6], qy[7]]
     return [as_i16(op_a[i] + op_b[i]) for i in range(4)] + [as_i16(op_a[i] - op_b[i]) for i in range(4)]
 
 
@@ -196,6 +202,28 @@ def check_ex03(sec: dict) -> list[tuple[str, bool, str]]:
         bad = [(i, pie[i], ref[i]) for i in range(len(pie)) if pie[i] != ref[i]]
         out.append((f"ex03 FIR shift={shift} matches the Python reference", not bad,
                     f"{len(bad)} mismatches, first {bad[:3]}" if bad else f"{len(pie)}/{len(pie)}"))
+    # The alignment rule that forced the kernel's shape, kept as a measurement rather than a comment.
+    if "align_probe" in d:
+        words = i16_words(d["align_probe"])
+        lo, hi = words[:8], words[8:]
+        out.append(("ex03 a 128-bit load at x+2 returns the bytes at x (the low address bits are dropped)",
+                    lo == hi and any(lo), f"{lo} vs {hi}"))
+    # The no-copy path: EE.LD.128.USAR.IP leaves the dropped bits in SAR_BYTE, EE.SRC.Q shifts the window
+    # out of two aligned chunks. The syntax line for EE.SRC.Q does not extract, so the log decides which
+    # operand is qs0; what is checkable is that one of the two orders produces the window at byte 2.
+    if {"funnel_ab", "funnel_ba", "x"} <= set(d):
+        x = i16_words(d["x"])
+        expected = x[1:9]                      # x is 16-byte aligned, so byte offset 2 is x[1]
+        ab, ba = i16_words(d["funnel_ab"]), i16_words(d["funnel_ba"])
+        if ab == expected:
+            which = "EE.SRC.Q qz, q0, q1 (the first operand is qs0)"
+        elif ba == expected:
+            which = "EE.SRC.Q qz, q1, q0 (the second operand is qs0)"
+        else:
+            which = "neither order"
+        out.append(("ex03 EE.SRC.Q reproduces the window at byte 2 in one operand order",
+                    which != "neither order",
+                    f"{which}; expected {expected}, got ab={ab} ba={ba}"))
     return out
 
 

@@ -41,6 +41,7 @@ static int32_t s_y[64] __attribute__((aligned(16)));
 static int32_t s_y_ref[64] __attribute__((aligned(16)));
 static uint8_t s_src[BUF_BYTES] __attribute__((aligned(16)));
 static uint8_t s_dst[BUF_BYTES] __attribute__((aligned(16)));
+static int16_t s_window[16] __attribute__((aligned(16)));
 static int32_t s_out2[2] __attribute__((aligned(16)));
 static int16_t s_lanes8[8] __attribute__((aligned(16)));
 static uint32_t s_words[4] __attribute__((aligned(16)));
@@ -272,8 +273,12 @@ static void ex03(void)
                 acc += (int32_t)s_x[i + k] * (int32_t)s_h[k];
             }
             s_y_ref[i] = sat32(acc >> shift);
+            /* Every 128-bit PIE access drops the low four address bits (TRM p49), so the sliding window
+             * has to reach the kernel on the 16-byte grid. The first run of the version that loaded
+             * `x + 2*n` directly is what produced this file's history: 42 of 49 outputs came back as y[0]. */
+            memcpy(s_window, &s_x[i], 16 * sizeof(int16_t));
+            s_y[i] = ex03_fir16_tap(s_window, s_h, shift);
         }
-        ex03_fir16(s_x, n_out, s_h, shift, s_y);
         int ok = 0, fail = 0;
         for (int i = 0; i < n_out; i++) {
             if (s_y[i] == s_y_ref[i]) {
@@ -296,6 +301,30 @@ static void ex03(void)
     print_i16(ex, name, "h", s_h, 16);
     fflush(stdout);
     check(ex, name, "samples_matching_reference", ok_total, 2 * n_out);
+
+    /* The failure that shaped this file, kept as a measurement: a 128-bit load from x+2 returns the bytes
+     * at x, because the hardware forms the address as {as[31:4], 4{0}} (TRM p49). */
+    int16_t probe[16] __attribute__((aligned(16)));
+    ex03_align_probe(s_x, probe);
+    int align_same = memcmp(probe, probe + 8, 16) == 0;
+    print_i16(ex, name, "align_probe", probe, 16);
+    check(ex, name, "vld128_at_x_plus_2_returns_the_bytes_at_x", align_same ? 1 : 0, 1);
+
+    /* The no-copy alternative for windows off the grid: EE.LD.128.USAR.IP leaves the dropped bits in
+     * SAR_BYTE and EE.SRC.Q shifts the window out of two aligned chunks. Whichever operand order produces
+     * the window starting at byte 2 is the one where the first operand is qs0 -- the syntax line does not
+     * extract, so the log decides. Expected window = x[1..8] (byte offset 2), and x is 16-byte aligned. */
+    int16_t funnel_ab[8] __attribute__((aligned(16))), funnel_ba[8] __attribute__((aligned(16)));
+    ex03_funnel_probe(&s_x[1], &s_x[8], funnel_ab, funnel_ba);
+    int ab_hit = memcmp(funnel_ab, &s_x[1], 16) == 0;
+    int ba_hit = memcmp(funnel_ba, &s_x[1], 16) == 0;
+    print_i16(ex, name, "funnel_ab", funnel_ab, 8);
+    print_i16(ex, name, "funnel_ba", funnel_ba, 8);
+    print_i16(ex, name, "funnel_expected", &s_x[1], 8);
+    printf("EX %s %s DATA funnel_verdict ab=%d ba=%d\n", ex, name, ab_hit, ba_hit);
+    fflush(stdout);
+    check(ex, name, "src_q_one_operand_order_gives_the_window_at_byte_2", (ab_hit || ba_hit) ? 1 : 0, 1);
+    check(ex, name, "src_q_the_two_operand_orders_differ", (funnel_ab[0] == funnel_ba[0]) ? 0 : 1, 1);
     section_end(ex, name, fail_total == 0 ? 1 : 0, fail_total);
 }
 
@@ -421,11 +450,14 @@ static void ex06(void)
     ok += ok0 == 8;
     fail += ok0 == 8 ? 0 : 1;
 
-    /* sel2 = 1: op_a = {qy[95:64], qy[31:0], qx[95:64], qx[31:0]} = {x4,x5,x0,x1,x4,x5,x0,x1},
-     * op_b = {qy[127:96], qy[63:32], qx[127:96], qx[63:32]} = {x6,x7,x2,x3,x6,x7,x2,x3}. */
+    /* sel2 = 1: the manual writes its operand lists MSB first -- the leftmost field occupies the highest
+     * lanes. The first silicon run settled that reading: {qy[95:64], qy[31:0], qx[95:64], qx[31:0]} puts
+     * {qx0,x1} in lanes 0..1, {qx4,x5} in lanes 2..3, {qy0,qy1} in lanes 4..5, {qy4,qy5} in lanes 6..7.
+     * (Reading it the other way round swaps the two halves of the result, which is exactly what the log
+     * showed before this line was corrected.) */
     ex06_r2bf_sel1(x, out);
-    int16_t a1[8] = {x[4], x[5], x[0], x[1], x[4], x[5], x[0], x[1]};
-    int16_t b1[8] = {x[6], x[7], x[2], x[3], x[6], x[7], x[2], x[3]};
+    int16_t a1[8] = {x[0], x[1], x[4], x[5], x[0], x[1], x[4], x[5]};
+    int16_t b1[8] = {x[2], x[3], x[6], x[7], x[2], x[3], x[6], x[7]};
     int ok1 = 0;
     for (int i = 0; i < 4; i++) {
         check(ex, name, "r2bf_sel1_sum", out[i], (int16_t)(a1[i] + b1[i]));

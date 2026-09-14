@@ -24,9 +24,17 @@ bash /home/exe/m5_workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --example
 # ログ /workspace/backups/pie-examples-<stamp>.log ＋ 判定レポート report.json
 ```
 
-`ex01` の生バイトプローブ（`field=1` が 8 / 4 / 1 バイトのどれを進めるか）が出れば
-`data/pie_encoding_errata.json` の `EE.ST.ACCX.IP` の項目が決着する。`ex06` のレーン対応が一致したら
-多段 FFT に進む（`notes/07-pie-examples.md` の手順）。
+第1回ラン（2026-09-14 17:41、`pie-examples-20260914T174138Z.log`）は 17/22 チェック通過。失敗2件はどちらも
+こちらの誤りで、原因は特定・修正済み（**次のランで未検証**）:
+
+- ex03: 2バイトずつ滑らせた窓が、128bit アクセスの下位4bit丸め（TRM p49）で8サンプル連続同じ16バイトを読んでいた
+  → 境界に揃えた窓を渡す形に書き直し、丸めを可視化するプローブと `EE.SRC.Q` ファネル経路のプローブを追加
+- ex06: `EE.FFT.R2BF.S16` のオペランド列は MSB 先（左が上位レーン）だった → C 参照と Python 参照を修正
+  （実機の値と完全一致を確認済み）
+
+確定した知見は `data/pie_examples_measured.json`（MCP の `example_measured_semantics` が返す）と
+`notes/07-pie-examples.md`。**次の一手**: 修正済み ex03 を流して `EE.SRC.Q` のオペランド順を決める →
+`EE.FFT.*` の多段（8点→32点）を段ごとに検証しながら書く。
 
 ## 実測は完了（2026-09-14 17:17、ホスト側から）
 

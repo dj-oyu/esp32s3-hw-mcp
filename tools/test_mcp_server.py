@@ -63,7 +63,7 @@ async def main() -> int:
 
             tools = await session.list_tools()
             names = sorted(t.name for t in tools.tools)
-            check("14 tools advertised", len(names) == 14, str(names))
+            check("15 tools advertised", len(names) == 15, str(names))
 
             r = payload(await session.call_tool("get_register", {"name": "GDMA_IN_CONF0_CH0_REG"}))
             g = r["registers"][0]
@@ -243,6 +243,25 @@ async def main() -> int:
             check("manual_errata can be asked about one instruction",
                   len(r["instructions"]) == 1 and r["instructions"][0]["status"] == "mismatch",
                   json.dumps(r["instructions"])[:200])
+
+            r = payload(await session.call_tool("example_measured_semantics", {}))
+            check("example_measured_semantics serves the silicon findings with their provenance",
+                  r["provenance"]["kind"] == "measured_on_hardware"
+                  and len(r["findings"]) >= 8 and r["open_after_this_run"]
+                  and "how_to_read" in r, json.dumps(r["provenance"]))
+            check("example_measured_semantics keeps the unresolved data separate from the findings",
+                  len(r["printed_not_interpreted"]) >= 1
+                  and all(f["status"] == "confirmed" for f in r["findings"]),
+                  json.dumps([f["id"] for f in r["findings"]]))
+            check("example_measured_semantics says a measurement resolved the ST.ACCX.IP errata entry",
+                  any(f.get("resolves", "").endswith("EE.ST.ACCX.IP") for f in r["findings"]),
+                  json.dumps([f.get("resolves") for f in r["findings"]]))
+
+            r = payload(await session.call_tool("example_measured_semantics",
+                                               {"instruction": "EE.FFT.R2BF.S16"}))
+            check("example_measured_semantics can be asked about one instruction",
+                  len(r["findings"]) == 1 and "MSB" in r["findings"][0]["claim"],
+                  json.dumps([f["id"] for f in r["findings"]]))
 
     print(f"\n{'FAILED' if FAILED else 'PASSED'}: {len(FAILED)} failure(s) of {CHECKED} checks"
           + (f", {len(SKIPPED)} skipped" if SKIPPED else ""))

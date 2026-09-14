@@ -51,6 +51,7 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 | `peripheral_map.json` | Table 4.3-3（p408-409）: ペリフェラル名と境界アドレス・サイズ。オフセットを絶対アドレスに直す基準 | 44行 |
 | `pie_timing_measured.json` | **実機（Cardputer / ESP32-S3）で測った** PIE 命令のインターロック。アンカー（マニュアルが段を明記している5ケース）が全部一致したときだけ `valid: true` になり派生値を出す | 31測定 / 5アンカー / 派生4件（`valid: true`） |
 | `pie_encoding_errata.json` | マニュアルの命令語図と Espressif アセンブラが**食い違う命令だけ**（下記「アセンブラ照合」） | 220命令中6件 |
+| `pie_examples_measured.json` | **実機で測った命令の意味**（`examples/` の手書きカーネル。各カーネルは装置上で C 参照と、ホスト側で Python 参照と三重に照合）: アドレス後置インクリメントの刻み、ACCX の飽和、R2BF のレーン並び、128bit アクセスの下位ビット丸め、など | 9知見＋解釈保留1件 |
 
 `pie_pipeline.json` が本プロジェクトの中核データで、これがあると
 **「この命令列は何サイクルストールするか」を決定論的に計算できる**（LLMの推定に頼らない）。
@@ -156,10 +157,15 @@ bash tools/host_flash_and_log.sh --examples                         # 焼く＋�
 |---|---|
 | ex01 | メモリ系命令のアドレス後置インクリメントの刻み（文書が 3 通りに割れている 2 件の決着）、`EE.SRS.ACCX`、`EE.BITREV` |
 | ex02 | 16×16 int16 行列積（`EE.VMULAS.S16.ACCX` は 8 レーンを合算） |
-| ex03 | 16tap Q15 FIR（スライディング窓＋レジスタ渡しシフト） |
+| ex03 | 16tap Q15 FIR。16バイト境界に乗らない窓は PIE の 128bit アクセスが下位ビットを落とすため、境界に揃えた窓を渡す（丸めの可視化プローブと、コピー不要の `EE.SRC.Q` 経路のプローブ付き） |
 | ex04 | `LD.QR`/`ST.QR`/`MV.QR` と、実測段に基づく `LD.QR` インターロックの追試 |
 | ex05 | 40bit ACCX と `EE.SRS.ACCX` の飽和（数学的和との比較） |
 | ex06 | `EE.FFT.R2BF.S16` / `EE.CMUL.S16` のレーン対応（多段 FFT の前段） |
+
+第1回ラン（`pie-examples-20260914T174138Z.log`）で ex01/ex02/ex04/ex05 と ex06 の測定済みレーンは一致し、
+失敗した2件はどちらも**こちら側の思い違い**が原因と判明した（ex03 は 2 バイトずつ滑らせた窓が
+8サンプル連続で同じ16バイトを読んでいた＝TRM p49 の丸めを実機が実演、ex06 は sel2=1 のフィールド並びが
+MSB 先だった）。詳細は `examples/README.md` と `data/pie_examples_measured.json`。
 
 ## 使い方
 
@@ -184,9 +190,10 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 
 クライアントへの登録は各クライアントの流儀に従う（Hermes なら `hermes mcp add` → `hermes mcp test`）。
 
-実装済みツール（14ツール）。**3つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
-②ツールチェーン（アセンブラ）は「実際に何に符号化されるか」を答える、③実機（計測）は測った値とその
-有効性検査の結果を返す。
+実装済みツール（15ツール）。**4つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
+②ツールチェーン（アセンブラ）は「実際に何に符号化されるか」を答える、③実機の計測（段・ストール）は測った値と
+その有効性検査の結果を返す、④実機の**意味**（`examples/` のカーネルが装置上で確かめた挙動）は測定条件と
+一緒に返す。
 
 | ツール | 層 | 内容 |
 |---|---|---|
@@ -203,6 +210,7 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 | `toolchain_status()` | ② | どの as/objdump を使っているか（版つき）。無ければ「無い」と言う |
 | `measured_timing(instruction)` | ③ | 実機で測ったストール。`valid`（有効性ゲート通過）とアンカー、限界を併せて返す |
 | `manual_errata(instruction)` | ②③ | マニュアルとアセンブラが食い違う命令の一覧（`data/pie_encoding_errata.json`） |
+| `example_measured_semantics(instruction)` | ④ | `examples/` のカーネルが実機で確かめた**意味**（`data/pie_examples_measured.json`）。TRM の疑似コードと実機の一致／不一致、レーンの実値、どの読みが反証されたか、解釈保留の生データ |
 
 リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256）。
 

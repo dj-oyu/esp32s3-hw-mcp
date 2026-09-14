@@ -42,9 +42,15 @@ void ex01_bitrev(uint32_t as_value, uint32_t *out4);
  * loop reads contiguous 128-bit chunks. Two VMULAS.S16.ACCX (8 lanes summed into ACCX) per dot product. */
 void ex02_matmul16(const int16_t *a, const int16_t *bt, int32_t *c);
 
-/* ex03: 16-tap FIR. y[n] = sat32((sum(k) x[n+k]*h[k]) >> shift); EE.SRS.ACCX takes the shift from a
- * register, so the same kernel produces both the raw accumulator and the Q15 result. */
-void ex03_fir16(const int16_t *x, int n_out, const int16_t *h, uint32_t shift, int32_t *y);
+/* ex03: 16-tap FIR. The kernel takes one window already on the 16-byte grid, because a 128-bit PIE access
+ * drops the low four address bits (TRM p49) -- the first run of the sliding version proved that on silicon
+ * (42 of 49 outputs were the same number, correct exactly at the 16-byte boundaries). The C side stages the
+ * window; the aligned probe keeps the failure visible; the funnel probe measures the no-copy alternative.
+ *   y = sat32((sum window[0..15] * h[0..15]) >> shift), the shift coming from a register (EE.SRS.ACCX). */
+int32_t ex03_fir16_tap(const int16_t *window16, const int16_t *h, uint32_t shift);
+void ex03_align_probe(const int16_t *x, int16_t *out32);
+void ex03_funnel_probe(const int16_t *misaligned, const int16_t *next_chunk, int16_t *out_ab,
+                       int16_t *out_ba);
 
 /* ex04: QR transfers (LD.QR / ST.QR / MV.QR) and the LD.QR interlock at issue distance 0, 1 and 2. */
 void ex04_qr_copy(void *dst, const void *src, uint32_t n_bytes);
