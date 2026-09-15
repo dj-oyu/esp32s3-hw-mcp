@@ -6,8 +6,12 @@
 > md5: `4b5df4425e05f3c97110c25d87c4d9f0` → `a4e7cbcdf3c540ef53813541e94908e8`（tools/check_abi.py / tools/fix_abi.py）
 
 > **Status (integrated)**: this kernel now lives at `examples/firmware/main/ex11_block8x8.S`, is listed in
-> `examples/firmware/main/CMakeLists.txt`, and is called from `main.c`'s `ex11()`. It builds and the host
-> checker (`tools/selftest_examples_checker.py`) passes; it has **not been run on hardware**. The body below
+> `examples/firmware/main/CMakeLists.txt`, and is called from `main.c`'s `ex11()`. It builds, the host
+> checker (`tools/selftest_examples_checker.py`) passes, and **it ran on the Cardputer ADV on 2026-09-15**:
+> all 64 coefficients matched the C reference on silicon at shift 15 (and the transposed axis too),
+> `BENCH block8x8` 318.11 cycles/block against 10606.56 for the -O2 C baseline (33.34x) —
+> log `/workspace/backups/pie-examples-20260915T032511Z.log`, where the firmware's checks are
+> `SUMMARY checks_ok=29 checks_fail=0` and the host checker 73/73. The body below
 > still says `proposed/` and "not wired in" because it records the state before the move (the pasted
 > command transcripts are the originals, and the `.S` was moved byte for byte), and the heading still
 > carries the old `(proposed)`.

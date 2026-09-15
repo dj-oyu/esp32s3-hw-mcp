@@ -46,11 +46,22 @@ bash /workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --examples
 | `ex11` block8x8 | 8×8 int16 ブロック変換（MP3 / JPEG / H.264 の内側の形）。`EE.VSMULAS.S16.QACC` の broadcast 側を還元インデックスに使うので、この向きは転置不要。読み出しは `EE.SRCMB.S16.QACC`（シフト + 16bit 飽和） | 64 係数が C 参照と Python 参照の両方に一致（shift 15、転置表でもう一方の軸も）。小さい shift（8）では読み出し飽和レーン数を `DATA` に固定。`BENCH block8x8`（ブロック毎） | 8 タップに伸ばしたときのレジスタ繰り（q0〜q7 しか無い）と、飽和が来る場所（40bit アキュムレータではなく 16bit 読み出し）が分かる |
 | `ex12` physics | 物理と衝突の3本: 半陰的オイラー（4 × int32 レーン = 8 物体、飽和加算 `VADDS.S32`×2 + `VMIN/VMAX.S32`）、AABB 分離軸テスト（8 箱ずつ、`VCMP.LT/GT.S16` + `ORQ` + `NOTQ`）、距離²（8 点ペア、`VMULAS.S16.QACC` + `RUR.QACC_L/H_*` の厳密読み出しと `SRCMB` の Q16 読み出し） | 19 箱・19 点（端数はスカラテイル）で C 参照と Python 参照に一致。int32 飽和・16bit 差の飽和・int32 クランプの件数を `DATA` に出す。`BENCH integrate`（物体毎）/ `sat_masks`（箱毎）/ `dist2`（ペア毎） | in-domain の外（int32 を越える加算、16bit を越える差）で何がどう壊れるかが件数で分かる |
 
-**実機の状態**: `ex10` / `ex11` / `ex12` は **ビルドが通り、ホスト側チェッカー
-（`tools/selftest_examples_checker.py` が 75/75 通過 + 追加した全変異を検出）も通っているが、実機では
-まだ走らせていない**（`BENCH` 行の数字は実機ランのときに初めて意味を持つ）。この印は実機ランが取れるまで
-外さない。とくに ex11 / ex12 の QACC 系（`VSMULAS.S16.QACC` / `SRCMB.S16.QACC` / `RUR.QACC_*`）は
-ex09 の実機ログでまだ確定していない（`notes/08-media-3d-perf.md` の「実機の前に読むこと」）。
+**実機の状態（2026-09-15 に取得）**: `ex10` / `ex11` / `ex12` は**実機で走った**。1回のランでファーム内
+C 参照のチェックは `SUMMARY checks_ok=29 checks_fail=0`、ホスト側チェッカーは **73/73 PASS**
+（`/workspace/backups/pie-examples-20260915T032511Z.log`）。`BENCH` の数字はここで初めて実機の値になった:
+`sad8` 11.58 / `halfpel` 1.71（ex10）、`block8x8` 318.11（ex11）、`integrate` 5.15 / `sat_masks` 7.89 /
+`dist2` 16.42 / `dist2_q16` 5.00（ex12） cycles/要素 — 対 C(-O2) で 6.8〜33.3 倍。QACC 経路（ex11 / ex12）も
+シリコンで C 参照と一致した（ex09 の間合いの結果を待たずに確定）。
+
+実機が捕まえたものは2件、どちらも直して再走して緑になっている:
+
+1. **`ex12_dist2_q16` の戻り値が「書いたペア数」ではなく「グループ数」だった**（19点でカーネルが 2、
+   C 参照とホスト側チェッカーが 16 → ファーム自身の CHECK が FAIL）。`.S` の `srli a2, a5, 3` に
+   `slli a2, a2, 3` が抜けていた。モデル・C 参照・文書は正しく、**アセンブリだけが食い違っていた** —
+   モデルはアセンブリを走らせないので、この手の食い違いは実機でしか出ない。
+2. **レポートの連続 printf がタスク WDT の 5 秒を使い切り、その間に `sad_total` 行が丸ごと消えた**
+   （IDF のコンソール書き込みは UART FIFO を空ループで待ち、yield しない）。32値ごとに `vTaskDelay(1)` を
+   入れて解消。`notes/11-report-console-and-wdt.md` に機序と実機の証拠つきで書いた。
 
 ## ログの書式
 
@@ -96,9 +107,10 @@ SUMMARY checks_ok=N checks_fail=0
    段ごとに中間バッファを出して1段ずつ検証できる。
 3. `EE.SRCMB.S16.QACC` / `EE.ST.QACC_*.IP` の詰め方（8並列 QACC 経路）は未着手 → ex16 として残っている
    （`notes/08` の繰り下げ表）。
-4. `ex10`〜`ex12`（動き補償・8×8 ブロック変換・物理/衝突）を実機で流す。ビルドとホスト側チェッカーは
-   通っているので、ここで初めて `BENCH` の cycles/要素が数字になる。QACC 経路（ex11 / ex12）は
-   ex09 の間合いの結果待ち。
+4. `notes/08` の繰り下げ表の **ex13〜ex21**（透視除算 / スパン塗り / 非整列 FB 転送 / CELT pre-rotate /
+   MP3 IMDCT / Opus stereo / スプライト合成 / 深度テスト / VM 一括充填）— 草案は `proposed/` にあるので、
+   ex10〜ex12 と同じ手順（examples.h → main.c の `exN()` → ホスト側チェッカー → 実機）で1本ずつ通す。
+   レポートが 5 秒を超えても `report_tick()` があるので WDT では落ちない。
 
 ## 信頼度（正直なところ）
 

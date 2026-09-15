@@ -34,7 +34,9 @@ Functions defined in the file: `ex12_integrate`, `ex12_sat_masks`, `ex12_dist2_q
 * **Encodings**: every PIE instruction used is re-checked against the manual's instruction-word diagram
   with the repo's own `tools/asm_toolchain.py --check-instruction` — **15 of 15 emitted, all `match`**
   (plus `EE.LDQA.S16.128.IP`, cited for the QACC lane layout and not emitted; table below).
-* **Behaviour**: **model vs reference on the host, not silicon.** The Python model in this file is an
+* **Behaviour**: **model vs reference on the host, not silicon** — plus, since 2026-09-15, a real run on the
+  Cardputer ADV (see "実機ラン" below: 29/29 firmware checks, 73/73 host checks, and one assembly-vs-model
+  divergence the silicon caught). The Python model in this file is an
   instruction-level model of the sequence in the `.S` (lane lists, the saturating ops, the 40-bit QACC
   packing, the RUR word order), and it is compared against the `ex12_*_c` scalar code in C compiled with
   the host gcc, over 700 random cases (2400 int32 lanes, 228 eight-box groups + 704 tail boxes, 2374
@@ -260,6 +262,12 @@ ex12_dist2_qacc: 114 instructions total, 13 of them EE.* PIE ops
 ex12_dist2_q16: 23 instructions total, 15 of them EE.* PIE ops
     loop body 0x023e..0x026d: 17 instructions (15 EE.* PIE + 0 RUR, rest scalar/branch)
 ```
+
+> **計測の更新（2026-09-15、実機の修正後）**: `ex12_dist2_q16` は **24 命令（EE.* は 15 のまま）**、
+> 関数サイズ 0x48、ループ本体は 0x026c..0x029b の 17 命令（**1 反復あたりは不変**）。増えた 1 命令は
+> 戻り値を「グループ数」から「ペア数」に直す `slli` で、下の「実機ラン」に経緯と実機の証拠を書いた。
+> 上の表の他の 3 関数の数字は当時のオブジェクトのままで、現物と一致している（`nm --print-size`:
+> `ex12_integrate` 0x41 / `ex12_sat_masks` 0xce / `ex12_dist2_qacc` 0x14b）。
 
 ## モデルと参照実装 (the two implementations that were compared)
 
@@ -985,6 +993,56 @@ run is what would settle them.
    verifies that the `.S` loads, the model and the scalar reference agree on that layout; it cannot verify
    anything about the hardware here, and the layout is the first thing to re-check when the kernel is
    wired into a caller.
+
+## 実機ラン (silicon run, 2026-09-15) — what the chip settled, and what it disagreed with
+
+This kernel now lives in `examples/firmware/main/ex12_physics.S` and was run on the Cardputer ADV
+(ESP32-S3 rev v0.2, ESP-IDF v6.0.1). Log: `/workspace/backups/pie-examples-20260915T032511Z.log`
+(that run: `SUMMARY checks_ok=29 checks_fail=0` on the firmware's own C checks, **73/73 PASS** on the
+host checker, no watchdog, `END` present).
+
+Settled by silicon — every one of these matched both the C reference in `main.c` and the Python checker:
+
+| kernel | what the run said |
+|---|---|
+| `ex12_integrate` | 8/8 lanes, 2 int32-saturating lanes and 3 lanes moved by the narrow bounds — the same counts the model predicts |
+| `ex12_sat_masks` | all 19 boxes match, 6 overlapping, 13 separating |
+| `ex12_dist2_qacc` | all 19 squared distances match; 8 int32 clamps, 16 saturating axis differences, `max|a-b|` = 65535, 9 points changed by the saturating difference |
+| `ex12_dist2_q16` | after the fix below: 16 pairs written and 16 matching, 15 readout-saturated lanes (the model says 15) |
+
+Measured cost on silicon (`BENCH` lines, cycles per element, the C baseline at -O2):
+
+```
+integrate    objects=16000  pie=82387  c=684235    -> 5.149 c/elem  vs 42.765   (8.31x)
+sat_masks    boxes=38000    pie=299803 c=2422082   -> 7.890        vs 63.739   (8.08x)
+dist2        pairs=38000    pie=623834 c=4375350   -> 16.417       vs 115.141  (7.01x)
+dist2_q16    pairs=32000    pie=160063 c=4045570   -> 5.002        vs 126.424  (25.27x)
+```
+
+**The one thing the chip caught: `ex12_dist2_q16` was returning the group count, not the pair count.**
+The firmware's own check printed `dist2_q16_writes_whole_groups_only_and_returns_the_count pie=2 ref=16 FAIL`
+with `n_points = 19`: the kernel returned 2, while the C reference (`n_points & ~7`) and `main.c`'s
+expectation are both 16. The cause is one missing multiply in the epilogue:
+
+```
+.Lq16_done:
+    srli a2, a5, 3                  /* the loop's group count, used as the return value */
+    l32i a10, a1, 32
+    retw.n
+```
+
+The Python model in this file returns `(n_points >> 3) << 3`, and the C reference returns `n_points & ~7`:
+all three written sources (model, reference, header comment) agreed on 16 — **only the `.S` disagreed**, and
+the model never executes the assembly, so a unit mismatch in a return value cannot show up until silicon.
+The fix is the missing instruction:
+
+```
+    srli a2, a5, 3                  /* whole groups of eight (the loop count is a7) */
+    slli a2, a2, 3                  /* ...times eight = the PAIRS written = (n_points & ~7) */
+```
+
+After the fix: `q16_written=16`, `q16_saturated_lanes=15`, both matching the checker's model, and
+`ex12_dist2_q16` is 24 instructions (the 15 PIE ops and the 17-instruction loop body are unchanged).
 
 ## 検査が捕まえたもの (what the model-vs-reference check actually caught)
 

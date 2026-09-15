@@ -151,11 +151,34 @@ static void check(const char *ex, const char *name, const char *label, int64_t p
     fflush(stdout);
 }
 
+/* The console write path busy-waits on the UART TX FIFO with an empty loop body
+ * (esp_driver_uart/src/uart_vfs.c: `while (uart_ll_get_txfifo_len(uart) < 2) { ; }`), and the UART is the
+ * slow side -- 115200 baud against a CPU that can fill the FIFO much faster than the wire drains it. This
+ * report is ~75 KB, i.e. 5+ s of uninterrupted spinning, and the task watchdog's IDLE0 check fires in the
+ * middle of it. Measured on the Cardputer ADV on 2026-09-15 (two runs, same byte position): the WDT report,
+ * printed from the WDT ISR through the ROM console, took over the same TX path while
+ * `EX ex10 motion DATA sad_total` was in flight, and that line never reached the host -- the host checker
+ * failed ex10 for the missing key. Yield every REPORT_YIELD_EVERY emitted values so that no single spin can
+ * reach the 5 s IDLE0 budget; the cost is one tick per chunk of output, and it does not touch the BENCH
+ * numbers (those are ccount deltas around the kernels, not around the printer).
+ */
+#define REPORT_YIELD_EVERY 32
+static unsigned s_report_emitted;
+
+static void report_tick(void)
+{
+    if (++s_report_emitted >= REPORT_YIELD_EVERY) {
+        s_report_emitted = 0;
+        vTaskDelay(1);
+    }
+}
+
 static void print_i16(const char *ex, const char *name, const char *key, const int16_t *v, int n)
 {
     printf("EX %s %s DATA %s=", ex, name, key);
     for (int i = 0; i < n; i++) {
         printf("%s%04x", i ? "," : "", (unsigned)(uint16_t)v[i]);
+        report_tick();
     }
     printf("\n");
     fflush(stdout);
@@ -166,6 +189,7 @@ static void print_i32(const char *ex, const char *name, const char *key, const i
     printf("EX %s %s DATA %s=", ex, name, key);
     for (int i = 0; i < n; i++) {
         printf("%s%08" PRIx32, i ? "," : "", (uint32_t)v[i]);
+        report_tick();
     }
     printf("\n");
     fflush(stdout);
@@ -656,6 +680,7 @@ static void ex06(void)
         printf("EX %s %s DATA cmul_half0_sar%" PRIu32 "=", ex, name, sar);
         for (int i = 0; i < 4; i++) {
             printf("%s%04x", i ? "," : "", (unsigned)(uint16_t)w[i]);
+            report_tick();
         }
         printf("\n");
 
@@ -670,6 +695,7 @@ static void ex06(void)
         printf("EX %s %s DATA cmul_half1_sar%" PRIu32 "=", ex, name, sar);
         for (int i = 4; i < 8; i++) {
             printf("%s%04x", i == 4 ? "" : ",", (unsigned)(uint16_t)w1[i]);
+            report_tick();
         }
         printf("\n");
         fflush(stdout);
@@ -1102,6 +1128,7 @@ static void ex09(void)
         printf("EX %s %s DATA raw_row%d=", ex, name, r);
         for (int j = 0; j < 8; j++) {
             printf("%s%04x", j ? "," : "", (unsigned)(uint16_t)(lanes[j] & 0xFFFF));
+            report_tick();
         }
         printf("\n");
         fflush(stdout);

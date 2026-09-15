@@ -472,7 +472,12 @@ ex12_dist2_q16:
     addi a7, a7, -1
     bnez a7, .Lq16_group
 .Lq16_done:
-    srli a2, a5, 3                  /* return (n_points & ~7): the pairs actually written */
+    srli a2, a5, 3                  /* whole groups of eight... */
+    slli a2, a2, 3                  /* ...times eight = the PAIRS written, i.e. (n_points & ~7). The
+                                     * group count is what the loop needs (a7); the return value is the
+                                     * pair count, and returning the group count here is a factor-of-eight
+                                     * bug the silicon caught on 2026-09-15 (`q16_written=2` for
+                                     * n_points=19, and the C reference's 16 disagreed with it). */
     /* ABI: put the caller's a2 back before returning. */
     l32i a10, a1, 32
     retw.n

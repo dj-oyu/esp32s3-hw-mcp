@@ -2,7 +2,13 @@
 
 > **状態（統合後）**: この2カーネルは `examples/firmware/main/ex10_motion.S` に移り、
 > `examples/firmware/main/CMakeLists.txt` のビルドに入って `main.c` の `ex10()` から呼ばれる。
-> ビルドとホスト側チェッカー（`tools/selftest_examples_checker.py`）は通っているが、**実機では未実行**。
+> ビルドとホスト側チェッカー（`tools/selftest_examples_checker.py`）が通り、**2026-09-15 に実機
+> （Cardputer ADV）でも走った**: `sad8` は 8bit ドメインで 512 レーンが教科書値と一致（43480）、
+> フルレンジは跨ぎ 114 レーン・飽和 45 レーン、`halfpel` は 128 レーン一致、`BENCH sad8` 11.58 /
+> `halfpel` 1.71 cycles/要素（対 C 11.8 倍 / 7.7 倍）。実機でのチェックは全部 `ok`
+> （ログ `/workspace/backups/pie-examples-20260915T032511Z.log`）。
+> 実機が捕まえたのはこのドキュメントではなく**レポート経路の不具合**（75 KB の連続 printf が
+> タスク WDT の 5 秒を使い切り、その間に `sad_total` 行が消えた → `notes/11-report-console-and-wdt.md`）。
 > 本文が `proposed/` のパスや「ビルドに入っていない」と書いているのは移動前の状態のままで、貼ってある
 > 実行記録も当時のまま（.S は移動以外は一字も変えていない）。
 

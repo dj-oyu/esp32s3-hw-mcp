@@ -82,9 +82,16 @@ OCEAN + STARS  mode=1 fps=30.3 draw=19.93 | prep=1.06 loop=0.89 (kernel=0.69) hu
 | **ex12** physics | 半陰的オイラー（4×int32 レーン = 8物体/呼び出し、`EE.VADDS.S32`×2 + `VMIN/VMAX.S32` クランプ）、AABB 分離軸テスト（8箱ずつ、`VCMP.LT/GT.S16` + `ORQ` ×5 + `NOTQ` ×1）、距離²（8点ペアを `VMULAS.S16.QACC` で各レーンに合算。`RUR.QACC_L/H_*` の厳密読み出し版と `SRCMB` の Q16 読み出し版） | 箱は plane-major（6面 × 16B、96B/8箱、要素は `96*(i/8)+16*p+2*(i%8)`）、点も plane-major（3面 × 16B、48B/8点）。`out` は16バイト整列。`|Δ| > 32767` は飽和、int32 出力は `minu` で 2^31-1 にクランプ | 同上 |
 
 **実機の前に読むこと**: ex11 / ex12 の QACC 系（`EE.VSMULAS.S16.QACC` / `EE.SRCMB.S16.QACC` /
-`RUR.QACC_L_*`）は **ex09 の実機ログでまだ確定していない**（`mac1_min_gap=-1` = どの間合いでもモデルに
-一致しなかった）。3本ともマニュアルの擬似コード通りに動く前提で書いてあり、実機で走らせたときに
-「どの層が違うか」が出るのはここが本命。ex10 は ACCX 系（ex02/ex05 で確定済み）なので前提は薄い。
+`RUR.QACC_L_*`）は ex09 で間合い（`mac1_min_gap`）がモデルに一致せず（-1）、マニュアルの擬似コード通りに
+動く前提で書いてあった。
+
+**2026-09-15 の実機ランで、値の側は確定した**: ex11 は 64 係数が、ex12 は 19 点の距離² と Q16 読み出し
+16 ペアが、どちらもファーム内 C 参照とホスト側 Python 参照に一致した（ログ
+`/workspace/backups/pie-examples-20260915T032511Z.log`、`checks_ok=29 checks_fail=0` / ホスト側 73/73）。
+同じログで ex09 の間合いは `mac1_min_gap=0`・`mac1_model_matched_at_g6=1` になっており、**直前のランで
+-1 だった理由は未追跡**（あのランは ex12 がクラッシュする中間ファームだったので、フレーム上端のスロット
+上書き = notes/10 の不具合と無関係とは言い切れない）。ex10 は ACCX 系（ex02/ex05 で確定済み）なので
+前提は薄い。
 
 ### 草案あり（`examples/firmware/main/proposed/`、未統合・未実機）
 
