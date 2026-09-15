@@ -6,6 +6,40 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 
 公開: https://github.com/dj-oyu/esp32s3-hw-mcp
 
+## 動かし方（uvx：クローン不要）
+
+```bash
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp          # MCP（stdio）として起動
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --list   # ツール面を人向けに表示
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --paths  # どの写しの知識が答えたか
+```
+
+抽出済みの知識（`data/`）は wheel に同梱されるので、**クローンも PDF も追加設定も無しに 18 ツール中 14 ツールが答える**
+（残り4つは符号化を確かめるツールで、Espressif の binutils が要る。無い環境では「無い」と答える）。
+
+マニュアル**本文**のページ検索（`search_manual` / `get_page`）だけは本文を再配布できないため、初回に一度だけ:
+
+```bash
+uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
+```
+
+sha256 を検証して PDF を取得し（16MB）、`~/.cache/esp32s3-hw-mcp/` にTRM 1531ページ＋Datasheet 87ページの
+コーパスを作る。以後は同じ uvx 起動がそこを見つけるので、環境変数は要らない。
+
+MCP クライアントへの登録（クライアントの流儀に従う）:
+
+```bash
+claude mcp add esp32s3-hw -- uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp
+hermes mcp add esp32s3-hw --command uvx --args --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp
+```
+
+```json
+{ "mcpServers": { "esp32s3-hw": { "command": "uvx",
+  "args": ["--from", "git+https://github.com/dj-oyu/esp32s3-hw-mcp", "esp32s3-hw-mcp"] } } }
+```
+
+短い別名 `esp32-hw-mcp` も同じサーバーを起動する（どちらの名前も同じ `main` を指す）。
+
 ## 公開・ライセンス方針
 
 - **ライセンスは付与しない（All rights reserved）。** 事実の出所が Espressif Systems の著作物である
@@ -14,6 +48,10 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
 - 抽出データには常に出所（文書・版・ページ）を持たせる。ページを出せない値はデータに入れない。
 - CI（`.github/workflows/verify.yml`）が一次情報を再取得して全派生ファイルを再生成し、
   コミット済みの `data/` と**バイト一致**することを要求する。抽出の静かな変化・上流の改版はここで落ちる。
+- CI はさらに **wheel を組んで配布物を検査する**（`tools/check_wheel.py`。レジストリが「同梱する」と宣言した
+  成果物が実際に入っているか、件数・entry point・登録ツールの実体まで）、素の環境にインストールした同じ
+  サーバーを stdio 越しの E2E 88項目に通す。**同梱物が1つ欠けてもツールは起動してしまい、何も無いところから
+  答える**ので、そこを門にしている。
 
 ## 一次情報ポリシー
 
@@ -39,22 +77,51 @@ ESP32-S3 の **PIE（Processor Instruction Extensions, `EE.*` 命令）・レジ
   → 基本ISA（パイプライン段の一般論、命令スケジューリング、hwloop 等）は PDF では裏が取れない。
      TRM 1.7 に書かれている範囲だけを一次情報として扱う。
 
-## 現状の成果物（`data/`）
+## 知識レジストリ（`data/` とルート）
 
-| ファイル | 内容 | 規模 |
-|---|---|---|
-| `pie_instructions.json` | TRM 1.8 の命令個別仕様（p76-303）: 命令語エンコード、アセンブラ構文、説明、操作擬似コード＋各フィールドのページ | 220命令（`EE.*` 217 + `LD.QR`/`ST.QR`/`MV.QR`） |
-| `pie_pipeline.json` | TRM Table 1.7-2（p66-74）: 命令ごとのオペランド／特殊レジスタの use/def パイプライン段（1=E, 2=M） | 217行 |
-| `pie_hazards.md` | TRM 1.7.1〜1.7.3（p65-75）の本文（データハザード／ハードウェア資源ハザード／制御ハザード） | ページマーカー付き原文 |
-| `pie_review.json` | マニュアル自身の記述が食い違う行（後述） | 2行 |
-| `registers.json` | TRM の "Register Summary" 表（第2〜39章、41節）: レジスタ名・説明・オフセット・アクセス種別・グループ・節・ページ | **1581レジスタ** |
-| `peripheral_map.json` | Table 4.3-3（p408-409）: ペリフェラル名と境界アドレス・サイズ。オフセットを絶対アドレスに直す基準 | 44行 |
-| `pie_timing_measured.json` | **実機（Cardputer / ESP32-S3）で測った** PIE 命令のインターロック。アンカー（マニュアルが段を明記している5ケース）が全部一致したときだけ `valid: true` になり派生値を出す | 31測定 / 5アンカー / 派生4件（`valid: true`） |
-| `pie_encoding_errata.json` | マニュアルの命令語図と Espressif アセンブラが**食い違う命令だけ**（下記「アセンブラ照合」） | 220命令中6件 |
-| `pie_examples_measured.json` | **実機で測った命令の意味**（`examples/` の手書きカーネル。各カーネルは装置上で C 参照と、ホスト側で Python 参照と三重に照合）: アドレス後置インクリメントの刻み、ACCX の飽和、R2BF のレーン並び、128bit アクセスの下位ビット丸め、など | 9知見＋解釈保留1件 |
+集めた知識は「成果物 → 層 → **それを提供するツール/リソース** → 生成元 → 門」の1枚の表で管理している
+（実体は `esp32s3_hw_mcp/registry.py` の `ARTIFACTS`。表と実装が食い違えば CI が落ちる）。
+規模は表の数字ではなく、サーバーが**その場でファイルを開いて数えた**値を `knowledge_routes` が返す。
+
+| ファイル | 層 | 内容 | 規模 | ルート（ツール / リソース） |
+|---|---|---|---|---|
+| `registers.json` | ① | TRM の "Register Summary" 表（第2〜39章、41節）: 名前・説明・オフセット・アクセス種別・グループ・節・ページ | **1581レジスタ** | `get_register` / `list_registers` |
+| `peripheral_map.json` | ① | Table 4.3-3（p408-409）: ペリフェラル名と境界アドレス・サイズ。オフセットを絶対アドレスに直す基準 | 44行 | `list_peripherals` / `get_register`（`include_base_guess`） |
+| `pie_instructions.json` | ① | TRM 1.8 の命令個別仕様（p76-303）: 命令語エンコード、アセンブラ構文、説明、操作擬似コード＋各フィールドのページ | 220命令 | `get_instruction` / `instruction_encoding` |
+| `pie_pipeline.json` | ① | Table 1.7-2（p66-74）: 命令ごとのオペランド／特殊レジスタの use/def パイプライン段（1=E, 2=M） | 217行 | `instruction_pipeline` / `analyze_sequence` |
+| `pie_hazards.md` | ① | TRM 1.7.1〜1.7.3（p65-75）の本文（データハザード／ハードウェア資源ハザード／制御ハザード） | ページマーカー付き原文 | `esp32s3://trm/pie-hazards` |
+| `pie_review.json` | ① | マニュアル自身の記述が食い違う行（後述） | 2行 | `esp32s3://trm/review` |
+| `pie_timing_measured.json` | ③ | **実機（Cardputer / ESP32-S3）で測った** PIE 命令のインターロック。アンカー（マニュアルが段を明記している5ケース）が全部一致したときだけ `valid: true` になり派生値を出す | 45測定 / 5アンカー / 派生4件 / 予測対5 | `measured_timing` / `instruction_pipeline` / `analyze_sequence` |
+| `pie_examples_measured.json` | ③ | **実機で測った命令の意味**（`examples/` の手書きカーネル。各カーネルは装置上で C 参照と、ホスト側で Python 参照と三重に照合） | 18知見＋解釈保留1件 | `example_measured_semantics` |
+| `pie_encoding_errata.json` | ② | マニュアルの命令語図と Espressif アセンブラが**食い違う命令だけ**（下記「アセンブラ照合」） | 220命令中6件 | `manual_errata` |
+| `pie_measured_costs.json` | ④ | 兄弟プロジェクト cardputer-adv-pocketjs の実機で較正されたコストモデルと落とし穴（全項目に出典行の逐字引用と `provenance`） | 46項目 / 6セクション | `measured_costs` / `pie_cost_estimate` / `esp32s3://pocketjs/pie-costs` |
+| `sources/*.pdf` | ① | 引用元そのもの（TRM v1.8 1531p / Datasheet v2.2 87p）。sha256 でピン留めし、再配布はしない | 2 PDF | `esp32s3://docs/sources`（`--fetch-corpus` で取得） |
+| `corpus/trm-s3/pages.jsonl` | ① | TRM のページ全文（1531ページ）＋ブックマーク。**同梱しない**（`--fetch-corpus` が作る） | 1531ページ | `search_manual` / `get_page` |
+| 兄弟プロジェクトの `docs/pie-simd.md` | ④ | ④層のデータが引用している文書。実行時には読まない（引用は同梱済み）が、④層の門がここに突き合わせる | — | （`tools/verify_measured_costs.py`） |
+| Espressif の binutils | ② | ファームをビルドするのと同じ `xtensa-esp32s3-elf-as` / `objdump`。`esp32s3_hw_mcp/asm_toolchain.py` が橋渡し | — | `check_asm` / `decode_instruction` / `instruction_encoding` / `toolchain_status` |
 
 `pie_pipeline.json` が本プロジェクトの中核データで、これがあると
 **「この命令列は何サイクルストールするか」を決定論的に計算できる**（LLMの推定に頼らない）。
+
+### ルートの解決（どの写しが答えるか）
+
+同じ知識が「wheel の中」「クローンの `data/`」「環境変数が指す先」にあり得るので、順番と根拠を1か所に決めている
+（`esp32s3_hw_mcp/registry.py`）。最初に見つかったものが勝ち、**探索の履歴ごと**報告する:
+
+1. `ESP32S3_DATA_DIR`（`ESP32S3_CORPUS_DIR` / `ESP32S3_SOURCES_DIR` / `ESP32S3_POCKETJS_DOC` も同様）— 明示指定が最優先。
+2. wheel 同梱の写し（`uvx --from git+…` の既定）。
+3. クローンの `data/`（`python server/esp32s3_mcp.py` のとき）。
+4. `~/.cache/esp32s3-hw-mcp/`（`--fetch-corpus` が作った PDF とコーパス。`ESP32S3_CACHE_DIR` で変更可）。
+
+```bash
+esp32s3-hw-mcp --paths       # どのルートがどこに解決したか（探索履歴つき）＋成果物の有無
+esp32s3-hw-mcp --registry    # レジストリ全体を JSON で（MCP の knowledge_routes と同じ内容）
+```
+
+MCP 経由では **`knowledge_routes`**（ツール）と **`esp32s3://registry`**（リソース）が同じ索引を返す。
+索引には「どの写しから答えたか」「何件あったか」が入るので、`corpus_missing` や `no_measurements` のような
+返事が出たときに、ルートとインストールのどちらが悪いのかを切り分けられる。必須の成果物が1つでも欠けていれば、
+サーバーは黙って空を返さず起動を拒否する（`--paths` が原因を出す）。
 
 ### アセンブラ照合（マニュアルの読み取りは信用しない）
 
@@ -133,11 +200,14 @@ Espressif binutils に答えさせ、図から再構成した命令語と突き�
 ```
 sources/          取得したPDF（git管理外。tools/fetch_sources.sh で再取得）
 corpus/           ページ単位JSONL＋ブックマーク（git管理外。tools/build_corpus.py で再生成）
-data/             抽出済み知識（git管理。MCPサーバーが読む）
+data/             抽出済み知識（git管理。wheel に同梱され、MCPサーバーが読む）
+esp32s3_hw_mcp/   配布するパッケージ（レジストリ＝ルート索引、wheel に同梱されるサーバー/橋/生成器）
 examples/         PIE実用サンプル（手書きアセンブリ＋自己採点。examples/README.md）
 experiments/      実機実験（段・ハザードの測定、flash退避）
+server/           サーバー本体（wheel では esp32s3_hw_mcp/server.py として入る）
 tools/            取得・コーパス・抽出・検証・ビルド・実機実行のスクリプト
 notes/            調査メモ（08 に Cardputer ADV のメディア/3D 性能の物差しと量産リスト）
+pyproject.toml    配布の宣言（依存・entry point・wheel に入れるもの）。tools/check_wheel.py が検査する
 ```
 
 ## PIE 実用サンプル（`examples/`）
@@ -169,31 +239,37 @@ bash tools/host_flash_and_log.sh --examples                         # 焼く＋�
 8サンプル連続で同じ16バイトを読んでいた＝TRM p49 の丸めを実機が実演、ex06 は sel2=1 のフィールド並びが
 MSB 先だった）。詳細は `examples/README.md` と `data/pie_examples_measured.json`。
 
-## 使い方
+## 使い方（クローンして開発・抽出・実機検証する場合）
+
+上の uvx 経路が利用者の既定で、こちらは**抽出を作り直す／検証する／実機で測る**ための経路。
 
 ```bash
+uv sync --extra dev                                           # 依存（pypdf / pymupdf / mcp）
 bash tools/fetch_sources.sh                                   # PDF取得＋sha256検証
-python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 .venv/bin/python tools/build_corpus.py sources/esp32-s3_technical_reference_manual_en.pdf --out corpus/trm-s3
 .venv/bin/python tools/extract_pie.py                         # data/*.json を生成
 .venv/bin/python tools/verify_pie.py                          # 検証（緑になること）
 ```
 
+`uv` を使わない場合は `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt` で同じ。
+
 コーパスへの問い合わせは skill 付属の `tools/pdf_corpus.py`（`toc` / `find` / `text` / `grep`）が使える。
 
-## MCPサーバー（実装済み・`server/esp32s3_mcp.py`）
+## MCPサーバー（`server/esp32s3_mcp.py` / パッケージ名 `esp32s3_hw_mcp`）
 
 ```bash
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python server/esp32s3_mcp.py --list      # ツール面を人向けに表示
-.venv/bin/python server/esp32s3_mcp.py             # MCP（stdio）として起動
-.venv/bin/python tools/test_mcp_server.py          # stdio越しに79項目のE2E検査（ツールチェーン検査は無ければ skip）
-.venv/bin/python tools/verify_measured_costs.py     # ④層のデータと出典文書の突き合わせ（sha256・引用・数値。文書が無ければ skip）
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp              # 利用者（uvx）
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --list       # ツール面
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --paths      # ルートの解決結果
+uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
+
+.venv/bin/python server/esp32s3_mcp.py                                              # 同じサーバー（クローンから）
+.venv/bin/python tools/test_mcp_server.py                                            # stdio越しに88項目のE2E
+.venv/bin/python tools/verify_measured_costs.py                                      # ④層のデータと出典文書の突き合わせ
+uv build --wheel && .venv/bin/python tools/check_wheel.py dist/*.whl                 # 配布物の門（中身・件数・entry point・ツール面）
 ```
 
-クライアントへの登録は各クライアントの流儀に従う（Hermes なら `hermes mcp add` → `hermes mcp test`）。
-
-実装済みツール（17ツール）。**4つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
+実装済みツール（18ツール）。**4つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
 ②ツールチェーン（アセンブラ）は「実際に何に符号化されるか」を答える、③実機の計測（段・ストール）は測った値と
 その有効性検査の結果を返す、④実機の**意味とコスト**は測定条件と一緒に返す。④には2種類あり、
 **このリポジトリで測ったもの**（`data/pie_examples_measured.json`、`data/pie_timing_measured.json`）と
@@ -202,12 +278,13 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 
 | ツール | 層 | 内容 |
 |---|---|---|
+| `knowledge_routes(include_counts)` | 索引 | 上のレジストリ表を実行時に返す（成果物・層・ルート・生成元・門・どの写しが答えたか・**その場で数えた件数**）。何が届くかを先に知りたいとき、返事がおかしいときに最初に呼ぶ |
 | `get_register(name, include_base_guess)` | ① | レジスタ名で引く（`_REG` 省略可・部分一致）。`include_base_guess` で Table 4.3-3 からのベースアドレス推定（**推定であることを明示**して返す） |
 | `list_registers(prefix/chapter/section/group)` | ① | 前置き・章・節・グループで一覧 |
 | `get_instruction(name)` | ① | PIE命令のエンコード・構文・説明・操作擬似コード |
 | `instruction_pipeline(name)` | ①③ | Table 1.7-2 の use/def 段（原文セルも併記）。LD.QR/ST.QR/MV.QR は「一次情報に無い（found=false）」と返しつつ、**有効性ゲートを通った実測**があれば `measured` として別枠で添える（表の値と混ぜない） |
 | `list_peripherals(target)` | ① | Table 4.3-3 のペリフェラル境界アドレス |
-| `search_manual(query)` / `get_page(page)` | ① | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ作り方を返す） |
+| `search_manual(query)` / `get_page(page)` | ① | TRM本文の検索・ページ取得（**ローカルにコーパスが要る**。無ければ `--fetch-corpus` か作り方を返す） |
 | `analyze_sequence([...])` | ① | 命令列のストール段数を見積もる。TRM 1.7.1 の `D=max(SA-SB+1,0)`／ストール `=max(SA-SB,0)` を Table 1.7-2 の段に適用（根拠と限界は `notes/03-interlock-model.md`）。資源・制御ハザードは「未モデル」として明示して返す |
 | `check_asm(snippet, expected_words)` | ② | アセンブルして符号化を返す。`expected_words` を渡せば**主張を検査**する（不一致は不一致として返る） |
 | `instruction_encoding(name)` | ② | マニュアルの図にオペランドを代入した語と、アセンブラが出した語を比較。不一致なら最初に違うビット位置を返す |
@@ -219,8 +296,9 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 | `measured_costs(section, query)` | ④ | **兄弟プロジェクトの実機で較正されたコストモデルと落とし穴**（`data/pie_measured_costs.json`）。1命令1サイクル・`VST.128.IP` のみ +0.6・下限の式・実動作 1.3〜1.4倍・索引ロードの値段・スカラー除算/数学関数の値段・計測作法など。全項目に出典行の逐字引用と `provenance` が付く |
 | `pie_cost_estimate(blocks, instructions_per_block, stores_per_block, stalls_per_block, runs, cycles_outside_loop_per_run, divisions_in_row_setup)` | ④ | 同じデータの定数で下限を計算する（命令数＋0.6×ストア数＋ストール数、×ブロック数、＋run の足場、×1.3〜1.4 のレンジ）。定数は必ず出典付きで返し、較正の場所以外への外挿には警告を付ける |
 
-リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256。**兄弟プロジェクトの文書は
-一次情報と別枠**で digest 付きに列挙）、`esp32s3://pocketjs/pie-costs`（④層のデータ本体）。
+リソース（5つ）: `esp32s3://registry`（上記レジストリの索引そのもの）、`esp32s3://trm/pie-hazards`（1.7 の原文）、
+`esp32s3://trm/review`（マニュアル自身が食い違う行）、`esp32s3://docs/sources`（出所とsha256。**兄弟プロジェクトの
+文書は一次情報と別枠**で digest 付きに列挙）、`esp32s3://pocketjs/pie-costs`（④層のデータ本体）。
 
 設計上の約束:
 
@@ -243,13 +321,10 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 
 ## 予定している MCP のサーフェス（未実装分の設計案）
 
-ツール（すべて回答に TRM/Datasheet のページを付ける）:
+上の表にあるものは実装済み。ここに残るのは未実装の設計案だけ（すべて回答に TRM/Datasheet のページを付ける）:
 
-- `search_manual(query, doc?, chapter?)` / `get_page(page, doc)` / `get_section(ref)`
-- `get_instruction(name)` — エンコード・構文・説明・操作・ページ
 - `list_instructions(class?)` — 1.6 の分類（Read/Write/DataExchange/Arithmetic/Comparison/…）で絞る
-- `instruction_pipeline(name)` — use/def 段とハザード則（`pie_pipeline.json`）
-- （実装済み: `analyze_sequence`。上記の節を参照）
+- `get_section(ref)` — 節単位の取得（現状は `search_manual` + `get_page`）
 - `get_field(reg, field)` — レジスタのビット範囲。**一次情報では図版に描かれている**ため、図形座標からの
   復元か ESP-IDF `soc/*_reg.h` との突き合わせが要る（未実装）
 - `memory_map()` / `clock_tree()` — Ch.4 (p400-409) / Ch.7 (p526-533)
@@ -263,6 +338,9 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 1. **実装言語: Python 一本。`uv` / `uvx` で動かせることを必須要件とする。**
    `pyproject.toml` に `[project.scripts]` と依存を宣言し、`uvx --from <path|repo> esp32s3-hw-mcp`
    で起動できる形にする（`uv run` も同じ宣言から動く）。`python3 -m venv` の手順は補助に落とす。
+   → **実装済み（2026-09-15）**: `pyproject.toml`（hatchling）＋ `esp32s3_hw_mcp/` パッケージ。
+   `uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp` が最短経路で、知識は wheel に
+   同梱。`uvx` からは取れない成果物（PDF・コーパス）は `--fetch-corpus` が `~/.cache/esp32s3-hw-mcp` に作る。
 2. **知識の持ち方: 構造化KB＋ページ全文検索**（ベクトルRAG・埋め込みは入れない）。
    値（オフセット・段数・ハザード・集約）は構造化データから、記述はページ全文検索から引く。
    どちらの経路でも回答に文書名・版・ページを付ける。
