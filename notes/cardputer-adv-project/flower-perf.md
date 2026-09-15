@@ -128,6 +128,14 @@ cardputer-adv-pocketjs の新ブランチ `perf/flower-decor`（親は design-co
 
 ## 3. 既に入った最適化（消えた量つき）
 
+> **残りの手の検討は `cardputer-adv-pocketjs` の `docs/flower-optimisation-options.md`（2026-09-15、
+> branch `perf/flower-decor`）に移した。** 要点: ①**LCD 転送の非同期化が最大**（`send` 7.4–7.8 ms を
+> 隠せる。`spi_device_polling_transmit` が CPU を止めている。シーンに触らない）②スカラーの残り玉は
+> 門番の 1 行とリテラル再ロード（合計 ~0.5 ms、要実測）③PIE は「8 レーンの RGB565 ブレンド部品」を
+> 先に作り、林冠 → 装飾光線の順 ④装飾光線の算術 micro-opt は実測で終了（§2.2）。
+> `pixels`（既存 PIE）6.0–6.8 ms と `send` 以外は全部スカラーで、`shots` の名目 60 fps に対して
+> 実測 21.9 fps（draw 45.6 ms）というのがいまの位置。
+
 | 何を | 出典 | 消えた量（実測） |
 |---|---|---|
 | `shade` の `floorf`×2 → `ifloor`（`flower.c:447-453`） | `flower-perf-handoff.md:23` | `prep: petals=` **2,710 → 2,395 cy/part**（−0.033 ms/frame）。`floorf` は約 78 cy |
