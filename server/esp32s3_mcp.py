@@ -18,34 +18,59 @@ Serves four layers, kept apart on purpose:
    presented as one measurement.
 
 The manual's full text is *not* in this repository (only the extracted facts are), so `search_manual` and
-`get_page` need a local corpus:
+`get_page` need a local corpus. `esp32s3-hw-mcp --fetch-corpus` fetches the pinned PDFs and builds it where
+the server looks for it (~/.cache/esp32s3-hw-mcp); from a checkout the same thing is:
 
     bash tools/fetch_sources.sh
     .venv/bin/python tools/build_corpus.py sources/esp32-s3_technical_reference_manual_en.pdf --out corpus/trm-s3
 
 Run:
-    .venv/bin/python server/esp32s3_mcp.py            # MCP over stdio
-    .venv/bin/python server/esp32s3_mcp.py --list     # print the tool surface and exit (for humans)
+    uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp         # MCP over stdio
+    uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --list  # tool surface, for humans
+    .venv/bin/python server/esp32s3_mcp.py                                        # same server, from a clone
+    .venv/bin/python server/esp32s3_mcp.py --paths                                # which copy answered
+
+Which copy of the knowledge answers is decided in esp32s3_hw_mcp/registry.py -- environment variable, then
+the copy inside the installed package (what uvx installs), then the checkout -- and reported by `--paths` and
+by the knowledge_routes tool, so an unexpected answer can be traced to the copy that gave it. The registry
+also holds the routes: which tool or resource reaches which artifact.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
+import urllib.request
 from functools import lru_cache
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA = os.environ.get("ESP32S3_DATA_DIR", os.path.join(ROOT, "data"))
-CORPUS = os.environ.get("ESP32S3_CORPUS_DIR", os.path.join(ROOT, "corpus"))
+try:                                        # installed (uvx / pip): the package is importable
+    from esp32s3_hw_mcp import __version__ as VERSION
+    from esp32s3_hw_mcp import registry
+except ImportError:                         # run as `python server/esp32s3_mcp.py`: the package is at the root
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from esp32s3_hw_mcp import __version__ as VERSION   # noqa: E402
+    from esp32s3_hw_mcp import registry      # noqa: E402
+
+ROOT = registry.REPO_ROOT                      # the checkout, when this is one
 TOOLS = os.path.join(ROOT, "tools")
-if TOOLS not in sys.path:
-    sys.path.insert(0, TOOLS)
-try:                                        # the toolchain bridge is optional: it needs Espressif binutils
-    import asm_toolchain                     # noqa: E402
-except Exception as _exc:                    # pragma: no cover - environment
-    asm_toolchain = None
-    _TOOLCHAIN_IMPORT_ERROR = str(_exc)
+DATA = registry.resolve_data()["path"]
+CORPUS = registry.resolve_corpus()["path"]
+
+_TOOLCHAIN_IMPORT_ERROR = ""
+try:                                        # the toolchain bridge ships inside the wheel ...
+    from esp32s3_hw_mcp import asm_toolchain  # type: ignore[attr-defined]
+except Exception:
+    asm_toolchain = None                    # type: ignore[assignment]
+if asm_toolchain is None and os.path.isdir(TOOLS):   # ... and lives in tools/ in a checkout
+    if TOOLS not in sys.path:
+        sys.path.insert(0, TOOLS)
+    try:
+        import asm_toolchain                 # noqa: E402,F811
+    except Exception as _exc:                # pragma: no cover - environment
+        asm_toolchain = None
+        _TOOLCHAIN_IMPORT_ERROR = str(_exc)
 
 # The documents the data was extracted from. Digests match tools/fetch_sources.sh, so a caller can tell
 # whether a claim was built from the revision it has.
@@ -289,10 +314,17 @@ def cost_value(m: dict, item_id: str, as_printed: str) -> tuple[float | None, di
     return None, {}
 
 
-CORPUS_HINT = ("The manual's page text is not part of this repository. Build it once:\n"
+CORPUS_HINT = ("The manual's page text is not redistributed here, so this needs a corpus. The server can "
+               "build one itself, once:\n"
+               "  uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp "
+               "--fetch-corpus\n"
+               "  (it fetches the sha256-pinned PDFs and leaves the corpus under ~/.cache/esp32s3-hw-mcp, "
+               "where the server looks for it)\n"
+               "or, from a checkout:\n"
                "  bash tools/fetch_sources.sh\n"
                "  .venv/bin/python tools/build_corpus.py sources/esp32-s3_technical_reference_manual_en.pdf"
-               " --out corpus/trm-s3")
+               " --out corpus/trm-s3\n"
+               "ESP32S3_CORPUS_DIR points the server at a corpus somewhere else.")
 
 
 def norm(name: str) -> str:
@@ -410,7 +442,7 @@ def build_server():
     server = MCPServer(
         name="esp32s3-hw",
         title="ESP32-S3 hardware knowledge (Espressif TRM/Datasheet)",
-        version="0.1.0",
+        version=VERSION,
         instructions=(
             "Answers about the ESP32-S3, from four layers that are deliberately kept apart. (1) "
             "Espressif's own documents (TRM v1.8, Datasheet v2.2): register maps, PIE instructions, "
@@ -427,7 +459,9 @@ def build_server():
             "measured_in_this_repository: false, because another project's board is not this "
             "repository's measurement — never merge layer 3 and layer 4 into one number. Facts "
             "that no layer states (e.g. base addresses for a register family, field bit ranges) are "
-            "reported as absent or heuristic, never invented."),
+            "reported as absent or heuristic, never invented. If you want to know what is reachable at all "
+            "before asking, call knowledge_routes (or read esp32s3://registry): it lists every artifact, "
+            "its layer, and the tool or resource that serves it, with the count it answered from."),
     )
 
     @server.tool(description="Look up an ESP32-S3 register by name (exact, or substring matches).")
@@ -1046,21 +1080,223 @@ def build_server():
                 **c["source"]}
         return json.dumps(out, ensure_ascii=False, indent=1)
 
+    # ---------------------------------------------------------------------------------------------
+    # The route index itself: what is reachable, in which layer, through which tool or resource, and
+    # where that copy of the knowledge came from. A caller that gets an unexpected answer (or a
+    # `corpus_missing`/`no_measurements` reply) can read this to see whether the route or the install
+    # is at fault -- the counts are measured by opening the files, not asserted here.
+    # ---------------------------------------------------------------------------------------------
+
+    @server.tool(description="The route index: every artifact this server can answer from, its layer, the "
+                             "tool(s) and resource(s) that serve it, its producer and its gate, where each "
+                             "root resolved to (environment / installed package / checkout / cache), and how "
+                             "many records answered. Call this first to see what is reachable, and to trace "
+                             "an unexpected answer to the copy of the knowledge that gave it.")
+    def knowledge_routes(include_counts: bool = True) -> dict:
+        return registry.describe(with_counts=include_counts)
+
+    @server.resource("esp32s3://registry",
+                     title="Knowledge registry: artifacts, layers and the route to each",
+                     mime_type="application/json")
+    def registry_index() -> str:
+        return json.dumps(registry.describe(with_counts=True), ensure_ascii=False, indent=1)
+
+    @server.resource("esp32s3://trm/review", title="TRM rows where the manual disagrees with itself",
+                     mime_type="application/json")
+    def trm_review() -> str:
+        path = os.path.join(DATA, "pie_review.json")
+        return open(path, encoding="utf-8").read() if os.path.exists(path) else "[]"
+
     return server
 
 
-def main() -> int:
-    if "--list" in sys.argv:
-        server = build_server()
+# ---------------------------------------------------------------------------------------------------------
+# Command line. `--fetch-corpus` exists so that the one artifact this repository must not redistribute (the
+# manual's page text) is reachable from the same command that serves the knowledge, instead of only from a
+# checkout: it fetches the sha256-pinned PDFs, builds the corpus where the server looks for it
+# (~/.cache/esp32s3-hw-mcp), and needs pymupdf for that one run.
+# ---------------------------------------------------------------------------------------------------------
+
+HELP = """esp32s3-hw-mcp -- ESP32-S3 hardware knowledge server (MCP over stdio)
+
+  (no arguments)            serve MCP over stdio; this is what a client launches
+  --list                     the tool surface, for humans
+  --paths                    where each root resolved to, and which artifacts are present
+  --registry                 the full route index as JSON
+  --fetch-corpus             fetch the pinned PDFs and build the page corpus (needs pymupdf)
+  --corpus-dir DIR           where --fetch-corpus writes the corpus (default: a checkout's corpus/, else
+                             ~/.cache/esp32s3-hw-mcp/corpus)
+  --sources-dir DIR          where --fetch-corpus puts the PDFs (same rule)
+  --version                  print the version
+
+Environment: ESP32S3_DATA_DIR, ESP32S3_CORPUS_DIR, ESP32S3_SOURCES_DIR, ESP32S3_CACHE_DIR,
+             ESP32S3_POCKETJS_DOC. An environment path always wins, and `--paths` shows the search."""
+
+
+def _sha256(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _opt(args: list[str], name: str, default: str = "") -> str:
+    if name not in args:
+        return default
+    i = args.index(name)
+    if i + 1 >= len(args):
+        raise SystemExit(f"{name} needs a value")
+    return args[i + 1]
+
+
+def fetch_sources(dest: str) -> dict:
+    """Download the two pinned PDFs into dest, checking the digest. A 200 with an HTML body is not a PDF:
+    the digest is the test (see sources/SOURCES.md)."""
+    os.makedirs(dest, exist_ok=True)
+    got = {}
+    for key, doc in DOCS.items():
+        name = doc["url"].rsplit("/", 1)[-1]
+        path = os.path.join(dest, name)
+        if os.path.exists(path) and _sha256(path) == doc["sha256"]:
+            print(f"  ok (cached)   {name}")
+            got[key] = path
+            continue
+        print(f"  fetching      {name} ({doc['document']} v{doc['version']})")
+        req = urllib.request.Request(doc["url"], headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=300) as resp, open(path, "wb") as out:
+            while True:
+                chunk = resp.read(1 << 20)
+                if not chunk:
+                    break
+                out.write(chunk)
+        digest = _sha256(path)
+        if digest != doc["sha256"]:
+            raise SystemExit(f"FAIL  {name}: sha256 {digest} != pinned {doc['sha256']} "
+                             f"(Espressif re-released the document?)")
+        print(f"  ok (fetched)  {name}  {digest[:16]}...")
+        got[key] = path
+    return got
+
+
+def _load_corpus_builder():
+    """The packaged copy when installed, tools/build_corpus.py in a checkout (same file, two locations)."""
+    try:
+        from esp32s3_hw_mcp import build_corpus as mod    # type: ignore[attr-defined]
+        return mod
+    except ImportError:
+        pass
+    path = os.path.join(TOOLS, "build_corpus.py")
+    if not os.path.exists(path):
+        raise SystemExit("build_corpus.py not found (neither installed nor in tools/)")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("build_corpus", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _scratch_dir(dirname: str, env_var: str) -> str:
+    env = os.environ.get(env_var, "").strip()
+    if env:
+        return env
+    if os.path.isdir(os.path.join(ROOT, "data")):        # a checkout: keep the repository layout
+        return os.path.join(ROOT, dirname)
+    return os.path.join(registry.CACHE_DIR, dirname)
+
+
+def cmd_fetch_corpus(args: list[str]) -> int:
+    sources = _opt(args, "--sources-dir") or _scratch_dir("sources", registry.ENV_SOURCES)
+    corpus = _opt(args, "--corpus-dir") or _scratch_dir("corpus", registry.ENV_CORPUS)
+    print(f"sources -> {sources}\ncorpus  -> {corpus}")
+    pdfs = fetch_sources(sources)
+    try:
+        builder = _load_corpus_builder()
+    except SystemExit as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    for key, sub in (("trm", "trm-s3"), ("datasheet", "datasheet-s3")):
+        out = os.path.join(corpus, sub)
+        print(f"building      {out}")
+        try:
+            builder.build(pdfs[key], out)
+        except ImportError as exc:            # pymupdf is needed for this one command
+            print(f"{exc}\n\npymupdf is needed only to build the corpus. Run this once as:\n"
+                  "  uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp "
+                  "--fetch-corpus", file=sys.stderr)
+            return 2
+    print("\ndone. `esp32s3-hw-mcp --paths` should now report the corpus as present; search_manual and "
+          "get_page answer from it.")
+    return 0
+
+
+def print_paths() -> int:
+    reg = registry.describe(with_counts=False)
+    print("roots (first hit wins; an ESP32S3_* variable overrides each one):")
+    for role, r in reg["roots"].items():
+        print(f"  {'ok     ' if r['exists'] else 'MISSING'} {role:<12} {r['path']}")
+        print(f"          source: {r['source']} -- {r['how']}")
+        for s in r["searched"]:
+            if s["source"] != r["source"]:
+                print(f"          also looked: {s['source']:<6} {s['path']} "
+                      f"-> {'found' if s['exists'] else 'no'}")
+    print("\nartifacts (the route each one is reached through is in --registry / knowledge_routes):")
+    for a in reg["artifacts"]:
+        tools = ",".join(a["served_by"]["tools"]) or "-"
+        print(f"  {'ok     ' if a['present'] else 'MISSING'} {a['id']:<24} layer={str(a['layer']):<5} "
+              f"{a['route_kind']:<16} {a['file'] or '(no file)':<40} [{tools}]")
+    missing = reg["summary"]["missing_required"]
+    if missing:
+        print(f"\nmissing required artifacts: {', '.join(missing)} -- the install is broken "
+              f"(they ship inside the package); reinstall, or point ESP32S3_DATA_DIR at a good data/ dir.")
+    return 1 if missing else 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        missing = registry.describe(with_counts=False)["summary"]["missing_required"]
+        if missing:                           # refuse to serve nothing: say which install is broken
+            print(f"missing required data: {', '.join(missing)}\n"
+                  f"data dir in use: {DATA}\n"
+                  f"run `esp32s3-hw-mcp --paths` for the search trace.", file=sys.stderr)
+            return 2
+        build_server().run(transport="stdio")
+        return 0
+    if "--version" in args:
+        print(f"esp32s3-hw-mcp {VERSION}")
+        return 0
+    if "--help" in args or "-h" in args:
+        print(HELP)
+        return 0
+    if "--list" in args:
         import asyncio
 
+        server = build_server()
         tools = asyncio.run(server.list_tools())
         for t in tools:
             print(f"- {t.name}: {(t.description or '').splitlines()[0]}")
-        print(f"\ndata dir: {DATA}\ncorpus:   {'present' if pages() is not None else 'absent (search/get_page disabled)'}")
+        reg = registry.describe(with_counts=True)
+        counts = {a["id"]: a.get("records") for a in reg["artifacts"] if a.get("records") is not None}
+        print(f"\n{len(tools)} tools; {len(reg['artifacts'])} registry artifacts "
+              f"({reg['summary']['present']} present)")
+        print("counts: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
+        for role, r in reg["roots"].items():
+            print(f"{role:<12} {r['path']}   [{r['source']}]")
+        print("corpus: " + ("present (search_manual/get_page enabled)" if pages() is not None
+                            else "absent -- build it with --fetch-corpus, or search_manual/get_page will "
+                                 "say so"))
         return 0
-    build_server().run(transport="stdio")
-    return 0
+    if "--paths" in args:
+        return print_paths()
+    if "--registry" in args:
+        print(json.dumps(registry.describe(with_counts=True), ensure_ascii=False, indent=1))
+        return 0
+    if "--fetch-corpus" in args:
+        return cmd_fetch_corpus(args)
+    print(f"unknown option(s): {' '.join(args)}\n\n{HELP}", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":

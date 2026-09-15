@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "esp32s3-hw-mcp"
+description = "MCP server for ESP32-S3 hardware knowledge (PIE instructions, registers, measured performance) — every answer carries the printed page it came from"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-Proprietary"
+authors = [{ name = "dj-oyu" }]
+keywords = ["esp32-s3", "pie", "espressif", "trm", "mcp", "model-context-protocol", "xtensa"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Embedded Systems",
+  "Topic :: Software Development :: Documentation",
+]
+dynamic = ["version"]
+# Only the MCP SDK: the server answers from the data files that are shipped inside this package.
+dependencies = ["mcp>=2.0"]
+
+[project.optional-dependencies]
+# `esp32s3-hw-mcp --fetch-corpus` fetches the pinned PDFs and builds the page corpus; nothing else needs it.
+corpus = ["pymupdf>=1.26"]
+# The extraction, verification and hardware scripts in tools/ need these (`uv sync --extra dev`).
+dev = ["pymupdf>=1.26", "pypdf>=6", "mcp>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/dj-oyu/esp32s3-hw-mcp"
+Sources = "https://github.com/dj-oyu/esp32s3-hw-mcp"
+
+[project.scripts]
+esp32s3-hw-mcp = "esp32s3_hw_mcp.server:main"
+# Alias: the same server under the shorter name, for clients whose config is easier to read that way.
+esp32-hw-mcp = "esp32s3_hw_mcp.server:main"
+
+[tool.hatch.version]
+path = "esp32s3_hw_mcp/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["esp32s3_hw_mcp"]
+
+# The wheel is self-contained: the extracted knowledge (data/), the two scripts the server itself runs
+# (tools/asm_toolchain.py for encoding checks, tools/build_corpus.py for --fetch-corpus) and the notice all
+# ship inside the importable package, while the repository keeps them where the extraction pipeline and the
+# CI gate expect them. tools/check_wheel.py reads esp32s3_hw_mcp/registry.py and asserts every artifact the
+# registry declares as shipped is actually in the built wheel.
+[tool.hatch.build.targets.wheel.force-include]
+"server/esp32s3_mcp.py" = "esp32s3_hw_mcp/server.py"
+"tools/asm_toolchain.py" = "esp32s3_hw_mcp/asm_toolchain.py"
+"tools/build_corpus.py" = "esp32s3_hw_mcp/build_corpus.py"
+"data" = "esp32s3_hw_mcp/data"
+"NOTICE.md" = "esp32s3_hw_mcp/NOTICE.md"
+
+[tool.uv]
+# `uv sync --extra dev` in a checkout; the venv the tools/ scripts document is the same set.
+default-groups = []

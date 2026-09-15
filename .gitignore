@@ -14,3 +14,7 @@ experiments/pie-timing/firmware/sdkconfig.old
 examples/firmware/build_*/
 examples/firmware/sdkconfig
 examples/firmware/sdkconfig.old
+
+# Packaged build output (`uv build` / `python -m build`); the wheel is a build artifact, never committed.
+dist/
+build/

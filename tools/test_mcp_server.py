@@ -5,15 +5,32 @@ Assertions use values that were read off the printed pages (see tools/verify_reg
 this test fails if the server starts serving something the manual does not say.
 
     .venv/bin/python tools/test_mcp_server.py
+
+    # ... against an installed copy instead of the checkout (this is what `uvx` users run):
+    ESP32S3_SERVER_CMD="uvx --from /path/to/checkout esp32s3-hw-mcp" .venv/bin/python tools/test_mcp_server.py
+
+The command form matters: the same checks then exercise the wheel's own data files and the console script,
+which is where a packaging mistake (a data file left out of the wheel) would otherwise go unnoticed -- every
+tool would still start, and every tool would answer from nothing.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import os
+import shlex
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# The advertised surface, spelled out: a tool that disappears is as much a regression as one that answers
+# wrongly, and this suite is the only place that would notice either.
+EXPECTED_TOOLS = [
+    "analyze_sequence", "check_asm", "decode_instruction", "example_measured_semantics", "get_instruction",
+    "get_page", "get_register", "instruction_encoding", "instruction_pipeline", "knowledge_routes",
+    "list_peripherals", "list_registers", "manual_errata", "measured_costs", "measured_timing",
+    "pie_cost_estimate", "search_manual", "toolchain_status",
+]
 
 FAILED: list[str] = []
 CHECKED = 0
@@ -51,11 +68,19 @@ async def main() -> int:
     from mcp.client.session import ClientSession
     from mcp.client.stdio import StdioServerParameters, stdio_client
 
-    params = StdioServerParameters(
-        command=sys.executable,
-        args=[os.path.join(ROOT, "server", "esp32s3_mcp.py")],
-        env=dict(os.environ),
-    )
+    # The server under test: the checkout's script by default, or whatever ESP32S3_SERVER_CMD names (an
+    # installed console script, a uvx invocation) so the same suite can gate a packaged build.
+    override = os.environ.get("ESP32S3_SERVER_CMD", "").strip()
+    if override:
+        parts = shlex.split(override)
+        params = StdioServerParameters(command=parts[0], args=parts[1:], env=dict(os.environ))
+    else:
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=[os.path.join(ROOT, "server", "esp32s3_mcp.py")],
+            env=dict(os.environ),
+        )
+    print(f"server under test: {params.command} {' '.join(params.args)}")
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             info = await session.initialize()
@@ -63,7 +88,8 @@ async def main() -> int:
 
             tools = await session.list_tools()
             names = sorted(t.name for t in tools.tools)
-            check("17 tools advertised", len(names) == 17, str(names))
+            check(f"{len(EXPECTED_TOOLS)} tools advertised", names == EXPECTED_TOOLS,
+                  str(sorted(set(names) ^ set(EXPECTED_TOOLS))))
 
             r = payload(await session.call_tool("get_register", {"name": "GDMA_IN_CONF0_CH0_REG"}))
             g = r["registers"][0]
@@ -126,9 +152,16 @@ async def main() -> int:
                       for p in r["peripherals"]), json.dumps(r["peripherals"])[:160])
 
             r = payload(await session.call_tool("search_manual", {"query": "5-stage pipeline"}))
-            check("search_manual finds the pipeline description with a page",
-                  r["pages_with_match"] >= 1 and r["hits"][0]["citation"]["page"] == 65,
-                  json.dumps(r)[:160])
+            if r.get("error") == "corpus_missing":
+                # A uvx / packaged install has no corpus until --fetch-corpus is run; that route is gated in
+                # the checkout job, where the PDFs have already been fetched.
+                skip("search_manual / get_page (no corpus in this environment)")
+                check("the missing corpus route says how to get one",
+                      "--fetch-corpus" in r["hint"] and "ESP32S3_CORPUS_DIR" in r["hint"], r["hint"][:160])
+            else:
+                check("search_manual finds the pipeline description with a page",
+                      r["pages_with_match"] >= 1 and r["hits"][0]["citation"]["page"] == 65,
+                      json.dumps(r)[:160])
 
             r = payload(await session.call_tool("analyze_sequence",
                                                  {"instructions": ["EE.LD.ACCX.IP", "EE.SRS.ACCX"]}))
@@ -165,8 +198,11 @@ async def main() -> int:
                   and r["unmodelled"]["control_hazard_citation"]["page"] == 74, "")
 
             r = payload(await session.call_tool("get_page", {"page": 66}))
-            check("get_page(66) returns Table 1.7-2's page",
-                  "Extended Instruction Pipeline Stages" in r["text"], r["text"][:80])
+            if r.get("error") == "corpus_missing":
+                skip("get_page(66) (no corpus in this environment)")
+            else:
+                check("get_page(66) returns Table 1.7-2's page",
+                      "Extended Instruction Pipeline Stages" in r["text"], r["text"][:80])
 
             # Toolchain-backed verification. These call the real Espressif binutils, so on a machine that
             # has none they are skipped rather than failed -- the tool itself reports toolchain_missing.
@@ -580,6 +616,57 @@ async def main() -> int:
                   doc["sibling_project_document"]["sha256"] == costs_file["source"]["sha256"]
                   and set(doc["documents"]) == {"trm", "datasheet"},
                   json.dumps(doc["sibling_project_document"])[:200])
+
+            # The registry is the route index: what is reachable, through which tool or resource, from which
+            # copy of the knowledge. These checks are what keeps the index and the surface from drifting
+            # apart -- a tool nobody can reach, an artifact nobody can read, or a count the data does not
+            # support all fail here.
+            reg = payload(await session.call_tool("knowledge_routes", {}))
+            by_id = {a["id"]: a for a in reg["artifacts"]}
+            check("knowledge_routes: no required artifact is missing",
+                  reg["summary"]["missing_required"] == [] and reg["summary"]["present"] >= 11,
+                  json.dumps(reg["summary"])[:200])
+            check("knowledge_routes counts what it opened: 1581 registers / 220 instructions / 217 pipeline "
+                  "rows",
+                  by_id["registers"]["records"] == 1581 and by_id["pie_instructions"]["records"] == 220
+                  and by_id["pie_pipeline"]["records"] == 217,
+                  json.dumps({k: by_id[k].get("records")
+                              for k in ("registers", "pie_instructions", "pie_pipeline")}))
+            check("knowledge_routes keeps the layers apart (1=PDF, 2=toolchain, 3=this device, 4=sibling) "
+                  "and names the route",
+                  by_id["registers"]["layer"] == 1 and by_id["pie_timing_measured"]["layer"] == 3
+                  and by_id["pie_measured_costs"]["layer"] == 4
+                  and by_id["pie_measured_costs"]["served_by"]["tools"] == ["measured_costs",
+                                                                           "pie_cost_estimate"]
+                  and by_id["toolchain"]["layer"] == 2,
+                  json.dumps({k: (by_id[k]["layer"], by_id[k]["served_by"]) for k in
+                              ("registers", "pie_measured_costs", "toolchain")})[:220])
+            routed_tools = {t for a in reg["artifacts"] for t in a["served_by"]["tools"]}
+            routed_res = {r for a in reg["artifacts"] for r in a["served_by"]["resources"]}
+            check("every advertised tool is listed in the registry", routed_tools == set(names),
+                  "unrouted: " + str(sorted(set(names) - routed_tools))
+                  + " unknown: " + str(sorted(routed_tools - set(names))))
+            check("every advertised resource is listed in the registry", routed_res == set(uris),
+                  "unrouted: " + str(sorted(set(uris) - routed_res))
+                  + " unknown: " + str(sorted(routed_res - set(uris))))
+            check("every extracted/measured artifact is present -- i.e. the wheel ships its data",
+                  all(a["present"] for a in reg["artifacts"]
+                      if a["shipped_in_wheel"] and a["route_kind"] in ("extracted", "measured")),
+                  json.dumps([a["id"] for a in reg["artifacts"]
+                              if a["shipped_in_wheel"] and a["route_kind"] in ("extracted", "measured")
+                              and not a["present"]]))
+            check("the registry says which copy of the knowledge answered, and how it was chosen",
+                  reg["roots"]["data"]["source"] in ("env", "wheel", "repo")
+                  and reg["roots"]["data"]["exists"] and reg["roots"]["data"]["searched"],
+                  json.dumps(reg["roots"]["data"])[:220])
+            reg_doc = json.loads((await session.read_resource("esp32s3://registry")).contents[0].text)
+            check("esp32s3://registry serves the same index the tool returns",
+                  [a["id"] for a in reg_doc["artifacts"]] == [a["id"] for a in reg["artifacts"]]
+                  and reg_doc["summary"]["missing_required"] == [], "")
+            rev = json.loads((await session.read_resource("esp32s3://trm/review")).contents[0].text)
+            check("esp32s3://trm/review serves the manual's self-contradictions (a data file that had no "
+                  "route before)",
+                  isinstance(rev, list) and len(rev) == 2, json.dumps(rev)[:160])
 
     print(f"\n{'FAILED' if FAILED else 'PASSED'}: {len(FAILED)} failure(s) of {CHECKED} checks"
           + (f", {len(SKIPPED)} skipped" if SKIPPED else ""))

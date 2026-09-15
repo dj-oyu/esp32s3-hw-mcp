@@ -68,3 +68,36 @@ jobs:
             git diff --stat -- data/
             exit 1
           fi
+
+  # The uvx route is a different install of the same knowledge, and it can lose a data file without failing
+  # anything: every tool still starts, and answers from nothing. So the wheel is built here, checked against
+  # the registry's own declaration (tools/check_wheel.py), installed into a clean environment, and put
+  # through the same end-to-end suite as the checkout -- which is what a `uvx --from git+...` user runs.
+  package:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tooling and the test client
+        run: pip install build mcp
+      - name: Build the wheel
+        run: python -m build --wheel
+      - name: The wheel carries every artifact the registry says it ships
+        run: python tools/check_wheel.py dist/*.whl
+      - name: Install the wheel into a clean environment
+        run: |
+          python -m venv /tmp/packaged
+          /tmp/packaged/bin/pip install --quiet dist/*.whl
+          /tmp/packaged/bin/esp32s3-hw-mcp --version
+      - name: The installed copy answers from its own data, and its routes resolve
+        run: |
+          /tmp/packaged/bin/esp32s3-hw-mcp --paths
+          /tmp/packaged/bin/esp32s3-hw-mcp --list
+          /tmp/packaged/bin/esp32-hw-mcp --version   # the short alias resolves to the same server
+      - name: The installed copy passes the same end-to-end suite
+        env:
+          ESP32S3_SERVER_CMD: /tmp/packaged/bin/esp32s3-hw-mcp
+        run: python tools/test_mcp_server.py

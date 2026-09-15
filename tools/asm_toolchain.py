@@ -44,7 +44,25 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INSTRUCTIONS = os.path.join(ROOT, "data", "pie_instructions.json")
+
+
+def _default_instructions() -> str:
+    """The extracted instruction table: the checkout's data/, or the copy inside the installed package.
+
+    The server always passes the instruction dict in (check_instruction), so this path only matters to the
+    command-line sweeps (--check-all / --errata) -- which should stay correct in the wheel as well.
+    """
+    env = os.environ.get("ESP32S3_DATA_DIR", "").strip()
+    cands = [os.path.join(env, "pie_instructions.json") if env else "",
+             os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pie_instructions.json"),
+             os.path.join(ROOT, "data", "pie_instructions.json")]
+    for cand in cands:
+        if cand and os.path.exists(cand):
+            return cand
+    return cands[-1]
+
+
+INSTRUCTIONS = _default_instructions()
 
 # Where the Espressif binutils lives. PATH first (after `source /opt/esp-idf/export.sh`), then the
 # managed-install layout that esp-idf writes on first use.
