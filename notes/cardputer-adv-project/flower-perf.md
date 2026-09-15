@@ -126,15 +126,22 @@ cardputer-adv-pocketjs の新ブランチ `perf/flower-decor`（親は design-co
 
 ---
 
+### 2.4 実装して計測した結果（2026-09-15、cardputer-adv-pocketjs `perf/flower-decor`）
+
+| 何を | 結果（実機、**同一バイナリ A/B**） | コミット |
+|---|---|---|
+| **パネル転送の非同期化**（`spi_device_queue_trans` + 面 2 枚 + 次ストリップで reap） | `send` 7.77 → **1.46 ms**、`draw` 50.54 → **44.70 ms**、fps 19.5 → **22.3**（+14%）。59 ペアで send 差 mean −6.31 / median −6.33 / min −6.51 / max −6.06 ms、対照の loop/kernel/prep/hud は ±0.3 ms 以内 | `e282c8e` |
+| **門番を unsigned 1 比較へ**（＋ canopy の `f==0` 短絡） | `rays` mean −1.46 / median −1.02 ms（[obj] の ~20 命令 ≒ ループ 143 命令の 14% と整合）。canopy 側は `veg` のノイズ（min −4.3 / max +4.9）内で**未解決** | `1ec48bd` |
+| 装飾光線の算術 micro-opt（profile 評価 35.6% 削減） | **ノーゲイン**（rays −0.19 / 対照 −0.09 ms） | `aef8636` |
+
+**ガラス側だけ未確認**: MISO 未配線でソフトからは見えないので物理確認が要る。画素一致は 4 アーム
+（門番・tweaks・両方・旧）すべてホストで証明済み（120 フレーム × 135 行、7.8 MB のバイト比較）。
+合計 **−7.8 ms / +2.8 fps**（元の 50.5 ms / 19.5 fps から）。残りの本体は PIE（林冠 → 装飾光線）。
+
 ## 3. 既に入った最適化（消えた量つき）
 
-> **残りの手の検討は `cardputer-adv-pocketjs` の `docs/flower-optimisation-options.md`（2026-09-15、
-> branch `perf/flower-decor`）に移した。** 要点: ①**LCD 転送の非同期化が最大**（`send` 7.4–7.8 ms を
-> 隠せる。`spi_device_polling_transmit` が CPU を止めている。シーンに触らない）②スカラーの残り玉は
-> 門番の 1 行とリテラル再ロード（合計 ~0.5 ms、要実測）③PIE は「8 レーンの RGB565 ブレンド部品」を
-> 先に作り、林冠 → 装飾光線の順 ④装飾光線の算術 micro-opt は実測で終了（§2.2）。
-> `pixels`（既存 PIE）6.0–6.8 ms と `send` 以外は全部スカラーで、`shots` の名目 60 fps に対して
-> 実測 21.9 fps（draw 45.6 ms）というのがいまの位置。
+> **残りの手の検討は `cardputer-adv-pocketjs` の `docs/flower-optimisation-options.md`
+> （2026-09-15、branch `perf/flower-decor`）にある。実装済みの結果は §2.4 に追記した。**
 
 | 何を | 出典 | 消えた量（実測） |
 |---|---|---|
