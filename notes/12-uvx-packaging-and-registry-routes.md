@@ -54,3 +54,7 @@ E2E 88項目）が落ちる。
   `uvx --from /workspace/esp32s3-hw-mcp`（`ESP32S3_SERVER_CMD` で対象を差し替え）。
 - `tools/check_wheel.py` 31項目緑（同梱物のバイト一致・件数・entry point・登録ツールの def まで）。
 - 実行時間: `--fetch-corpus` は 4 秒（16MB 取得＋1531ページ抽出）。wheel は 172KB。
+- クライアント登録も実際に通した: `hermes mcp add esp32s3-hw --command uvx --args --from <path>
+  esp32s3-hw-mcp` → 18/18 ツールを発見（確認後に `hermes mcp remove` で元に戻した）。
+- CI の package ジョブと同じ手順をローカルで再現（`python -m build --wheel` → `check_wheel.py` →
+  素の venv にインストール → E2E）。コーパス無しでも通る（本文検索の2項目は skip になる）。

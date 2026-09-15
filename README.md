@@ -14,8 +14,8 @@ uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --list   
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --paths  # どの写しの知識が答えたか
 ```
 
-抽出済みの知識（`data/`）は wheel に同梱されるので、**クローンも PDF も追加設定も無しに 18 ツール中 14 ツールが答える**
-（残り4つは符号化を確かめるツールで、Espressif の binutils が要る。無い環境では「無い」と答える）。
+抽出済みの知識（`data/`）は wheel に同梱されるので、**クローンも PDF も追加設定も無しに 18 ツール中 12 ツールがそのまま答える**
+（符号化を確かめる4つは Espressif の binutils が、本文検索の2つは下記のコーパスが要る。無い環境では「無い」と理由を返す）。
 
 マニュアル**本文**のページ検索（`search_manual` / `get_page`）だけは本文を再配布できないため、初回に一度だけ:
 
@@ -26,7 +26,7 @@ uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-h
 sha256 を検証して PDF を取得し（16MB）、`~/.cache/esp32s3-hw-mcp/` にTRM 1531ページ＋Datasheet 87ページの
 コーパスを作る。以後は同じ uvx 起動がそこを見つけるので、環境変数は要らない。
 
-MCP クライアントへの登録（クライアントの流儀に従う）:
+MCP クライアントへの登録（クライアントの流儀に従う。`hermes mcp add` は有効化するツールを対話で聞く）:
 
 ```bash
 claude mcp add esp32s3-hw -- uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp
