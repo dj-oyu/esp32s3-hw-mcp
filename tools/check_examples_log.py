@@ -532,9 +532,409 @@ def check_ex09(sec: dict) -> list[tuple[str, bool, str]]:
     return out
 
 
+# ------------------------------------------------------------------ ex10: motion (block SAD + half-pel row)
+
+def u16_words(text: str) -> list[int]:
+    """The lanes of ex10's SAD are uint16 bit patterns: i16_words would fold the top half down, and the
+    textbook SAD that says where the kernel's inputs leave their contract is computed on the unsigned
+    reading."""
+    return [int(w, 16) & 0xFFFF for w in text.split(",") if w.strip()]
+
+
+def accx_total(text: str) -> int:
+    """((uint64_t)ACCX[39:32] << 32) | ACCX[31:0] from the two words RUR.ACCX_0/1 returned."""
+    w = [int(x, 16) & 0xFFFFFFFF for x in text.split(",") if x.strip()]
+    return -1 if len(w) < 2 else (w[0] | (w[1] << 32))
+
+
+def ref_sad8_lane(a: int, b: int) -> int:
+    """One lane through the vector unit: VSUBS.S16(VMAX.S16, VMIN.S16) over the SIGNED lane readings, i.e.
+    min(<|a-b|, or 65536-|a-b| when the two lanes straddle 32768>, 32767)."""
+    d = abs(as_i16(a) - as_i16(b))
+    return 32767 if d > 32767 else d
+
+
+def ref_sad8(a: list[int], b: list[int]) -> int:
+    return sum(ref_sad8_lane(x, y) for x, y in zip(a, b))
+
+
+def ref_sad8_rule(a: list[int], b: list[int]) -> int:
+    """The same total stated the way ex10_motion.S states the rule: the UNSIGNED difference, or its
+    65536-complement when the two lanes sit in different halves, clamped at 32767. Independent of
+    ref_sad8's signed-reading formulation, which it must agree with."""
+    total = 0
+    for x, y in zip(a, b):
+        d = abs(x - y)
+        if (x >= 0x8000) != (y >= 0x8000):
+            d = 0x10000 - d
+        total += 32767 if d > 32767 else d
+    return total
+
+
+def ref_sad8_plain(a: list[int], b: list[int]) -> int:
+    """The textbook SAD on the unsigned readings -- equal to the kernel inside the 8-bit sample domain."""
+    return sum(abs(x - y) for x, y in zip(a, b))
+
+
+def straddling(a: list[int], b: list[int]) -> int:
+    return sum(1 for x, y in zip(a, b) if (x >= 0x8000) != (y >= 0x8000))
+
+
+def clamped_diff(a: list[int], b: list[int]) -> int:
+    return sum(1 for x, y in zip(a, b) if abs(as_i16(x) - as_i16(y)) > 32767)
+
+
+def ref_halfpel(a: list[int], b: list[int], ones: int = 1, sar: int = 1) -> list[int]:
+    """The kernel's own sequence: VADDS.S16 (the sum), VADDS.S16 (+ones), VMUL.U16 by ones with SAR = 1 --
+    all three saturating/flags as the manual's pseudo-code has them."""
+    out = []
+    for x, y in zip(a, b):
+        t = sat16(sat16(x + y) + ones)
+        out.append(as_i16((((t & 0xFFFF) * (ones & 0xFFFF)) >> sar) & 0xFFFF))
+    return out
+
+
+def ref_halfpel_formula(a: list[int], b: list[int]) -> list[int]:
+    """out[i] = (uint16_t)(a[i] + b[i] + 1) >> 1 -- the expression the kernel is written from."""
+    return [as_i16(((x + y + 1) & 0xFFFF) >> 1) for x, y in zip(a, b)]
+
+
+def halfpel_saturating_lanes(a: list[int], b: list[int]) -> tuple[int, int]:
+    """The lanes where a + b + 1 does not fit a signed 16-bit lane, positive and negative."""
+    pos = sum(1 for x, y in zip(a, b) if x + y + 1 > 32767)
+    neg = sum(1 for x, y in zip(a, b) if x + y + 1 < -32768)
+    return pos, neg
+
+
+def check_ex10(sec: dict) -> list[tuple[str, bool, str]]:
+    """The two motion kernels, re-derived from the DATA lines: the block SAD against a third reading of the
+    instruction rule (VMAX/VMIN/VSUBS.S16 into VMULAS.U16.ACCX, read out once through RUR.ACCX_0/1) and the
+    half-pel row against both the kernel's op sequence and the reference expression."""
+    d = sec["data"]
+    need = {"sad_a", "sad_b", "sad_accx", "sad_total", "sad_plain_textbook", "sad_blocks",
+            "sad_straddling_lanes", "sad_clamped_lanes", "sad_full_a", "sad_full_b", "sad_full_accx",
+            "sad_full_total", "sad_full_blocks", "sad_full_plain_textbook", "sad_full_straddling_lanes",
+            "sad_full_clamped_lanes", "halfpel_a", "halfpel_b", "halfpel_out", "halfpel_lanes",
+            "halfpel_ones8", "halfpel_full_a",
+            "halfpel_full_b", "halfpel_full_out", "halfpel_full_lanes", "halfpel_full_mismatch",
+            "halfpel_full_sat_pos", "halfpel_full_sat_neg"}
+    missing = sorted(need - set(d))
+    if missing:
+        return [("ex10 carries the SAD and half-pel inputs and results", False, f"missing {missing}")]
+    out: list[tuple[str, bool, str]] = []
+
+    a, b = u16_words(d["sad_a"]), u16_words(d["sad_b"])
+    fa, fb = u16_words(d["sad_full_a"]), u16_words(d["sad_full_b"])
+    ref8, ref_full = ref_sad8(a, b), ref_sad8(fa, fb)
+    plain8, plain_full = ref_sad8_plain(a, b), ref_sad8_plain(fa, fb)
+    blocks, full_blocks = int(d["sad_blocks"]), int(d["sad_full_blocks"])
+    out.append((f"ex10 the SAD inputs are the {blocks} blocks of eight lanes the kernel was told to read",
+                len(a) == len(b) == 8 * blocks, f"a={len(a)} b={len(b)} blocks={blocks}"))
+    out.append((f"ex10 the full-range inputs are the {full_blocks} blocks of eight lanes",
+                len(fa) == len(fb) == 8 * full_blocks, f"a={len(fa)} b={len(fb)} blocks={full_blocks}"))
+
+    # The 40-bit readout pair, reconstructed here exactly as the firmware reconstructs it.
+    accx8, accx_full = accx_total(d["sad_accx"]), accx_total(d["sad_full_accx"])
+    out.append(("ex10 RUR.ACCX_0/1 reconstruct the SAD the Python reference computes (8-bit samples)",
+                accx8 == ref8 == int(d["sad_total"]),
+                f"accx pair {accx8}, reference {ref8}, firmware {d['sad_total']}"))
+    out.append(("ex10 in the 8-bit sample domain the kernel equals the textbook SAD",
+                ref8 == plain8 and int(d["sad_plain_textbook"]) == plain8,
+                f"kernel {ref8} vs textbook {plain8} vs firmware {d['sad_plain_textbook']}"))
+    out.append(("ex10 the 8-bit sample domain straddles no lane and clamps none",
+                straddling(a, b) == 0 and clamped_diff(a, b) == 0
+                and int(d["sad_straddling_lanes"]) == 0 and int(d["sad_clamped_lanes"]) == 0,
+                f"straddling {straddling(a, b)} (firmware {d['sad_straddling_lanes']}), "
+                f"clamped {clamped_diff(a, b)} (firmware {d['sad_clamped_lanes']})"))
+    out.append(("ex10 the full-range case follows the instruction rule, not the textbook formula",
+                accx_full == ref_full == ref_sad8_rule(fa, fb) == int(d["sad_full_total"]),
+                f"accx pair {accx_full}, reference {ref_full}, rule {ref_sad8_rule(fa, fb)}, "
+                f"firmware {d['sad_full_total']}"))
+    out.append(("ex10 the full-range case is genuinely outside the contract (the two readings differ)",
+                ref_full != plain_full and int(d["sad_full_plain_textbook"]) == plain_full,
+                f"kernel {ref_full} vs textbook {plain_full}: the two part company by "
+                f"{abs(ref_full - plain_full)}"))
+    out.append(("ex10 the full-range straddling and clamping lane counts match the Python model",
+                straddling(fa, fb) == int(d["sad_full_straddling_lanes"])
+                and clamped_diff(fa, fb) == int(d["sad_full_clamped_lanes"])
+                and straddling(fa, fb) > 0 and clamped_diff(fa, fb) > 0,
+                f"straddling {straddling(fa, fb)} (firmware {d['sad_full_straddling_lanes']}), "
+                f"clamped {clamped_diff(fa, fb)} (firmware {d['sad_full_clamped_lanes']})"))
+
+    ha, hb = i16_words(d["halfpel_a"]), i16_words(d["halfpel_b"])
+    hout = i16_words(d["halfpel_out"])
+    ones = int(d["halfpel_ones8"])
+    lanes = int(d["halfpel_lanes"])
+    seq = ref_halfpel(ha, hb, ones)
+    out.append((f"ex10 half-pel on 8-bit samples: the kernel, the op sequence and the expression all agree "
+                f"(ones8={ones})",
+                len(hout) == lanes and hout == seq == ref_halfpel_formula(ha, hb),
+                f"{lanes} lanes; kernel {hout[:3]} vs sequence {seq[:3]} vs expression "
+                f"{ref_halfpel_formula(ha, hb)[:3]}"))
+
+    fha, fhb = i16_words(d["halfpel_full_a"]), i16_words(d["halfpel_full_b"])
+    fhout = i16_words(d["halfpel_full_out"])
+    model = ref_halfpel(fha, fhb, ones)
+    expression = ref_halfpel_formula(fha, fhb)
+    sat_pos, sat_neg = halfpel_saturating_lanes(fha, fhb)
+    diverging = [i for i in range(len(model)) if model[i] != expression[i]]
+    saturating = set([i for i in range(len(fha)) if fha[i] + fhb[i] + 1 > 32767]
+                     + [i for i in range(len(fha)) if fha[i] + fhb[i] + 1 < -32768])
+    out.append(("ex10 half-pel on full-range lanes follows the kernel's op sequence",
+                fhout == model and len(fhout) == int(d["halfpel_full_lanes"]),
+                f"{len(fhout)} lanes; first divergence from the model: "
+                f"{next((i for i in range(len(model)) if model[i] != fhout[i]), None)}"))
+    out.append(("ex10 the diverging lanes are exactly the lanes where the rounding add saturates",
+                set(diverging) == saturating
+                and len(diverging) == int(d["halfpel_full_mismatch"])
+                and sat_pos == int(d["halfpel_full_sat_pos"]) and sat_neg == int(d["halfpel_full_sat_neg"]),
+                f"{len(diverging)} diverging (firmware {d['halfpel_full_mismatch']}), saturation set size "
+                f"{len(saturating)}, +{sat_pos}/-{sat_neg} (firmware +{d['halfpel_full_sat_pos']}/"
+                f"-{d['halfpel_full_sat_neg']})"))
+    return out
+
+
+def ref_block8x8(coef: list[int], block: list[int], shift: int) -> list[int]:
+    """out[k][j] = sat16((sum over i of coef[k][i] * block[i][j]) >> shift), with each lane's 40-bit
+    accumulator clamped per MAC as EE.VSMULAS.S16.QACC documents."""
+    out = []
+    for k in range(8):
+        for j in range(8):
+            acc = 0
+            for i in range(8):
+                acc = sat40(acc + coef[k * 8 + i] * block[i * 8 + j])
+            out.append(sat16(acc >> shift))
+    return out
+
+
+def block8x8_row_sums(coef: list[int], block: list[int]) -> list[list[int]]:
+    return [[sum(coef[k * 8 + i] * block[i * 8 + j] for i in range(8)) for j in range(8)] for k in range(8)]
+
+
+def check_ex11(sec: dict) -> list[tuple[str, bool, str]]:
+    """The 8x8 block transform, re-derived from the DATA lines as an int64 matrix product with the
+    saturating 16-bit readout."""
+    d = sec["data"]
+    need = {"coef", "coef_transposed", "block", "out", "out_transposed", "out_saturating", "shift",
+            "shift_saturating", "saturated_lanes", "rows_over_40bit", "max_abs_row_sum"}
+    missing = sorted(need - set(d))
+    if missing:
+        return [("ex11 carries the block, the coefficient tables and the readouts", False,
+                 f"missing {missing}")]
+    out: list[tuple[str, bool, str]] = []
+    coef, block = i16_words(d["coef"]), i16_words(d["block"])
+    coeft = i16_words(d["coef_transposed"])
+    shift, shift_sat = int(d["shift"]), int(d["shift_saturating"])
+    if len(coef) != 64 or len(block) != 64 or len(coeft) != 64:
+        return [("ex11 carries the 8x8 tables (64 int16 each)", False,
+                 f"coef={len(coef)} block={len(block)} coef_transposed={len(coeft)}")]
+
+    got, ref = i16_words(d["out"]), ref_block8x8(coef, block, shift)
+    bad = [i for i in range(min(len(got), len(ref))) if got[i] != ref[i]]
+    out.append((f"ex11 all 64 coefficients match the Python int64 reference (shift={shift})",
+                got == ref, f"{len(bad)} differ, first {bad[:3]}" if bad else "64/64"))
+    gott, reft = i16_words(d["out_transposed"]), ref_block8x8(coeft, block, shift)
+    out.append(("ex11 the transposed coefficient table transforms the other axis",
+                gott == reft, "64/64" if gott == reft else f"first few {gott[:3]} vs {reft[:3]}"))
+    out.append(("ex11 the second table printed really is the transpose of the first",
+                coeft == [coef[i * 8 + k] for k in range(8) for i in range(8)],
+                "coef_t[k][i] == coef[i][k] for all 64"))
+    gots, refs = i16_words(d["out_saturating"]), ref_block8x8(coef, block, shift_sat)
+    sat_now = sum(1 for v in gots if v in (32767, -32768))
+    out.append((f"ex11 the small shift makes EE.SRCMB.S16.QACC saturate, exactly like sat16 (shift={shift_sat})",
+                gots == refs and sat_now == int(d["saturated_lanes"]) and sat_now > 0,
+                f"{sat_now} clipped lanes (firmware {d['saturated_lanes']})"))
+    rows = block8x8_row_sums(coef, block)
+    biggest = max(abs(v) for row in rows for v in row)
+    over = sum(1 for row in rows for v in row if v > (1 << 39) - 1)
+    out.append(("ex11 no output row reaches the 40-bit accumulator's clamp",
+                over == 0 and int(d["rows_over_40bit"]) == 0 and biggest == int(d["max_abs_row_sum"]),
+                f"largest |row sum| {biggest} (firmware {d['max_abs_row_sum']}), clamp at 2^39-1 = "
+                f"{(1 << 39) - 1}, headroom factor {(1 << 39) // max(1, biggest)}"))
+    return out
+
+
+# ------------------------------------------------------------------ ex12: physics and collision
+
+def ref_integrate(pos: list[int], vel: list[int], acc: list[int], lo: int, hi: int) -> list[int]:
+    """The kernel's order: VADDS.S32, VADDS.S32, VMIN.S32 (hi), VMAX.S32 (lo)."""
+    out = []
+    for i in range(min(len(pos), len(vel), len(acc))):
+        t = sat32(pos[i] + vel[i])
+        u = sat32(t + acc[i])
+        out.append(max(min(u, hi), lo))
+    return out
+
+
+def ref_integrate_exact(pos: list[int], vel: list[int], acc: list[int], lo: int, hi: int) -> list[int]:
+    return [max(min(pos[i] + vel[i] + acc[i], hi), lo) for i in range(len(pos))]
+
+
+def ref_sat_masks(boxes: list[int], query: list[int], n_boxes: int) -> list[int]:
+    """The plane-major AABB image: box b, axis ax has min at int16 index 48*(b//8) + 16*ax + (b%8) and max
+    8 words on; separated iff box_max < query_min or box_min > query_max; -1 for overlap, 0 otherwise."""
+    out = []
+    for b in range(n_boxes):
+        sep = False
+        for ax in range(3):
+            bmin = boxes[48 * (b // 8) + 16 * ax + (b % 8)]
+            bmax = boxes[48 * (b // 8) + 16 * ax + 8 + (b % 8)]
+            if bmax < query[2 * ax] or bmin > query[2 * ax + 1]:
+                sep = True
+        out.append(0 if sep else -1)
+    return out
+
+
+def dist2_lane(pt_a: list[int], pt_b: list[int], i: int) -> int:
+    """The 40-bit QACC lane after the three saturating 16-bit subtractions and the three squaring MACs."""
+    s = 0
+    for ax in range(3):
+        k = 24 * (i // 8) + 8 * ax + (i % 8)
+        d = sat16(pt_a[k] - pt_b[k])
+        s += d * d
+    return s
+
+
+def ref_dist2(pt_a: list[int], pt_b: list[int], n_points: int) -> list[int]:
+    return [min(dist2_lane(pt_a, pt_b, i), 0x7FFFFFFF) for i in range(n_points)]
+
+
+def ref_dist2_q16(pt_a: list[int], pt_b: list[int], n_points: int, shift: int) -> list[int]:
+    return [sat16(dist2_lane(pt_a, pt_b, i) >> shift) for i in range(n_points & ~7)]
+
+
+def dist2_stats(pt_a: list[int], pt_b: list[int], n_points: int) -> dict:
+    """The counters the firmware prints, recomputed: axis differences that saturate, points where the
+    saturating difference changes the value, points the int32 clamp fires on, and the largest |a-b|."""
+    sat_axis = changed = clamps = max_delta = 0
+    for i in range(n_points):
+        sat_sum = exact = 0
+        for ax in range(3):
+            k = 24 * (i // 8) + 8 * ax + (i % 8)
+            d = pt_a[k] - pt_b[k]
+            max_delta = max(max_delta, abs(d))
+            if d > 32767 or d < -32768:
+                sat_axis += 1
+            ds = sat16(d)
+            sat_sum += ds * ds
+            exact += d * d
+        clamps += 1 if sat_sum > 0x7FFFFFFF else 0
+        changed += 1 if sat_sum != exact else 0
+    return {"saturating_axis_diffs": sat_axis, "changed_by_saturation": changed, "int32_clamps": clamps,
+            "max_abs_delta": max_delta}
+
+
+def check_ex12(sec: dict) -> list[tuple[str, bool, str]]:
+    """The three physics/collision kernels, re-derived from the DATA lines."""
+    d = sec["data"]
+    need = {"pos", "vel", "acc", "integrated", "integrated_narrow_bounds", "objects", "integrate_lo",
+            "integrate_hi", "integrate_lo_narrow", "integrate_hi_narrow", "integrate_diverging_from_exact",
+            "integrate_moved_by_the_bounds", "boxes", "query", "masks", "n_boxes", "overlap_boxes",
+            "pt_a", "pt_b", "dist2", "n_points", "dist2_int32_clamps", "dist2_saturating_axis_diffs",
+            "dist2_max_abs_delta", "dist2_changed_by_the_saturating_difference", "dist2_q16", "q16_shift",
+            "q16_written", "q16_saturated_lanes"}
+    missing = sorted(need - set(d))
+    if missing:
+        return [("ex12 carries the physics/collision inputs and results", False, f"missing {missing}")]
+    out: list[tuple[str, bool, str]] = []
+
+    pos, vel, acc = hex_words(d["pos"]), hex_words(d["vel"]), hex_words(d["acc"])
+    got = hex_words(d["integrated"])
+    lo, hi = int(d["integrate_lo"]), int(d["integrate_hi"])
+    lo_n, hi_n = int(d["integrate_lo_narrow"]), int(d["integrate_hi_narrow"])
+    n_obj = int(d["objects"])
+    n_boxes, n_points = int(d["n_boxes"]), int(d["n_points"])
+    boxes, query, masks = i16_words(d["boxes"]), i16_words(d["query"]), i16_words(d["masks"])
+    pt_a, pt_b, d2 = i16_words(d["pt_a"]), i16_words(d["pt_b"]), hex_words(d["dist2"])
+    q16, written = i16_words(d["dist2_q16"]), int(d["q16_written"])
+    # Structural check first: a DATA line that does not carry what its count says is a failure, not a crash.
+    bad_shapes = []
+    for what, have, want in (("pos", len(pos), n_obj), ("vel", len(vel), n_obj), ("acc", len(acc), n_obj),
+                             ("integrated", len(got), n_obj),
+                             ("boxes", len(boxes), 48 * ((n_boxes + 7) // 8)),
+                             ("query", len(query), 6), ("masks", len(masks), n_boxes),
+                             ("pt_a", len(pt_a), 24 * ((n_points + 7) // 8)),
+                             ("pt_b", len(pt_b), 24 * ((n_points + 7) // 8)),
+                             ("dist2", len(d2), n_points), ("dist2_q16", len(q16), written)):
+        if have != want:
+            bad_shapes.append(f"{what}: {have} values, the log says {want}")
+    if bad_shapes:
+        return [("ex12 prints as many values as its own counts claim", False, "; ".join(bad_shapes))]
+
+    ref = ref_integrate(pos, vel, acc, lo, hi)
+    bad = [i for i in range(min(len(got), len(ref))) if got[i] != ref[i]]
+    out.append((f"ex12 the {n_obj} integrated positions match the Python saturating-add reference",
+                len(got) == n_obj and got == ref, f"{len(bad)} differ, first {bad[:3]}" if bad else
+                f"{n_obj}/{n_obj}"))
+    exact = ref_integrate_exact(pos, vel, acc, lo, hi)
+    src = [i for i in range(n_obj) if -0x80000000 <= pos[i] + vel[i] <= 0x7FFFFFFF]
+    in_domain_bad = [i for i in src if got[i] != exact[i]]
+    out.append(("ex12 every lane whose pos+vel stays inside int32 equals the exact 64-bit sum",
+                not in_domain_bad,
+                f"{len(src)} in-domain lanes, {len(in_domain_bad)} disagree "
+                f"(firmware counts {d['integrate_diverging_from_exact']} lanes off the exact sum in all)"))
+    diverging = [i for i in range(n_obj) if got[i] != exact[i]]
+    out.append(("ex12 the lanes that leave the exact sum are exactly the out-of-int32 ones",
+                set(diverging) == set(range(n_obj)) - set(src)
+                and len(diverging) == int(d["integrate_diverging_from_exact"]),
+                f"diverging {diverging} (firmware {d['integrate_diverging_from_exact']}), "
+                f"out-of-range {sorted(set(range(n_obj)) - set(src))}"))
+    got_n = hex_words(d["integrated_narrow_bounds"])
+    ref_n = ref_integrate(pos, vel, acc, lo_n, hi_n)
+    moved = sum(1 for i in range(n_obj) if got_n[i] != got[i])
+    out.append((f"ex12 the same lanes under the [{lo_n}, {hi_n}] bounds match the reference",
+                got_n == ref_n, f"{len([i for i in range(n_obj) if got_n[i] != ref_n[i]])} differ"))
+    out.append(("ex12 the narrow bounds move the lanes the clamp is supposed to move",
+                moved == int(d["integrate_moved_by_the_bounds"]) and moved > 0,
+                f"{moved} lanes moved (firmware {d['integrate_moved_by_the_bounds']})"))
+
+    ref_m = ref_sat_masks(boxes, query, n_boxes)
+    out.append((f"ex12 all {n_boxes} AABB masks match the Python separating-axis reference",
+                masks == ref_m, f"got {masks[:8]}... want {ref_m[:8]}..." if masks != ref_m else
+                f"{n_boxes}/{n_boxes}"))
+    overlaps = sum(1 for v in ref_m if v == -1)
+    out.append(("ex12 the AABB probe reaches both verdicts and its overlap count is the model's",
+                overlaps == int(d["overlap_boxes"]) and 0 < overlaps < n_boxes,
+                f"{overlaps} overlapping (firmware {d['overlap_boxes']}) of {n_boxes}"))
+
+    ref_d2 = ref_dist2(pt_a, pt_b, n_points)
+    bad = [i for i in range(min(len(d2), len(ref_d2))) if d2[i] != ref_d2[i]]
+    out.append((f"ex12 all {n_points} squared distances match the Python QACC-lane reference",
+                len(d2) == n_points and d2 == ref_d2, f"{len(bad)} differ, first {bad[:3]}" if bad else
+                f"{n_points}/{n_points}"))
+    st = dist2_stats(pt_a, pt_b, n_points)
+    agree = (st["int32_clamps"] == int(d["dist2_int32_clamps"])
+             and st["saturating_axis_diffs"] == int(d["dist2_saturating_axis_diffs"])
+             and st["max_abs_delta"] == int(d["dist2_max_abs_delta"])
+             and st["changed_by_saturation"] == int(d["dist2_changed_by_the_saturating_difference"]))
+    out.append(("ex12 the saturating-difference, int32-clamp and max|a-b| counters are the Python model's",
+                agree and st["int32_clamps"] > 0 and st["saturating_axis_diffs"] > 0,
+                f"clamps {st['int32_clamps']} (firmware {d['dist2_int32_clamps']}), saturating axes "
+                f"{st['saturating_axis_diffs']} (firmware {d['dist2_saturating_axis_diffs']}), max|a-b| "
+                f"{st['max_abs_delta']} (firmware {d['dist2_max_abs_delta']}), changed "
+                f"{st['changed_by_saturation']} (firmware {d['dist2_changed_by_the_saturating_difference']})"))
+    # the int32 clamp must preserve the r^2 test, and the low 32 bits must be the whole lane
+    lane_ok = all(dist2_lane(pt_a, pt_b, i) <= (1 << 40) - 1 and
+                  (dist2_lane(pt_a, pt_b, i) < (1 << 32) or True) for i in range(n_points))
+    hi_bits = [i for i in range(n_points) if dist2_lane(pt_a, pt_b, i) >= (1 << 32)]
+    out.append(("ex12 no QACC lane needs bits 32..39 (the saturating difference bounds dist2 below 2^32)",
+                not hi_bits and lane_ok, f"{len(hi_bits)} lanes at or above 2^32"))
+
+    shift = int(d["q16_shift"])
+    ref_q16 = ref_dist2_q16(pt_a, pt_b, n_points, shift)
+    sat_q16 = sum(1 for v in ref_q16 if v in (32767, -32768))
+    out.append((f"ex12 the Q16 readout (>> {shift}, saturating) matches on every written pair",
+                written == (n_points & ~7) and len(q16) == written and q16 == ref_q16,
+                f"written {written} (expected {n_points & ~7}), {len([i for i in range(min(len(q16), len(ref_q16))) if q16[i] != ref_q16[i]])} differ"))
+    out.append(("ex12 the Q16 readout saturates where the model says it does",
+                sat_q16 == int(d["q16_saturated_lanes"]) and sat_q16 > 0,
+                f"{sat_q16} clipped lanes (firmware {d['q16_saturated_lanes']})"))
+    return out
+
+
 CHECKS = {"ex01": check_ex01, "ex02": check_ex02, "ex03": check_ex03, "ex04": check_ex04,
           "ex05": check_ex05, "ex06": check_ex06, "ex07": check_ex07, "ex08": check_ex08,
-          "ex09": check_ex09}
+          "ex09": check_ex09, "ex10": check_ex10, "ex11": check_ex11, "ex12": check_ex12}
 
 
 def main() -> int:
@@ -575,8 +975,9 @@ def main() -> int:
         for kernel, b in sorted(bench.items()):
             per_pie = b["cycles_pie"] / b["elements"]
             per_c = b["cycles_c"] / b["elements"]
+            ratio = f"{per_c / per_pie:5.2f}x" if per_pie else "n/a"
             print(f"  {kernel:<12} elements={b['elements']:6d}  pie={per_pie:7.3f} c/elem  "
-                  f"c={per_c:7.3f} c/elem  ratio={per_c / per_pie:5.2f}x")
+                  f"c={per_c:7.3f} c/elem  ratio={ratio}")
 
     if a.json:
         json.dump(report, open(a.json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

@@ -27,6 +27,26 @@ def hex16(values, width=4) -> str:
     return ",".join(f"{(v & ((1 << (4 * width)) - 1)):0{width}x}" for v in values)
 
 
+def box_img(n_boxes: int, spec: list) -> list[int]:
+    """The plane-major AABB image examples.h documents: plane p of box b at 48*(b//8) + 16*p + (b%8), the
+    max 8 words on from the min."""
+    img = [0] * (48 * ((n_boxes + 7) // 8))
+    for b, (mn, mx) in enumerate(spec):
+        for ax in range(3):
+            img[48 * (b // 8) + 16 * ax + (b % 8)] = mn[ax]
+            img[48 * (b // 8) + 16 * ax + 8 + (b % 8)] = mx[ax]
+    return img
+
+
+def point_img(n_points: int, spec: list) -> list[int]:
+    """The plane-major point image: axis ax of point i at 24*(i//8) + 8*ax + (i%8)."""
+    img = [0] * (24 * ((n_points + 7) // 8))
+    for i, xyz in enumerate(spec):
+        for ax in range(3):
+            img[24 * (i // 8) + 8 * ax + (i % 8)] = xyz[ax]
+    return img
+
+
 def build_log() -> str:
     """A log that must pass: every value is a reference value, in the firmware's exact format."""
     rng = random.Random(0x1234)
@@ -208,7 +228,165 @@ def build_log() -> str:
         "EX ex09 qacc DATA probe v=1000..-8000 coef_lanes=3,7,5,11 shift=0",
         "EX ex09 qacc RESULT ok=1 fail=0",
     ]
-    lines += ["SUMMARY checks_ok=52 checks_fail=0", "END", ""]
+
+    # ex10: the two motion kernels. Smaller arrays than the device prints (two blocks of eight lanes), and
+    # every value is a reference value from this checker's own models.
+    sad_a = [rng.randrange(0, 256) for _ in range(16)]
+    sad_b = [rng.randrange(0, 256) for _ in range(16)]
+    sad_ref, sad_plain = cel.ref_sad8(sad_a, sad_b), cel.ref_sad8_plain(sad_a, sad_b)
+    sad_fa = [0xFFFF, 0x8000, 0x0000, 0x7FFF] + [rng.randrange(0, 0x10000) for _ in range(12)]
+    sad_fb = [0x0000, 0x0000, 0xFFFF, 0x8000] + [rng.randrange(0, 0x10000) for _ in range(12)]
+    sadf_ref, sadf_plain = cel.ref_sad8(sad_fa, sad_fb), cel.ref_sad8_plain(sad_fa, sad_fb)
+    hp_a = [rng.randrange(0, 256) for _ in range(8)]
+    hp_b = [rng.randrange(0, 256) for _ in range(8)]
+    hp_out = cel.ref_halfpel_formula(hp_a, hp_b)
+    fha = [30000, -30000, 20000, -20000, 15000, -15000, 100, -100]
+    fhb = [30000, -30000, -20000, 20000, 20000, -20000, 50, -50]
+    fh_model = cel.ref_halfpel(fha, fhb)
+    fh_expression = cel.ref_halfpel_formula(fha, fhb)
+    fh_mismatch = sum(1 for i in range(len(fha)) if fh_model[i] != fh_expression[i])
+    fh_pos, fh_neg = cel.halfpel_saturating_lanes(fha, fhb)
+    lines += [
+        "EX ex10 motion BEGIN",
+        f"EX ex10 motion DATA sad_a={hex16(sad_a)}",
+        f"EX ex10 motion DATA sad_b={hex16(sad_b)}",
+        "EX ex10 motion DATA sad_accx=" + ",".join(f"{w:08x}" for w in
+                                                   (sad_ref & 0xFFFFFFFF, sad_ref >> 32)),
+        "EX ex10 motion DATA sad_blocks=2",
+        f"EX ex10 motion DATA sad_total={sad_ref}",
+        f"EX ex10 motion DATA sad_plain_textbook={sad_plain}",
+        f"EX ex10 motion DATA sad_straddling_lanes={cel.straddling(sad_a, sad_b)}",
+        f"EX ex10 motion DATA sad_clamped_lanes={cel.clamped_diff(sad_a, sad_b)}",
+        f"EX ex10 motion DATA sad_full_a={hex16(sad_fa)}",
+        f"EX ex10 motion DATA sad_full_b={hex16(sad_fb)}",
+        "EX ex10 motion DATA sad_full_accx=" + ",".join(f"{w:08x}" for w in
+                                                        (sadf_ref & 0xFFFFFFFF, sadf_ref >> 32)),
+        "EX ex10 motion DATA sad_full_blocks=2",
+        f"EX ex10 motion DATA sad_full_total={sadf_ref}",
+        f"EX ex10 motion DATA sad_full_plain_textbook={sadf_plain}",
+        f"EX ex10 motion DATA sad_full_straddling_lanes={cel.straddling(sad_fa, sad_fb)}",
+        f"EX ex10 motion DATA sad_full_clamped_lanes={cel.clamped_diff(sad_fa, sad_fb)}",
+        f"EX ex10 motion DATA halfpel_a={hex16(hp_a)}",
+        f"EX ex10 motion DATA halfpel_b={hex16(hp_b)}",
+        f"EX ex10 motion DATA halfpel_out={hex16(hp_out)}",
+        "EX ex10 motion DATA halfpel_lanes=8",
+        "EX ex10 motion DATA halfpel_ones8=1",
+        f"EX ex10 motion DATA halfpel_full_a={hex16(fha)}",
+        f"EX ex10 motion DATA halfpel_full_b={hex16(fhb)}",
+        f"EX ex10 motion DATA halfpel_full_out={hex16(fh_model)}",
+        "EX ex10 motion DATA halfpel_full_lanes=8",
+        f"EX ex10 motion DATA halfpel_full_mismatch={fh_mismatch}",
+        f"EX ex10 motion DATA halfpel_full_sat_pos={fh_pos}",
+        f"EX ex10 motion DATA halfpel_full_sat_neg={fh_neg}",
+        f"EX ex10 motion CHECK sad8_8bit_matches_the_saturating_C_reference pie={sad_ref} ref={sad_ref} ok",
+        f"EX ex10 motion CHECK sad8_full_range_matches_the_saturating_C_reference pie={sadf_ref} "
+        f"ref={sadf_ref} ok",
+        "EX ex10 motion CHECK halfpel_8bit_matches_the_reference_expression pie=8 ref=8 ok",
+        "EX ex10 motion RESULT ok=4 fail=0",
+        "BENCH sad8 blocks=6400 cycles_pie=120000 cycles_c=300000",
+        "BENCH halfpel pixels=12800 cycles_pie=30000 cycles_c=90000",
+    ]
+
+    # ex11: the 8x8 block transform.
+    coef = [rng.randrange(-16384, 16385) for _ in range(64)]
+    coeft = [coef[i * 8 + k] for k in range(8) for i in range(8)]
+    blk = [rng.randrange(-1024, 1025) for _ in range(64)]
+    out11 = cel.ref_block8x8(coef, blk, 15)
+    out11t = cel.ref_block8x8(coeft, blk, 15)
+    out11s = cel.ref_block8x8(coef, blk, 8)
+    sat11 = sum(1 for v in out11s if v in (32767, -32768))
+    biggest11 = max(abs(v) for row in cel.block8x8_row_sums(coef, blk) for v in row)
+    lines += [
+        "EX ex11 block8x8 BEGIN",
+        f"EX ex11 block8x8 DATA coef={hex16(coef)}",
+        f"EX ex11 block8x8 DATA coef_transposed={hex16(coeft)}",
+        f"EX ex11 block8x8 DATA block={hex16(blk)}",
+        f"EX ex11 block8x8 DATA out={hex16(out11)}",
+        f"EX ex11 block8x8 DATA out_transposed={hex16(out11t)}",
+        f"EX ex11 block8x8 DATA out_saturating={hex16(out11s)}",
+        "EX ex11 block8x8 DATA shift=15",
+        "EX ex11 block8x8 DATA shift_saturating=8",
+        f"EX ex11 block8x8 DATA saturated_lanes={sat11}",
+        "EX ex11 block8x8 DATA rows_over_40bit=0",
+        f"EX ex11 block8x8 DATA max_abs_row_sum={biggest11}",
+        "EX ex11 block8x8 CHECK all_64_coefficients_match_the_int64_C_reference pie=64 ref=64 ok",
+        "EX ex11 block8x8 RESULT ok=2 fail=0",
+        "BENCH block8x8 blocks=2000 cycles_pie=40000 cycles_c=200000",
+    ]
+
+    # ex12: integration, the AABB masks and the squared distances. Ten boxes and ten points, so the whole
+    # group of eight and the scalar tail both carry data.
+    spec_a = [(0, 0, 0), (32767, 0, 0), (26756, 26756, 26756), (26757, 26757, 26757),
+              (0, 0, 0), (32767, 32767, 32767), (-1000, 2000, -3000)]
+    spec_b = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0),
+              (-32768, 0, 0), (-32768, -32768, -32768), (1000, -2000, 3000)]
+    pta, ptb = point_img(10, spec_a), point_img(10, spec_b)
+    d2 = cel.ref_dist2(pta, ptb, 10)
+    d2q = cel.ref_dist2_q16(pta, ptb, 10, 8)
+    st = cel.dist2_stats(pta, ptb, 10)
+    pos12 = [rng.randrange(-200000, 200001) for _ in range(8)]
+    vel12 = [rng.randrange(-200000, 200001) for _ in range(8)]
+    acc12 = [rng.randrange(-1000, 1001) for _ in range(8)]
+    pos12[6], vel12[6], acc12[6] = 2147483647, 2147483647, -1
+    pos12[7], vel12[7], acc12[7] = -2147483648, -2147483648, 1
+    wide = cel.ref_integrate(pos12, vel12, acc12, -0x80000000, 0x7FFFFFFF)
+    exact = cel.ref_integrate_exact(pos12, vel12, acc12, -0x80000000, 0x7FFFFFFF)
+    narrow = cel.ref_integrate(pos12, vel12, acc12, -300000, 300000)
+    boxspec = [((-400, -300, -200), (100, 200, 300)),
+               ((-400, 500, -200), (100, 600, 300)),
+               ((600, -300, -200), (700, 200, 300)),
+               ((-400, -300, -200), (100, 200, 300)),
+               ((-400, -300, -200), (100, 200, 300)),
+               ((-400, -300, -200), (100, 200, 300)),
+               ((-400, -300, -200), (100, 200, 300)),
+               ((-400, -300, -200), (100, 200, 300)),
+               ((-400, -300, -200), (100, 200, 300)),
+               ((600, -300, -200), (700, 200, 300))]
+    boxes12 = box_img(10, boxspec)
+    query12 = [-500, 500, -400, 400, -300, 300]
+    masks12 = cel.ref_sat_masks(boxes12, query12, 10)
+    lines += [
+        "EX ex12 physics BEGIN",
+        f"EX ex12 physics DATA pos={hex16(pos12, 8)}",
+        f"EX ex12 physics DATA vel={hex16(vel12, 8)}",
+        f"EX ex12 physics DATA acc={hex16(acc12, 8)}",
+        f"EX ex12 physics DATA integrated={hex16(wide, 8)}",
+        f"EX ex12 physics DATA integrated_narrow_bounds={hex16(narrow, 8)}",
+        "EX ex12 physics DATA objects=8",
+        "EX ex12 physics DATA integrate_lo=-2147483648",
+        "EX ex12 physics DATA integrate_hi=2147483647",
+        "EX ex12 physics DATA integrate_lo_narrow=-300000",
+        "EX ex12 physics DATA integrate_hi_narrow=300000",
+        f"EX ex12 physics DATA integrate_diverging_from_exact="
+        f"{sum(1 for i in range(8) if wide[i] != exact[i])}",
+        f"EX ex12 physics DATA integrate_moved_by_the_bounds="
+        f"{sum(1 for i in range(8) if narrow[i] != wide[i])}",
+        f"EX ex12 physics DATA boxes={hex16(boxes12)}",
+        f"EX ex12 physics DATA query={hex16(query12)}",
+        f"EX ex12 physics DATA masks={hex16(masks12)}",
+        "EX ex12 physics DATA n_boxes=10",
+        f"EX ex12 physics DATA overlap_boxes={sum(1 for v in masks12 if v == -1)}",
+        f"EX ex12 physics DATA pt_a={hex16(pta)}",
+        f"EX ex12 physics DATA pt_b={hex16(ptb)}",
+        f"EX ex12 physics DATA dist2={hex16(d2, 8)}",
+        "EX ex12 physics DATA n_points=10",
+        f"EX ex12 physics DATA dist2_int32_clamps={st['int32_clamps']}",
+        f"EX ex12 physics DATA dist2_saturating_axis_diffs={st['saturating_axis_diffs']}",
+        f"EX ex12 physics DATA dist2_max_abs_delta={st['max_abs_delta']}",
+        f"EX ex12 physics DATA dist2_changed_by_the_saturating_difference={st['changed_by_saturation']}",
+        f"EX ex12 physics DATA dist2_q16={hex16(d2q)}",
+        "EX ex12 physics DATA q16_shift=8",
+        f"EX ex12 physics DATA q16_written={len(d2q)}",
+        f"EX ex12 physics DATA q16_saturated_lanes={sum(1 for v in d2q if v in (32767, -32768))}",
+        "EX ex12 physics CHECK sat_masks_matches_the_C_reference pie=10 ref=10 ok",
+        "EX ex12 physics CHECK dist2_matches_the_C_reference pie=10 ref=10 ok",
+        "EX ex12 physics RESULT ok=5 fail=0",
+        "BENCH integrate objects=16000 cycles_pie=320000 cycles_c=640000",
+        "BENCH sat_masks boxes=38000 cycles_pie=400000 cycles_c=900000",
+        "BENCH dist2 pairs=38000 cycles_pie=700000 cycles_c=500000",
+        "BENCH dist2_q16 pairs=32000 cycles_pie=200000 cycles_c=450000",
+    ]
+    lines += ["SUMMARY checks_ok=69 checks_fail=0", "END", ""]
     return "\n".join(lines)
 
 
@@ -252,6 +430,17 @@ MUTATIONS = [
     ("ex09 ipwalk_out (the .IP walk)", "EX ex09 qacc DATA ipwalk_out=", "0000"),
     ("ex09 wb_b (the read-modify-write verdict)", "EX ex09 qacc DATA wb_b=", "0000"),
     ("ex09 qacc_lane3", "EX ex09 qacc DATA qacc_lane3=", "0 want=0"),
+    ("ex10 sad_accx (the 40-bit RUR.ACCX_0/1 readout)", "EX ex10 motion DATA sad_accx=",
+     "00000000,00000000"),
+    ("ex10 halfpel_out (the half-pel row)", "EX ex10 motion DATA halfpel_out=", "0000"),
+    ("ex10 halfpel_full_mismatch (the saturating rounding add)", "EX ex10 motion DATA halfpel_full_mismatch=",
+     "0"),
+    ("ex11 out (the 8x8 transform at shift 15)", "EX ex11 block8x8 DATA out=", "0000"),
+    ("ex11 out_saturating (the saturating readout)", "EX ex11 block8x8 DATA out_saturating=", "0000"),
+    ("ex12 integrated (the saturating adds and the clamp)", "EX ex12 physics DATA integrated=", "00000000"),
+    ("ex12 masks (the separating-axis result)", "EX ex12 physics DATA masks=", "0000"),
+    ("ex12 dist2 (the QACC squared distances)", "EX ex12 physics DATA dist2=", "00000000"),
+    ("ex12 dist2_q16 (the one-instruction readout)", "EX ex12 physics DATA dist2_q16=", "0000"),
 ]
 
 failures = []

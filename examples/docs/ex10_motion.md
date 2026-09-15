@@ -1,5 +1,11 @@
 # ex10 — 動画の動き補償まわりの PIE プリミティブ: ブロック SAD とハーフペル行
 
+> **状態（統合後）**: この2カーネルは `examples/firmware/main/ex10_motion.S` に移り、
+> `examples/firmware/main/CMakeLists.txt` のビルドに入って `main.c` の `ex10()` から呼ばれる。
+> ビルドとホスト側チェッカー（`tools/selftest_examples_checker.py`）は通っているが、**実機では未実行**。
+> 本文が `proposed/` のパスや「ビルドに入っていない」と書いているのは移動前の状態のままで、貼ってある
+> 実行記録も当時のまま（.S は移動以外は一字も変えていない）。
+
 `examples/firmware/main/proposed/ex10_motion.S` の2カーネル。動画デコードの動き補償・スプライト移動で
 最初に要る2つを、8レーン（16bit × 8）単位のベタ書き PIE で書いたもの。
 

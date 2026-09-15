@@ -128,4 +128,84 @@ void ex09_zero_vis(const int16_t *v8, const int16_t *coef8, int16_t *out8, uint3
 void ex09_srcmb_wb(const int16_t *v8, const int16_t *coef8, int16_t *out_a, int16_t *out_b,
                    uint32_t shift_a, uint32_t shift_b);
 
+/* ex10: motion video -- a block SAD accumulated in ACCX and a half-pel interpolated row. What is pinned
+ * down: (A) there is no SAD and no ABS in the 220-instruction set, so |a-b| is spelled
+ * VSUBS.S16(VMAX.S16, VMIN.S16) over the SIGNED lane readings, and the sum comes from EE.VMULAS.U16.ACCX
+ * against a register of ones with the 40-bit accumulator read out ONCE through RUR.ACCX_0/ACCX_1 (no
+ * saturation and no side effect, unlike EE.SRS.ACCX, which writes ACCX back and clamps into 32 bits). The
+ * C reference in main.c follows the instructions -- a saturating signed distance -- so its CHECK is exact
+ * on any input; 8-bit sample data (0..255, zero-extended into the lanes) is the domain where that also
+ * equals the textbook SAD, and main.c counts the lanes where a full-range input makes the two part company
+ * instead of pretending they agree.
+ *   (B) the half-pel row is EE.VADDS.S16 twice (the sum, then the +1 rounding -- both SATURATING) followed
+ * by EE.VMUL.U16 with SAR = 1, which is a LOGICAL shift (the reference expression casts to uint16_t before
+ * the shift); one constant register serves as both the addend 1 and the multiplier 1. The rounding add
+ * saturates, so the two readings of the expression agree exactly where a+b+1 fits a signed 16-bit lane:
+ * main.c prints the divergence count and the saturation count rather than assuming they are equal.
+ *   Layout: ex10_sad8 takes n_blocks*8 uint16 lanes in each of a/b and writes out[0] = ACCX[31:0],
+ * out[1] = ACCX[39:32] (host total = ((uint64_t)out[1] << 32) | out[0]); ex10_halfpel takes n_lanes
+ * (a multiple of 8, trailing lanes untouched), an ones8 of eight lanes holding 1, and writes n_lanes.
+ * Every buffer 16-byte aligned (TRM p49). */
+void ex10_sad8(const uint16_t *a, const uint16_t *b, uint32_t n_blocks, uint32_t *out);
+void ex10_halfpel(const int16_t *a, const int16_t *b, const int16_t *ones8, int16_t *out,
+                  uint32_t n_lanes);
+
+/* ex11: the separable 8x8 integer block transform (the MP3 / JPEG / H.264 inner shape), eight columns in
+ * the SIMD lanes. What is pinned down: EE.VSMULAS.S16.QACC broadcasts ONE lane of qy and multiply-
+ * accumulates it against all eight lanes of qx, each lane into its own saturating 40-bit accumulator, so
+ * the REDUCTION index goes in the broadcast operand and the FREE index in the lanes; the readout is
+ * EE.SRCMB.S16.QACC (shift, saturate to 16 bits -- and it writes the shifted value back into QACC, which
+ * is why this kernel zeroes the accumulator at the top of every output row). The PIE has eight 128-bit
+ * registers and the assembler rejects q8, so ex07's "one live register per tap" shape does not scale from
+ * four taps to eight: the row registers roll with a reuse distance of eight instructions.
+ *   Layout: coef, block and out are 64 int16 row-major (coef/out row k at +16*k, block row i at +16*i) and
+ * out[k][j] = sat16((sum over i of coef[k][i] * block[i][j]) >> shift). The eight lanes are the eight
+ * COLUMNS j of the block, so this pass needs no transposition; the other axis of a 2-D transform is a
+ * second call with the transposed coefficient table, which is the same arithmetic (main.c does both and
+ * ships both tables in its DATA lines). Buffers must be 16-byte aligned. */
+void ex11_block8x8(const int16_t *coef, const int16_t *block, int16_t *out, uint32_t shift);
+
+/* ex12: the two loops a 2D/3D game spends its frame budget in.
+ *   ex12_integrate: semi-implicit Euler on FOUR int32 lanes (EIGHT objects per call, two register groups),
+ * out[i] = clamp(sat32(sat32(pos[i] + vel[i]) + acc[i]), lo, hi). The set has no plain vector add, so the
+ * two adds are the SATURATING EE.VADDS.S32 and the clamp is VMIN.S32(hi) then VMAX.S32(lo) in that order
+ * (lo must win when lo > hi, so the caller passes lo <= hi); lo/hi reach the vector unit through the
+ * frame `entry` already allocated, read back with EE.VLDBC.32, because there is no move from an AR to a QR
+ * register. The reference in main.c follows the instructions, so the CHECK is exact; where the kernel
+ * stops agreeing with the exact 64-bit sum (|pos+vel| leaving int32) main.c prints the count.
+ *   ex12_sat_masks: the AABB / separating-axis test for eight candidate boxes against one query box: on an
+ * axis separated iff box_max < query_min or box_min > query_max (one EE.VCMP.LT.S16 and one
+ * EE.VCMP.GT.S16 against a broadcast query scalar), EE.ORQ accumulates the separation bits across the two
+ * tests and then across the three axes (De Morgan), and a single EE.NOTQ turns "no separation anywhere"
+ * into the all-ones overlap mask. The compares are SIGNED 16-bit.
+ *   Layout, which is the whole contract here: boxes is plane-major, six 16-byte planes per group of eight
+ * boxes in the order +0 min_x, +16 max_x, +32 min_y, +48 max_y, +64 min_z, +80 max_z (96 bytes per group),
+ * element (plane p, box i) at 96*(i/8) + 16*p + 2*(i%8); only the lanes below n_boxes are read (whole
+ * groups of eight through the vector loop, the n_boxes & 7 remainder through the scalar tail). query is
+ * six int16 in the same order -- min_x, max_x, min_y, max_y, min_z, max_z -- and 2-byte alignment is
+ * enough for the broadcast loads. out is n_boxes int16, 0xFFFF (all ones) for overlap and 0 for separated,
+ * 16-byte aligned: the vector stores are whole groups of eight and the tail writes single int16.
+ *   ex12_dist2_qacc: squared distance of eight point pairs per group, accumulated per lane in QACC, so a
+ * caller compares against r^2 and never needs a square root (there is neither a divide nor a square root
+ * in the set). pt_a/pt_b are plane-major groups of eight points (+0 x, +16 y, +32 z; element (axis ax,
+ * point i) at 48*(i/8) + 16*ax + 2*(i%8), 48 bytes per group). The readout is RUR.QACC_L_0..4 /
+ * RUR.QACC_H_0..4: five 32-bit words per 160-bit half, the lanes bit-packed at 40-bit offsets. Only the
+ * low 32 bits of a lane are taken, which is exact rather than approximate because the difference comes out
+ * of a saturating 16-bit subtract: |dx| <= 32767, so dist2 <= 3*32767^2 < 2^32 and bits 32..39 of every
+ * lane are zero for any input; the value is then unsigned-clamped (minu) to 2^31-1 to fit the int32 out.
+ * out is n_points int32, 16-byte aligned. The n_points & 7 tail is scalar and takes the same saturating
+ * difference and the same clamp, so the two paths agree.
+ *   ex12_dist2_q16: the same three MACs with the one-instruction readout (EE.SRCMB.S16.QACC): sat16 of the
+ * lane shifted by `shift` (a register operand, not an immediate), exact while dist2 <= 32767 << shift --
+ * for callers that live in a Q-format radius. It processes whole groups of eight only and RETURNS the
+ * number of pairs written ((n_points & ~7)), so nothing is silently dropped; out is int16 per pair.
+ * All buffers 16-byte aligned: the 128-bit PIE forms zero the low four address bits (TRM p49), so a
+ * misaligned pointer is not reported, it silently reads or writes the neighbouring bytes. */
+void ex12_integrate(const int32_t *pos, const int32_t *vel, const int32_t *acc, int32_t *out,
+                    int32_t lo, int32_t hi);
+void ex12_sat_masks(const int16_t *boxes, const int16_t *query, int16_t *out, uint32_t n_boxes);
+void ex12_dist2_qacc(const int16_t *pt_a, const int16_t *pt_b, int32_t *out, uint32_t n_points);
+uint32_t ex12_dist2_q16(const int16_t *pt_a, const int16_t *pt_b, int16_t *out, uint32_t n_points,
+                        uint32_t shift);
+
 #endif

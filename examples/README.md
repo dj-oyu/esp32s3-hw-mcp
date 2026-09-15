@@ -42,6 +42,15 @@ bash /workspace/esp32s3-hw-mcp/tools/host_flash_and_log.sh --examples
 | `ex06` fft | `EE.FFT.R2BF.S16`（レーン並列バタフライ、sel2 で並び替え）と `EE.CMUL.S16`（(re,im) ペアの複素乗算、SAR シフト） | 疑似コードの op_a/op_b 構成を Python でそのまま実装して一致を要求 | レーンの対応（sel2 / sel4 の意味）が確定する |
 | `ex07` transform3d | 4×4 頂点変換（Q8、8 頂点並列）。`EE.VSMULAS.S16.QACC` の broadcast 積和＋`EE.SRCMB.S16.QACC` の飽和読み出し | 32 座標が C 参照と Python 参照の両方に一致。`BENCH transform8` で **頂点あたりのサイクル数**を C(-O2) と比較 | 3D の内側ループが組めるか、SIMD が何倍効くかが数字で出る |
 | `ex08` media | フレームバッファ効果を 128bit 単位で: RGB565 ハーフブレンド（`ANDQ`+`VMUL`+`VADDS`）、飽和加算グロー、`VMIN/VMAX` クランプ、`VMUL`+SAR のティント | 1024 px の配列を C 参照と Python 参照で全数照合。`BENCH` で **ピクセルあたりのサイクル数**と C との比 | メディア表現（合成・残像・明るさ）のコストが見える |
+| `ex10` motion | 動画の動き補償の2プリミティブ: ブロック SAD（8 × uint16 レーンを `EE.VMULAS.U16.ACCX` で合算。絶対差は `VSUBS.S16(VMAX.S16, VMIN.S16)` — PIE に SAD も ABS も無い）と、ハーフペル行 `out[i] = (uint16_t)(a[i]+b[i]+1) >> 1`（`VADDS.S16`×2 + `VMUL.U16`、SAR=1） | 8bit サンプル 512 レーンで SAD が教科書値と一致し、ハーフペルは参照式と全レーン一致。**フルレンジ uint16 レーンは契約外**で、跨ぎ／飽和レーン数を `DATA` に出して隠さない。`BENCH sad8`（ブロック毎）と `BENCH halfpel`（ピクセル毎） | 飽和加算しか無い PIE で絶対差と `>>1` をどう組むか、その代償（どこで参照式と食い違うか）が数字で出る |
+| `ex11` block8x8 | 8×8 int16 ブロック変換（MP3 / JPEG / H.264 の内側の形）。`EE.VSMULAS.S16.QACC` の broadcast 側を還元インデックスに使うので、この向きは転置不要。読み出しは `EE.SRCMB.S16.QACC`（シフト + 16bit 飽和） | 64 係数が C 参照と Python 参照の両方に一致（shift 15、転置表でもう一方の軸も）。小さい shift（8）では読み出し飽和レーン数を `DATA` に固定。`BENCH block8x8`（ブロック毎） | 8 タップに伸ばしたときのレジスタ繰り（q0〜q7 しか無い）と、飽和が来る場所（40bit アキュムレータではなく 16bit 読み出し）が分かる |
+| `ex12` physics | 物理と衝突の3本: 半陰的オイラー（4 × int32 レーン = 8 物体、飽和加算 `VADDS.S32`×2 + `VMIN/VMAX.S32`）、AABB 分離軸テスト（8 箱ずつ、`VCMP.LT/GT.S16` + `ORQ` + `NOTQ`）、距離²（8 点ペア、`VMULAS.S16.QACC` + `RUR.QACC_L/H_*` の厳密読み出しと `SRCMB` の Q16 読み出し） | 19 箱・19 点（端数はスカラテイル）で C 参照と Python 参照に一致。int32 飽和・16bit 差の飽和・int32 クランプの件数を `DATA` に出す。`BENCH integrate`（物体毎）/ `sat_masks`（箱毎）/ `dist2`（ペア毎） | in-domain の外（int32 を越える加算、16bit を越える差）で何がどう壊れるかが件数で分かる |
+
+**実機の状態**: `ex10` / `ex11` / `ex12` は **ビルドが通り、ホスト側チェッカー
+（`tools/selftest_examples_checker.py` が 75/75 通過 + 追加した全変異を検出）も通っているが、実機では
+まだ走らせていない**（`BENCH` 行の数字は実機ランのときに初めて意味を持つ）。この印は実機ランが取れるまで
+外さない。とくに ex11 / ex12 の QACC 系（`VSMULAS.S16.QACC` / `SRCMB.S16.QACC` / `RUR.QACC_*`）は
+ex09 の実機ログでまだ確定していない（`notes/08-media-3d-perf.md` の「実機の前に読むこと」）。
 
 ## ログの書式
 
@@ -85,7 +94,11 @@ SUMMARY checks_ok=N checks_fail=0
    コピー不要で窓を作れるかの決着。
 2. その結果で `EE.FFT.*` の多段（8点 → 32点）を書く。sel2=0/1 のレーン並びは確定済みなので、
    段ごとに中間バッファを出して1段ずつ検証できる。
-3. `EE.SRCMB.S16.QACC` / `EE.ST.QACC_*.IP` の詰め方（8並列 QACC 経路）は未着手。
+3. `EE.SRCMB.S16.QACC` / `EE.ST.QACC_*.IP` の詰め方（8並列 QACC 経路）は未着手 → ex16 として残っている
+   （`notes/08` の繰り下げ表）。
+4. `ex10`〜`ex12`（動き補償・8×8 ブロック変換・物理/衝突）を実機で流す。ビルドとホスト側チェッカーは
+   通っているので、ここで初めて `BENCH` の cycles/要素が数字になる。QACC 経路（ex11 / ex12）は
+   ex09 の間合いの結果待ち。
 
 ## 信頼度（正直なところ）
 

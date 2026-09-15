@@ -1,5 +1,11 @@
 # ex12 — 物理と衝突（PIE で 8 レーンずつ） / physics and collision, eight lanes at a time
 
+> **状態（統合後）**: この3カーネルは `examples/firmware/main/ex12_physics.S` に移り、
+> `examples/firmware/main/CMakeLists.txt` のビルドに入って `main.c` の `ex12()` から呼ばれる。
+> ビルドとホスト側チェッカー（`tools/selftest_examples_checker.py`）は通っているが、**実機では未実行**。
+> 本文が `proposed/` のパスや「ビルドに入っていない」と書いているのは移動前の状態のままで、貼ってある
+> 実行記録も当時のまま（.S は移動以外は一字も変えていない）。
+
 `examples/firmware/main/proposed/ex12_physics.S` — **new sample, not in the build**. `main.c`,
 `examples.h` and `CMakeLists.txt` are untouched (this directory is not compiled by
 `examples/firmware/main/CMakeLists.txt`), so nothing in the running firmware changes until someone moves

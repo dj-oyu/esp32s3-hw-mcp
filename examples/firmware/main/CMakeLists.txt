@@ -10,6 +10,9 @@ idf_component_register(
         "ex07_transform3d.S"
         "ex08_media.S"
         "ex09_qacc.S"
+        "ex10_motion.S"
+        "ex11_block8x8.S"
+        "ex12_physics.S"
     INCLUDE_DIRS ".")
 
 # The examples time hand-written assembly against an equivalent C loop. ESP-IDF's default for application

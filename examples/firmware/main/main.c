@@ -69,6 +69,62 @@ static int16_t s_wb_a[8] __attribute__((aligned(16)));
 static int16_t s_wb_b[8] __attribute__((aligned(16)));
 static uint32_t s_qraw[16] __attribute__((aligned(16)));
 static uint32_t s_qrows[64] __attribute__((aligned(16)));
+/* ex10 (motion): the block SAD gets an 8-bit sample case (the kernel's documented domain) and a full-range
+ * uint16 case (outside the contract, where the signed reading of a lane stops meaning |a-b|), and the
+ * half-pel row gets the same pair of domains. */
+#define SAD_BLOCKS      64
+#define SAD_FULL_BLOCKS 32
+#define HP_LANES        128
+#define HP_FULL_LANES   64
+static uint16_t s_sad_a[SAD_BLOCKS * 8] __attribute__((aligned(16)));
+static uint16_t s_sad_b[SAD_BLOCKS * 8] __attribute__((aligned(16)));
+static uint16_t s_sad_fa[SAD_FULL_BLOCKS * 8] __attribute__((aligned(16)));
+static uint16_t s_sad_fb[SAD_FULL_BLOCKS * 8] __attribute__((aligned(16)));
+static uint32_t s_sad_out[4] __attribute__((aligned(16)));      /* [0..1] 8-bit case, [2..3] full range */
+static int16_t s_hp_a[HP_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_b[HP_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_out[HP_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_ref[HP_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_fa[HP_FULL_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_fb[HP_FULL_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_fout[HP_FULL_LANES] __attribute__((aligned(16)));
+static int16_t s_hp_fref[HP_FULL_LANES] __attribute__((aligned(16)));
+/* ex11 (block8x8): the 8x8 block, the coefficient table, its transpose, and the readout with a shift small
+ * enough that EE.SRCMB.S16.QACC has to saturate (the acc_sat buffers). */
+#define BLOCK8_SHIFT     15
+#define BLOCK8_SHIFT_SAT 8
+static int16_t s_b8_coef[64] __attribute__((aligned(16)));
+static int16_t s_b8_coeft[64] __attribute__((aligned(16)));
+static int16_t s_b8_block[64] __attribute__((aligned(16)));
+static int16_t s_b8_out[64] __attribute__((aligned(16)));
+static int16_t s_b8_ref[64] __attribute__((aligned(16)));
+static int16_t s_b8_outt[64] __attribute__((aligned(16)));
+static int16_t s_b8_reft[64] __attribute__((aligned(16)));
+static int16_t s_b8_outs[64] __attribute__((aligned(16)));
+static int16_t s_b8_refs[64] __attribute__((aligned(16)));
+/* ex12 (physics): 19 boxes and 19 point pairs, so both the whole groups of eight and the scalar tail run;
+ * the plane-major images are 96 bytes per box group and 48 bytes per point group (see examples.h). */
+#define BOXES  19
+#define POINTS 19
+#define BOX_GROUPS  ((BOXES + 7) / 8)
+#define POINT_GROUPS ((POINTS + 7) / 8)
+static int32_t s_phy_pos[8] __attribute__((aligned(16)));
+static int32_t s_phy_vel[8] __attribute__((aligned(16)));
+static int32_t s_phy_acc[8] __attribute__((aligned(16)));
+static int32_t s_phy_out[8] __attribute__((aligned(16)));
+static int32_t s_phy_outc[8] __attribute__((aligned(16)));
+static int32_t s_phy_ref[8] __attribute__((aligned(16)));
+static int32_t s_phy_refc[8] __attribute__((aligned(16)));
+static int16_t s_phy_boxes[48 * BOX_GROUPS] __attribute__((aligned(16)));
+static int16_t s_phy_query[8] __attribute__((aligned(16)));
+static int16_t s_phy_masks[BOXES] __attribute__((aligned(16)));
+static int16_t s_phy_masks_ref[BOXES] __attribute__((aligned(16)));
+static int16_t s_phy_pta[24 * POINT_GROUPS] __attribute__((aligned(16)));
+static int16_t s_phy_ptb[24 * POINT_GROUPS] __attribute__((aligned(16)));
+static int32_t s_phy_d2[POINTS] __attribute__((aligned(16)));
+static int32_t s_phy_d2_ref[POINTS] __attribute__((aligned(16)));
+static int16_t s_phy_d2q[POINTS] __attribute__((aligned(16)));
+static int16_t s_phy_d2q_ref[POINTS] __attribute__((aligned(16)));
 
 static int s_ok, s_fail;
 
@@ -121,6 +177,14 @@ static int16_t rnd16(int lo, int hi)
 {
     s_rng = s_rng * 1664525u + 1013904223u;
     return (int16_t)(lo + (int)((s_rng >> 16) % (uint32_t)(hi - lo + 1)));
+}
+
+/* The same generator over an int32 range: the physics example needs lanes whose pos + vel leaves int32,
+ * which int16 lanes cannot reach. Every lane is still reproducible from the seed. */
+static int32_t rnd32(int32_t lo, int32_t hi)
+{
+    s_rng = s_rng * 1664525u + 1013904223u;
+    return lo + (int32_t)((uint32_t)(s_rng >> 8) % (uint32_t)(hi - lo + 1));
 }
 
 static int32_t sat32(int64_t v)
@@ -1090,6 +1154,768 @@ static void ex09(void)
     section_end(ex, name, (fail == 0) ? 1 : 0, fail);
 }
 
+/* ------------------------------------------------------------------ ex10: motion (block SAD + half-pel) */
+
+/* The C references for the two kernels, written from the same manual pseudo-code the assembly was (see
+ * examples/docs/ex10_motion.md): the SAD reference follows the INSTRUCTIONS -- a saturating signed
+ * distance -- rather than the textbook formula, so comparing against it is exact on any input. The
+ * textbook version is here too, because it is what says where the kernel's inputs stopped being in
+ * contract; the examples print that difference as a DATA line instead of asserting it away.
+ *
+ * The SAD reference returns its total instead of writing a buffer, so the timed loop has to consume it: a
+ * pure call whose value is discarded can be deleted by the optimiser, and the cycle count would then
+ * describe nothing at all. */
+static volatile uint64_t s_bench_sink;
+
+uint64_t ex10_sad8_c(const uint16_t *a, const uint16_t *b, uint32_t n_blocks)
+{
+    uint64_t acc = 0;
+    for (uint32_t i = 0; i < n_blocks * 8; i++) {
+        int32_t d = (int32_t)(int16_t)a[i] - (int32_t)(int16_t)b[i];   /* VSUBS(VMAX.S16, VMIN.S16) */
+        if (d < 0) {
+            d = -d;
+        }
+        if (d > 32767) {
+            d = 32767;                     /* EE.VSUBS.S16 saturates at +32767 */
+        }
+        acc += (uint32_t)d;
+    }
+    return acc;
+}
+
+uint64_t ex10_sad8_plain_c(const uint16_t *a, const uint16_t *b, uint32_t n_blocks)
+{
+    uint64_t acc = 0;
+    for (uint32_t i = 0; i < n_blocks * 8; i++) {
+        acc += (a[i] > b[i]) ? (uint32_t)(a[i] - b[i]) : (uint32_t)(b[i] - a[i]);
+    }
+    return acc;
+}
+
+/* out[i] = (uint16_t)(a[i] + b[i] + 1) >> 1 -- the cast is before the shift, which is the EE.VMUL.U16
+ * reading of the >>1 and not the EE.VMUL.S16 one. */
+void ex10_halfpel_c(const int16_t *a, const int16_t *b, int16_t *out, uint32_t n_lanes)
+{
+    for (uint32_t i = 0; i < n_lanes; i++) {
+        out[i] = (int16_t)((uint16_t)((int32_t)a[i] + (int32_t)b[i] + 1) >> 1);
+    }
+}
+
+static void ex10(void)
+{
+    const char *ex = "ex10", *name = "motion";
+    section_begin(ex, name);
+
+    s_rng = 0x10A;                              /* fixed seed: this file plus the log is the whole story */
+    for (int i = 0; i < SAD_BLOCKS * 8; i++) {
+        s_sad_a[i] = (uint16_t)rnd16(0, 255);   /* an 8-bit luma sample zero-extended into the lane */
+        s_sad_b[i] = (uint16_t)rnd16(0, 255);
+    }
+    for (int i = 0; i < SAD_FULL_BLOCKS * 8; i++) {
+        s_sad_fa[i] = (uint16_t)rnd16(-32768, 32767);   /* full-range lanes: outside the contract */
+        s_sad_fb[i] = (uint16_t)rnd16(-32768, 32767);
+    }
+    for (int i = 0; i < 8; i++) {
+        s_ones8[i] = 1;                         /* ex10_halfpel's ones8: the +1 addend AND the x1 factor */
+    }
+    for (int i = 0; i < HP_LANES; i++) {
+        s_hp_a[i] = rnd16(0, 255);
+        s_hp_b[i] = rnd16(0, 255);
+    }
+    for (int i = 0; i < HP_FULL_LANES; i++) {
+        s_hp_fa[i] = rnd16(-32768, 32767);
+        s_hp_fb[i] = rnd16(-32768, 32767);
+    }
+
+    int fail = 0;
+    int ok;
+    check_aligned(ex, name, "sad_a_16_byte_aligned", s_sad_a, &fail);
+    check_aligned(ex, name, "sad_b_16_byte_aligned", s_sad_b, &fail);
+    check_aligned(ex, name, "sad_full_a_16_byte_aligned", s_sad_fa, &fail);
+    check_aligned(ex, name, "sad_full_b_16_byte_aligned", s_sad_fb, &fail);
+    check_aligned(ex, name, "sad_out_16_byte_aligned", s_sad_out, &fail);
+    check_aligned(ex, name, "halfpel_a_16_byte_aligned", s_hp_a, &fail);
+    check_aligned(ex, name, "halfpel_b_16_byte_aligned", s_hp_b, &fail);
+    check_aligned(ex, name, "ones8_16_byte_aligned", s_ones8, &fail);
+    check_aligned(ex, name, "halfpel_full_a_16_byte_aligned", s_hp_fa, &fail);
+    check_aligned(ex, name, "halfpel_full_b_16_byte_aligned", s_hp_fb, &fail);
+
+    /* --- A: the block SAD, 8-bit sample data first (the domain the kernel is exact in) --- */
+    ex10_sad8(s_sad_a, s_sad_b, SAD_BLOCKS, s_sad_out);
+    const uint64_t sad_total = ((uint64_t)s_sad_out[1] << 32) | s_sad_out[0];
+    const uint64_t sad_ref = ex10_sad8_c(s_sad_a, s_sad_b, SAD_BLOCKS);
+    const uint64_t sad_plain = ex10_sad8_plain_c(s_sad_a, s_sad_b, SAD_BLOCKS);
+    int sad_straddle = 0, sad_clamped = 0;
+    for (int i = 0; i < SAD_BLOCKS * 8; i++) {
+        int32_t d = (int32_t)(int16_t)s_sad_a[i] - (int32_t)(int16_t)s_sad_b[i];
+        if (d < 0) {
+            d = -d;
+        }
+        if ((s_sad_a[i] >= 32768) != (s_sad_b[i] >= 32768)) {
+            sad_straddle++;                 /* the two lanes are in different halves of the range */
+        }
+        if (d > 32767) {
+            sad_clamped++;
+        }
+    }
+    ok = (sad_total == sad_ref);
+    check(ex, name, "sad8_8bit_matches_the_saturating_C_reference", (int64_t)sad_total, (int64_t)sad_ref);
+    fail += ok ? 0 : 1;
+    ok = (sad_total == sad_plain);
+    check(ex, name, "sad8_8bit_domain_equals_the_textbook_SAD", (int64_t)sad_total, (int64_t)sad_plain);
+    fail += ok ? 0 : 1;
+    ok = (sad_straddle == 0 && sad_clamped == 0);
+    check(ex, name, "sad8_8bit_domain_straddles_no_lane_and_clamps_none", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    /* ... and then full-range uint16 lanes, which are outside it: the kernel computes its own rule
+     * (|a-b| when the lanes share a half, 65536-|a-b| when they straddle, clamped at 32767) and the
+     * textbook SAD is a different number. Both are output; the CHECK is against the instruction rule. */
+    ex10_sad8(s_sad_fa, s_sad_fb, SAD_FULL_BLOCKS, &s_sad_out[2]);
+    const uint64_t sadf_total = ((uint64_t)s_sad_out[3] << 32) | s_sad_out[2];
+    const uint64_t sadf_ref = ex10_sad8_c(s_sad_fa, s_sad_fb, SAD_FULL_BLOCKS);
+    const uint64_t sadf_plain = ex10_sad8_plain_c(s_sad_fa, s_sad_fb, SAD_FULL_BLOCKS);
+    uint64_t sadf_rule = 0;
+    int sadf_straddle = 0, sadf_clamped = 0;
+    for (int i = 0; i < SAD_FULL_BLOCKS * 8; i++) {
+        int same_half = (s_sad_fa[i] >= 32768) == (s_sad_fb[i] >= 32768);
+        /* The rule as ex10_motion.S states it, in terms of the UNSIGNED readings: the difference, or its
+         * 65536-complement when the two lanes sit in different halves, clamped at 32767. The signed
+         * readings give the same number without the complement step -- |signed(a) - signed(b)| is what the
+         * C reference computes -- and that identity is what this second reading is here to demonstrate. */
+        int32_t d = (s_sad_fa[i] >= s_sad_fb[i]) ? (int32_t)(s_sad_fa[i] - s_sad_fb[i])
+                                                : (int32_t)(s_sad_fb[i] - s_sad_fa[i]);
+        if (!same_half) {
+            sadf_straddle++;
+            d = 65536 - d;
+        }
+        if (d > 32767) {
+            sadf_clamped++;
+            d = 32767;
+        }
+        sadf_rule += (uint32_t)d;
+    }
+    ok = (sadf_total == sadf_ref);
+    check(ex, name, "sad8_full_range_matches_the_saturating_C_reference", (int64_t)sadf_total,
+          (int64_t)sadf_ref);
+    fail += ok ? 0 : 1;
+    ok = (sadf_rule == sadf_total);
+    check(ex, name, "sad8_full_range_per_lane_rule_matches_the_kernel", (int64_t)sadf_rule,
+          (int64_t)sadf_total);
+    fail += ok ? 0 : 1;
+    ok = (sadf_straddle > 0 && sadf_clamped > 0);
+    check(ex, name, "sad8_full_range_reaches_the_straddling_and_clamping_lanes", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    /* --- B: the half-pel row. 8-bit samples first: a + b + 1 <= 511, so neither saturating add can
+     * fire and the kernel is the reference expression lane for lane. --- */
+    ex10_halfpel(s_hp_a, s_hp_b, s_ones8, s_hp_out, HP_LANES);
+    ex10_halfpel_c(s_hp_a, s_hp_b, s_hp_ref, HP_LANES);
+    int hp_match = 0;
+    for (int i = 0; i < HP_LANES; i++) {
+        hp_match += s_hp_out[i] == s_hp_ref[i];
+    }
+    check(ex, name, "halfpel_8bit_matches_the_reference_expression", hp_match, HP_LANES);
+    fail += (hp_match == HP_LANES) ? 0 : 1;
+
+    ex10_halfpel(s_hp_fa, s_hp_fb, s_ones8, s_hp_fout, HP_FULL_LANES);
+    ex10_halfpel_c(s_hp_fa, s_hp_fb, s_hp_fref, HP_FULL_LANES);
+    int hp_kern = 0, hp_mismatch = 0, hp_sat_pos = 0, hp_sat_neg = 0;
+    for (int i = 0; i < HP_FULL_LANES; i++) {
+        int32_t s = (int32_t)s_hp_fa[i] + (int32_t)s_hp_fb[i] + 1;
+        int16_t t = sat16((int32_t)s_hp_fa[i] + s_hp_fb[i]);    /* EE.VADDS.S16 (saturating) */
+        t = sat16((int32_t)t + 1);                              /* EE.VADDS.S16 with the ones8 (+1) */
+        int16_t k = (int16_t)((uint16_t)t >> 1);                /* EE.VMUL.U16 by ones8, SAR = 1 */
+        hp_kern += k == s_hp_fout[i];
+        hp_mismatch += k != s_hp_fref[i];
+        if (s > 32767) {
+            hp_sat_pos++;
+        }
+        if (s < -32768) {
+            hp_sat_neg++;
+        }
+    }
+    check(ex, name, "halfpel_full_range_follows_the_kernel_sequence", hp_kern, HP_FULL_LANES);
+    fail += (hp_kern == HP_FULL_LANES) ? 0 : 1;
+    ok = (hp_mismatch == hp_sat_pos + hp_sat_neg);
+    check(ex, name, "halfpel_full_range_diverging_lanes_are_exactly_the_saturating_rounding_add",
+          hp_mismatch, hp_sat_pos + hp_sat_neg);
+    fail += ok ? 0 : 1;
+    ok = (hp_sat_pos > 0 && hp_sat_neg > 0);
+    check(ex, name, "halfpel_full_range_reaches_both_saturation_directions", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    print_i16(ex, name, "sad_a", (const int16_t *)s_sad_a, SAD_BLOCKS * 8);
+    print_i16(ex, name, "sad_b", (const int16_t *)s_sad_b, SAD_BLOCKS * 8);
+    print_i32(ex, name, "sad_accx", (const int32_t *)s_sad_out, 2);
+    printf("EX %s %s DATA sad_blocks=%d\n", ex, name, SAD_BLOCKS);
+    printf("EX %s %s DATA sad_total=%llu\n", ex, name, (unsigned long long)sad_total);
+    printf("EX %s %s DATA sad_plain_textbook=%llu\n", ex, name, (unsigned long long)sad_plain);
+    printf("EX %s %s DATA sad_straddling_lanes=%d\n", ex, name, sad_straddle);
+    printf("EX %s %s DATA sad_clamped_lanes=%d\n", ex, name, sad_clamped);
+    print_i16(ex, name, "sad_full_a", (const int16_t *)s_sad_fa, SAD_FULL_BLOCKS * 8);
+    print_i16(ex, name, "sad_full_b", (const int16_t *)s_sad_fb, SAD_FULL_BLOCKS * 8);
+    print_i32(ex, name, "sad_full_accx", (const int32_t *)&s_sad_out[2], 2);
+    printf("EX %s %s DATA sad_full_blocks=%d\n", ex, name, SAD_FULL_BLOCKS);
+    printf("EX %s %s DATA sad_full_total=%llu\n", ex, name, (unsigned long long)sadf_total);
+    printf("EX %s %s DATA sad_full_plain_textbook=%llu\n", ex, name, (unsigned long long)sadf_plain);
+    printf("EX %s %s DATA sad_full_straddling_lanes=%d\n", ex, name, sadf_straddle);
+    printf("EX %s %s DATA sad_full_clamped_lanes=%d\n", ex, name, sadf_clamped);
+    print_i16(ex, name, "halfpel_a", s_hp_a, HP_LANES);
+    print_i16(ex, name, "halfpel_b", s_hp_b, HP_LANES);
+    print_i16(ex, name, "halfpel_out", s_hp_out, HP_LANES);
+    printf("EX %s %s DATA halfpel_lanes=%d\n", ex, name, HP_LANES);
+    printf("EX %s %s DATA halfpel_ones8=1\n", ex, name);
+    print_i16(ex, name, "halfpel_full_a", s_hp_fa, HP_FULL_LANES);
+    print_i16(ex, name, "halfpel_full_b", s_hp_fb, HP_FULL_LANES);
+    print_i16(ex, name, "halfpel_full_out", s_hp_fout, HP_FULL_LANES);
+    printf("EX %s %s DATA halfpel_full_lanes=%d\n", ex, name, HP_FULL_LANES);
+    printf("EX %s %s DATA halfpel_full_mismatch=%d\n", ex, name, hp_mismatch);
+    printf("EX %s %s DATA halfpel_full_sat_pos=%d\n", ex, name, hp_sat_pos);
+    printf("EX %s %s DATA halfpel_full_sat_neg=%d\n", ex, name, hp_sat_neg);
+    fflush(stdout);
+
+    /* Cycles per block and per pixel, the assembly against the same arithmetic in C at -O2. */
+    const int reps = 100;
+    uint32_t t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex10_sad8(s_sad_a, s_sad_b, SAD_BLOCKS, s_sad_out);
+    }
+    uint32_t sad_pie_cycles = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        s_bench_sink = ex10_sad8_c(s_sad_a, s_sad_b, SAD_BLOCKS);
+    }
+    uint32_t sad_c_cycles = ex07_ccount() - t0;
+    printf("BENCH sad8 blocks=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * SAD_BLOCKS,
+           sad_pie_cycles, sad_c_cycles);
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex10_halfpel(s_hp_a, s_hp_b, s_ones8, s_hp_out, HP_LANES);
+    }
+    uint32_t hp_pie_cycles = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex10_halfpel_c(s_hp_a, s_hp_b, s_hp_ref, HP_LANES);
+    }
+    uint32_t hp_c_cycles = ex07_ccount() - t0;
+    printf("BENCH halfpel pixels=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * HP_LANES,
+           hp_pie_cycles, hp_c_cycles);
+    fflush(stdout);
+    section_end(ex, name, (fail == 0) ? 1 : 0, fail);
+}
+
+/* ------------------------------------------------------------------ ex11: the 8x8 block transform */
+
+/* out[k][j] = sat16((sum over i of coef[k][i] * block[i][j]) >> shift), int64 accumulation and the
+ * saturation only at the readout -- the independent scalar reading of the contract in
+ * examples/docs/ex11_block8x8.md. */
+void ex11_block8x8_c(const int16_t *coef, const int16_t *block, int16_t *out, uint32_t shift)
+{
+    for (int k = 0; k < 8; k++) {
+        for (int j = 0; j < 8; j++) {
+            int64_t acc = 0;
+            for (int i = 0; i < 8; i++) {
+                acc += (int32_t)coef[k * 8 + i] * (int32_t)block[i * 8 + j];
+            }
+            out[k * 8 + j] = sat16(acc >> shift);
+        }
+    }
+}
+
+static void ex11(void)
+{
+    const char *ex = "ex11", *name = "block8x8";
+    section_begin(ex, name);
+
+    s_rng = 0x11B;
+    /* A Q15-scale coefficient table (rows the size a DCT-II uses) and a block of moderate amplitude: at the
+     * shift the readout lands inside int16, so the CHECK is about the arithmetic and not about the
+     * readout's saturation. The third call drops the shift to 8 to pin the saturating readout itself, which
+     * is the one place ex09's probes say this datapath is not free. */
+    for (int k = 0; k < 8; k++) {
+        for (int i = 0; i < 8; i++) {
+            s_b8_coef[k * 8 + i] = rnd16(-16384, 16384);
+            s_b8_coeft[i * 8 + k] = s_b8_coef[k * 8 + i];       /* the transpose: the other axis */
+        }
+    }
+    for (int i = 0; i < 64; i++) {
+        s_b8_block[i] = rnd16(-1024, 1024);
+    }
+
+    int fail = 0, ok;
+    check_aligned(ex, name, "coef_16_byte_aligned", s_b8_coef, &fail);
+    check_aligned(ex, name, "coef_transposed_16_byte_aligned", s_b8_coeft, &fail);
+    check_aligned(ex, name, "block_16_byte_aligned", s_b8_block, &fail);
+    check_aligned(ex, name, "out_16_byte_aligned", s_b8_out, &fail);
+    check_aligned(ex, name, "out_transposed_16_byte_aligned", s_b8_outt, &fail);
+    check_aligned(ex, name, "out_saturating_16_byte_aligned", s_b8_outs, &fail);
+
+    ex11_block8x8(s_b8_coef, s_b8_block, s_b8_out, BLOCK8_SHIFT);
+    ex11_block8x8_c(s_b8_coef, s_b8_block, s_b8_ref, BLOCK8_SHIFT);
+    ex11_block8x8(s_b8_coeft, s_b8_block, s_b8_outt, BLOCK8_SHIFT);
+    ex11_block8x8_c(s_b8_coeft, s_b8_block, s_b8_reft, BLOCK8_SHIFT);
+    ex11_block8x8(s_b8_coef, s_b8_block, s_b8_outs, BLOCK8_SHIFT_SAT);
+    ex11_block8x8_c(s_b8_coef, s_b8_block, s_b8_refs, BLOCK8_SHIFT_SAT);
+
+    int m0 = 0, m1 = 0, ms = 0, tr = 1, sat_lanes = 0;
+    for (int i = 0; i < 64; i++) {
+        m0 += s_b8_out[i] == s_b8_ref[i];
+        m1 += s_b8_outt[i] == s_b8_reft[i];
+        ms += s_b8_outs[i] == s_b8_refs[i];
+        sat_lanes += s_b8_outs[i] == 32767 || s_b8_outs[i] == -32768;
+    }
+    for (int k = 0; k < 8; k++) {                    /* the transpose table really is the transpose */
+        for (int i = 0; i < 8; i++) {
+            tr &= s_b8_coeft[i * 8 + k] == s_b8_coef[k * 8 + i];
+        }
+    }
+    /* The 40-bit accumulator's headroom: the largest |row sum| over the whole block, and how many
+     * (k,j) reach the clamp at all. */
+    int64_t max_abs_sum = 0;
+    int over40 = 0;
+    for (int k = 0; k < 8; k++) {
+        for (int j = 0; j < 8; j++) {
+            int64_t acc = 0;
+            for (int i = 0; i < 8; i++) {
+                acc += (int32_t)s_b8_coef[k * 8 + i] * (int32_t)s_b8_block[i * 8 + j];
+            }
+            if (acc < 0) {
+                acc = -acc;
+            }
+            if (acc > max_abs_sum) {
+                max_abs_sum = acc;
+            }
+            if (acc > 0x7FFFFFFFFFLL) {
+                over40++;
+            }
+        }
+    }
+    check(ex, name, "all_64_coefficients_match_the_int64_C_reference", m0, 64);
+    fail += (m0 == 64) ? 0 : 1;
+    check(ex, name, "transpose_form_matches_its_own_C_reference", m1, 64);
+    fail += (m1 == 64) ? 0 : 1;
+    check(ex, name, "the_second_table_is_the_transpose_of_the_first", tr ? 1 : 0, 1);
+    fail += tr ? 0 : 1;
+    ok = (ms == 64);
+    check(ex, name, "saturating_readout_matches_sat16_of_the_row_sum", ms, 64);
+    fail += ok ? 0 : 1;
+    ok = (sat_lanes > 0);
+    check(ex, name, "the_small_shift_makes_the_readout_saturate", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+    ok = (over40 == 0);
+    check(ex, name, "no_output_row_reaches_the_40_bit_accumulator_clamp", over40, 0);
+    fail += ok ? 0 : 1;
+
+    print_i16(ex, name, "coef", s_b8_coef, 64);
+    print_i16(ex, name, "coef_transposed", s_b8_coeft, 64);
+    print_i16(ex, name, "block", s_b8_block, 64);
+    print_i16(ex, name, "out", s_b8_out, 64);
+    print_i16(ex, name, "out_transposed", s_b8_outt, 64);
+    print_i16(ex, name, "out_saturating", s_b8_outs, 64);
+    printf("EX %s %s DATA shift=%" PRIu32 "\n", ex, name, (uint32_t)BLOCK8_SHIFT);
+    printf("EX %s %s DATA shift_saturating=%" PRIu32 "\n", ex, name, (uint32_t)BLOCK8_SHIFT_SAT);
+    printf("EX %s %s DATA saturated_lanes=%d\n", ex, name, sat_lanes);
+    printf("EX %s %s DATA rows_over_40bit=%d\n", ex, name, over40);
+    printf("EX %s %s DATA max_abs_row_sum=%lld\n", ex, name, (long long)max_abs_sum);
+    fflush(stdout);
+
+    /* Cycles per 8x8 block: the kernel against the scalar C matrix product, both at -O2. */
+    const int reps = 2000;
+    uint32_t t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex11_block8x8(s_b8_coef, s_b8_block, s_b8_out, BLOCK8_SHIFT);
+    }
+    uint32_t pie_cycles = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex11_block8x8_c(s_b8_coef, s_b8_block, s_b8_ref, BLOCK8_SHIFT);
+    }
+    uint32_t c_cycles = ex07_ccount() - t0;
+    printf("BENCH block8x8 blocks=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps, pie_cycles,
+           c_cycles);
+    fflush(stdout);
+    section_end(ex, name, (fail == 0) ? 1 : 0, fail);
+}
+
+/* ------------------------------------------------------------------ ex12: physics and collision */
+
+/* One box of the plane-major image: plane p of box b at 96*(b/8) + 16*p + 2*(b%8), the max 16 bytes on
+ * from its min (see examples.h). */
+static void box_set(int16_t *boxes, uint32_t b, int ax, int16_t lo, int16_t hi)
+{
+    boxes[48 * (int)(b / 8) + 16 * ax + (int)(b % 8)] = lo;
+    boxes[48 * (int)(b / 8) + 16 * ax + 8 + (int)(b % 8)] = hi;
+}
+
+/* The three scalar references, from the same pseudo-code the kernel was written from
+ * (examples/docs/ex12_physics.md): the saturating adds of the kernel, not the exact sum. */
+void ex12_integrate_c(const int32_t *pos, const int32_t *vel, const int32_t *acc, int32_t *out,
+                      int32_t lo, int32_t hi)
+{
+    for (int i = 0; i < 8; i++) {
+        int32_t t = sat32((int64_t)pos[i] + vel[i]);            /* EE.VADDS.S32 */
+        int32_t u = sat32((int64_t)t + acc[i]);                 /* EE.VADDS.S32 */
+        int32_t m = (u < hi) ? u : hi;                          /* EE.VMIN.S32 */
+        out[i] = (m > lo) ? m : lo;                             /* EE.VMAX.S32 (lo wins if lo > hi) */
+    }
+}
+
+void ex12_sat_masks_c(const int16_t *boxes, const int16_t *query, int16_t *out, uint32_t n_boxes)
+{
+    for (uint32_t b = 0; b < n_boxes; b++) {
+        int sep = 0;
+        for (int ax = 0; ax < 3; ax++) {
+            int16_t bmin = boxes[48 * (int)(b / 8) + 16 * ax + (int)(b % 8)];
+            int16_t bmax = boxes[48 * (int)(b / 8) + 16 * ax + 8 + (int)(b % 8)];
+            if (bmax < query[2 * ax] || bmin > query[2 * ax + 1]) {
+                sep = 1;
+            }
+        }
+        out[b] = sep ? 0 : -1;
+    }
+}
+
+void ex12_dist2_qacc_c(const int16_t *pt_a, const int16_t *pt_b, int32_t *out, uint32_t n_points)
+{
+    for (uint32_t i = 0; i < n_points; i++) {
+        int64_t s = 0;                                          /* the QACC lane is 40 bits wide */
+        for (int ax = 0; ax < 3; ax++) {
+            int16_t d = sat16((int32_t)pt_a[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)] -
+                              (int32_t)pt_b[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)]);
+            s += (int32_t)d * d;
+        }
+        out[i] = (s <= 0x7FFFFFFF) ? (int32_t)s : 2147483647;   /* unsigned minu with 2^31-1 */
+    }
+}
+
+/* The Q16 readout, on the whole groups only, returning the number of pairs written -- the same contract as
+ * the kernel's (n_points & ~7) return value. */
+uint32_t ex12_dist2_q16_c(const int16_t *pt_a, const int16_t *pt_b, int16_t *out, uint32_t n_points,
+                          uint32_t shift)
+{
+    uint32_t n = n_points & ~7u;
+    for (uint32_t i = 0; i < n; i++) {
+        int64_t s = 0;
+        for (int ax = 0; ax < 3; ax++) {
+            int16_t d = sat16((int32_t)pt_a[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)] -
+                              (int32_t)pt_b[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)]);
+            s += (int32_t)d * d;
+        }
+        out[i] = sat16((int32_t)(s >> shift));
+    }
+    return n;
+}
+
+#define Q16_SHIFT 8
+
+static void ex12(void)
+{
+    const char *ex = "ex12", *name = "physics";
+    section_begin(ex, name);
+
+    s_rng = 0x12C;
+    int fail = 0, ok;
+    uint32_t t0;
+    const int reps = 2000;
+
+    /* --- A: semi-implicit Euler on eight objects. Two lanes are pushed to the int32 edge on purpose, so
+     * |pos + vel| leaves int32 and the saturating add is exercised rather than assumed. --- */
+    for (int i = 0; i < 8; i++) {
+        s_phy_pos[i] = rnd32(-200000, 200000);
+        s_phy_vel[i] = rnd32(-200000, 200000);
+        s_phy_acc[i] = rnd32(-1000, 1000);
+    }
+    s_phy_pos[6] = 2147483647;
+    s_phy_vel[6] = 2147483647;
+    s_phy_acc[6] = -1;
+    s_phy_pos[7] = -2147483647 - 1;
+    s_phy_vel[7] = -2147483647 - 1;
+    s_phy_acc[7] = 1;
+    const int32_t lo_wide = -2147483647 - 1, hi_wide = 2147483647;   /* widest bounds: no clamp in the way */
+    const int32_t lo_tight = -300000, hi_tight = 300000;             /* bounds a game would actually use */
+
+    check_aligned(ex, name, "pos_16_byte_aligned", s_phy_pos, &fail);
+    check_aligned(ex, name, "vel_16_byte_aligned", s_phy_vel, &fail);
+    check_aligned(ex, name, "acc_16_byte_aligned", s_phy_acc, &fail);
+    check_aligned(ex, name, "integrated_16_byte_aligned", s_phy_out, &fail);
+    check_aligned(ex, name, "boxes_16_byte_aligned", s_phy_boxes, &fail);
+    check_aligned(ex, name, "query_16_byte_aligned", s_phy_query, &fail);
+    check_aligned(ex, name, "masks_16_byte_aligned", s_phy_masks, &fail);
+    check_aligned(ex, name, "pt_a_16_byte_aligned", s_phy_pta, &fail);
+    check_aligned(ex, name, "pt_b_16_byte_aligned", s_phy_ptb, &fail);
+    check_aligned(ex, name, "dist2_16_byte_aligned", s_phy_d2, &fail);
+
+    ex12_integrate(s_phy_pos, s_phy_vel, s_phy_acc, s_phy_out, lo_wide, hi_wide);
+    ex12_integrate_c(s_phy_pos, s_phy_vel, s_phy_acc, s_phy_ref, lo_wide, hi_wide);
+    int i_ok = 0, i_div = 0, i_domain = 0, i_domain_ok = 0;
+    for (int i = 0; i < 8; i++) {
+        int64_t sum = (int64_t)s_phy_pos[i] + s_phy_vel[i] + s_phy_acc[i];
+        int64_t exact = sum > hi_wide ? hi_wide : (sum < lo_wide ? lo_wide : sum);
+        int64_t pv = (int64_t)s_phy_pos[i] + s_phy_vel[i];
+        i_ok += s_phy_out[i] == s_phy_ref[i];
+        i_div += (int64_t)s_phy_out[i] != exact;
+        if (pv <= 2147483647LL && pv >= -2147483647LL - 1) {     /* the documented in-domain condition */
+            i_domain++;
+            i_domain_ok += (int64_t)s_phy_out[i] == exact;
+        }
+    }
+    check(ex, name, "integrate_matches_the_saturating_C_reference", i_ok, 8);
+    fail += (i_ok == 8) ? 0 : 1;
+    ok = (i_domain_ok == i_domain);
+    check(ex, name, "integrate_in_domain_lanes_equal_the_exact_64_bit_sum", i_domain_ok, i_domain);
+    fail += ok ? 0 : 1;
+    ok = (i_div > 0);
+    check(ex, name, "integrate_leaves_the_exact_sum_where_pos_plus_vel_leaves_int32", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    ex12_integrate(s_phy_pos, s_phy_vel, s_phy_acc, s_phy_outc, lo_tight, hi_tight);
+    ex12_integrate_c(s_phy_pos, s_phy_vel, s_phy_acc, s_phy_refc, lo_tight, hi_tight);
+    int c_ok = 0, c_moved = 0;
+    for (int i = 0; i < 8; i++) {
+        c_ok += s_phy_outc[i] == s_phy_refc[i];
+        c_moved += s_phy_outc[i] != s_phy_out[i];
+    }
+    check(ex, name, "integrate_with_narrow_bounds_matches_the_C_reference", c_ok, 8);
+    fail += (c_ok == 8) ? 0 : 1;
+    ok = (c_moved > 0);
+    check(ex, name, "the_bounds_move_at_least_one_lane", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    print_i32(ex, name, "pos", s_phy_pos, 8);
+    print_i32(ex, name, "vel", s_phy_vel, 8);
+    print_i32(ex, name, "acc", s_phy_acc, 8);
+    print_i32(ex, name, "integrated", s_phy_out, 8);
+    print_i32(ex, name, "integrated_narrow_bounds", s_phy_outc, 8);
+    printf("EX %s %s DATA objects=8\n", ex, name);
+    printf("EX %s %s DATA integrate_lo=%" PRId32 "\n", ex, name, lo_wide);
+    printf("EX %s %s DATA integrate_hi=%" PRId32 "\n", ex, name, hi_wide);
+    printf("EX %s %s DATA integrate_lo_narrow=%" PRId32 "\n", ex, name, lo_tight);
+    printf("EX %s %s DATA integrate_hi_narrow=%" PRId32 "\n", ex, name, hi_tight);
+    printf("EX %s %s DATA integrate_diverging_from_exact=%d\n", ex, name, i_div);
+    printf("EX %s %s DATA integrate_moved_by_the_bounds=%d\n", ex, name, c_moved);
+    fflush(stdout);
+
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex12_integrate(s_phy_pos, s_phy_vel, s_phy_acc, s_phy_outc, lo_tight, hi_tight);
+    }
+    uint32_t int_pie = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex12_integrate_c(s_phy_pos, s_phy_vel, s_phy_acc, s_phy_refc, lo_tight, hi_tight);
+    }
+    uint32_t int_c = ex07_ccount() - t0;
+    printf("BENCH integrate objects=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * 8, int_pie,
+           int_c);
+
+    /* --- B: the AABB masks. Boxes 0..4 sit inside the query box, then one box per axis that separates,
+     * one that separates on two axes, one that only TOUCHES (bmin == qmax, which is not a separation), one
+     * that separates below qmin, and the rest random. The query and the boxes both carry negative
+     * coordinates on purpose: the compares are signed 16-bit. 19 boxes so the scalar tail runs too. --- */
+    s_phy_query[0] = -500;
+    s_phy_query[1] = 500;
+    s_phy_query[2] = -400;
+    s_phy_query[3] = 400;
+    s_phy_query[4] = -300;
+    s_phy_query[5] = 300;
+    for (uint32_t b = 0; b < BOXES; b++) {
+        for (int ax = 0; ax < 3; ax++) {
+            int16_t qmin = s_phy_query[2 * ax], qmax = s_phy_query[2 * ax + 1];
+            int mode;                       /* 0 inside, 1 above qmax, 2 below qmin, 3 touching, -1 random */
+            if (b < 5) {
+                mode = 0;
+            } else if (b == 5) {
+                mode = (ax == 1) ? 1 : 0;
+            } else if (b == 6) {
+                mode = (ax == 2) ? 1 : 0;
+            } else if (b == 7) {
+                mode = (ax == 1) ? 0 : 1;
+            } else if (b == 8) {
+                mode = 3;
+            } else if (b == 9) {
+                mode = (ax == 0) ? 2 : 0;
+            } else {
+                mode = -1;
+            }
+            int16_t lo, hi;
+            switch (mode) {
+            case 0:
+                lo = (int16_t)(qmin + rnd16(0, 100));
+                hi = (int16_t)(lo + rnd16(0, 200));
+                break;
+            case 1:
+                lo = (int16_t)(qmax + 10);
+                hi = (int16_t)(lo + 50);
+                break;
+            case 2:
+                hi = (int16_t)(qmin - 10);
+                lo = (int16_t)(hi - 50);
+                break;
+            case 3:
+                lo = qmax;
+                hi = (int16_t)(qmax + 50);
+                break;
+            default:
+                lo = rnd16(-30000, 30000);
+                hi = (int16_t)(lo + rnd16(0, 1000));
+                break;
+            }
+            box_set(s_phy_boxes, b, ax, lo, hi);
+        }
+    }
+
+    ex12_sat_masks(s_phy_boxes, s_phy_query, s_phy_masks, BOXES);
+    ex12_sat_masks_c(s_phy_boxes, s_phy_query, s_phy_masks_ref, BOXES);
+    int b_ok = 0, overlaps = 0;
+    for (uint32_t b = 0; b < BOXES; b++) {
+        b_ok += s_phy_masks[b] == s_phy_masks_ref[b];
+        overlaps += s_phy_masks[b] == -1;
+    }
+    check(ex, name, "sat_masks_matches_the_C_reference", b_ok, BOXES);
+    fail += (b_ok == (int)BOXES) ? 0 : 1;
+    ok = (overlaps > 0 && overlaps < (int)BOXES);
+    check(ex, name, "sat_masks_reports_both_verdicts", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    print_i16(ex, name, "boxes", s_phy_boxes, 48 * BOX_GROUPS);
+    print_i16(ex, name, "query", s_phy_query, 6);
+    print_i16(ex, name, "masks", s_phy_masks, BOXES);
+    printf("EX %s %s DATA n_boxes=%d\n", ex, name, BOXES);
+    printf("EX %s %s DATA overlap_boxes=%d\n", ex, name, overlaps);
+    fflush(stdout);
+
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex12_sat_masks(s_phy_boxes, s_phy_query, s_phy_masks, BOXES);
+    }
+    uint32_t sm_pie = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex12_sat_masks_c(s_phy_boxes, s_phy_query, s_phy_masks_ref, BOXES);
+    }
+    uint32_t sm_c = ex07_ccount() - t0;
+    printf("BENCH sat_masks boxes=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * BOXES, sm_pie,
+           sm_c);
+
+    /* --- C: squared distances. Points 0..5 are hand-built to cover the boundaries: identical points; a
+     * difference of exactly 32767 (no saturation); distances just under and just over 2^31 (26756 and
+     * 26757 on all three axes); a difference of 32768, which SATURATES to 32767 and so is not 32768^2; and
+     * all three axes at 65535, the saturated maximum. 6.. are random. --- */
+    static const int16_t spec_a[6] = {0, 32767, 26756, 26757, 0, 32767};
+    static const int16_t spec_b[6] = {0, 0, 0, 0, -32768, -32768};
+    for (uint32_t i = 0; i < POINTS; i++) {
+        for (int ax = 0; ax < 3; ax++) {
+            s_phy_pta[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)] = rnd16(-32768, 32767);
+            s_phy_ptb[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)] = rnd16(-32768, 32767);
+        }
+    }
+    for (uint32_t i = 0; i < 6; i++) {
+        for (int ax = 0; ax < 3; ax++) {
+            s_phy_pta[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)] = spec_a[i];
+            s_phy_ptb[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)] = spec_b[i];
+        }
+    }
+
+    ex12_dist2_qacc(s_phy_pta, s_phy_ptb, s_phy_d2, POINTS);
+    ex12_dist2_qacc_c(s_phy_pta, s_phy_ptb, s_phy_d2_ref, POINTS);
+    int d_ok = 0, d_clamp = 0, d_satax = 0, d_changed = 0, d_max_delta = 0;
+    for (uint32_t i = 0; i < POINTS; i++) {
+        int64_t sat_sum = 0, exact_sum = 0;
+        for (int ax = 0; ax < 3; ax++) {
+            int32_t a = s_phy_pta[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)];
+            int32_t b = s_phy_ptb[24 * (int)(i / 8) + 8 * ax + (int)(i % 8)];
+            int32_t d = a - b;
+            int32_t ad = (d < 0) ? -d : d;
+            if (d > 32767 || d < -32768) {
+                d_satax++;                          /* EE.VSUBS.S16 clamps this axis */
+            }
+            if (ad > d_max_delta) {
+                d_max_delta = ad;
+            }
+            int16_t ds = sat16(d);
+            sat_sum += (int32_t)ds * ds;
+            exact_sum += (int64_t)d * d;
+        }
+        d_ok += s_phy_d2[i] == s_phy_d2_ref[i];
+        d_clamp += sat_sum > 0x7FFFFFFF;
+        d_changed += sat_sum != exact_sum;
+    }
+    check(ex, name, "dist2_matches_the_C_reference", d_ok, POINTS);
+    fail += (d_ok == (int)POINTS) ? 0 : 1;
+    ok = (d_clamp > 0);
+    check(ex, name, "dist2_reaches_the_int32_clamp", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+    ok = (d_satax > 0 && d_changed > 0);
+    check(ex, name, "dist2_reaches_both_the_saturating_difference_and_its_effect", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+    ok = (d_satax > 0 && d_max_delta > 32767);
+    check(ex, name, "dist2_max_abs_delta_exceeds_the_16_bit_difference", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    print_i16(ex, name, "pt_a", s_phy_pta, 24 * POINT_GROUPS);
+    print_i16(ex, name, "pt_b", s_phy_ptb, 24 * POINT_GROUPS);
+    print_i32(ex, name, "dist2", s_phy_d2, POINTS);
+    printf("EX %s %s DATA n_points=%d\n", ex, name, POINTS);
+    printf("EX %s %s DATA dist2_int32_clamps=%d\n", ex, name, d_clamp);
+    printf("EX %s %s DATA dist2_saturating_axis_diffs=%d\n", ex, name, d_satax);
+    printf("EX %s %s DATA dist2_max_abs_delta=%d\n", ex, name, d_max_delta);
+    printf("EX %s %s DATA dist2_changed_by_the_saturating_difference=%d\n", ex, name, d_changed);
+    fflush(stdout);
+
+    const uint32_t q16_written = ex12_dist2_q16(s_phy_pta, s_phy_ptb, s_phy_d2q, POINTS, Q16_SHIFT);
+    const uint32_t q16_ref_written = ex12_dist2_q16_c(s_phy_pta, s_phy_ptb, s_phy_d2q_ref, POINTS,
+                                                     Q16_SHIFT);
+    int q_ok = 0, q_sat = 0;
+    for (uint32_t i = 0; i < q16_written; i++) {
+        q_ok += s_phy_d2q[i] == s_phy_d2q_ref[i];
+        q_sat += s_phy_d2q[i] == 32767 || s_phy_d2q[i] == -32768;
+    }
+    ok = (q_ok == (int)q16_written);
+    check(ex, name, "dist2_q16_matches_sat16_of_the_shifted_lane", q_ok, (int)q16_written);
+    fail += ok ? 0 : 1;
+    ok = (q16_written == (POINTS & ~7u) && q16_ref_written == q16_written);
+    check(ex, name, "dist2_q16_writes_whole_groups_only_and_returns_the_count", q16_written,
+          (int)(POINTS & ~7u));
+    fail += ok ? 0 : 1;
+    ok = (q_sat > 0);
+    check(ex, name, "dist2_q16_readout_saturates_at_this_shift", ok ? 1 : 0, 1);
+    fail += ok ? 0 : 1;
+
+    print_i16(ex, name, "dist2_q16", s_phy_d2q, (int)q16_written);
+    printf("EX %s %s DATA q16_shift=%d\n", ex, name, Q16_SHIFT);
+    printf("EX %s %s DATA q16_written=%d\n", ex, name, (int)q16_written);
+    printf("EX %s %s DATA q16_saturated_lanes=%d\n", ex, name, q_sat);
+    fflush(stdout);
+
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex12_dist2_qacc(s_phy_pta, s_phy_ptb, s_phy_d2, POINTS);
+    }
+    uint32_t d2_pie = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        ex12_dist2_qacc_c(s_phy_pta, s_phy_ptb, s_phy_d2_ref, POINTS);
+    }
+    uint32_t d2_c = ex07_ccount() - t0;
+    printf("BENCH dist2 pairs=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n", reps * POINTS, d2_pie,
+           d2_c);
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        s_bench_sink = ex12_dist2_q16(s_phy_pta, s_phy_ptb, s_phy_d2q, POINTS, Q16_SHIFT);
+    }
+    uint32_t q16_pie = ex07_ccount() - t0;
+    t0 = ex07_ccount();
+    for (int i = 0; i < reps; i++) {
+        s_bench_sink = ex12_dist2_q16_c(s_phy_pta, s_phy_ptb, s_phy_d2q_ref, POINTS, Q16_SHIFT);
+    }
+    uint32_t q16_c = ex07_ccount() - t0;
+    printf("BENCH dist2_q16 pairs=%d cycles_pie=%" PRIu32 " cycles_c=%" PRIu32 "\n",
+           reps * (int)(POINTS & ~7u), q16_pie, q16_c);
+    fflush(stdout);
+    section_end(ex, name, (fail == 0) ? 1 : 0, fail);
+}
+
 /* ------------------------------------------------------------------ */
 
 void app_main(void)
@@ -1104,7 +1930,7 @@ void app_main(void)
 
     printf("ENV chip=esp32s3 cores=%d revision=%d.%d idf=%s\n", chip.cores, chip.revision / 100,
            chip.revision % 100, esp_get_idf_version());
-    printf("ENV examples=9 buffers=16-byte-aligned rng_seed=0x1234 c_flags=-O2\n");
+    printf("ENV examples=12 buffers=16-byte-aligned rng_seed=0x1234 c_flags=-O2\n");
     fflush(stdout);
 
     ex01();
@@ -1116,6 +1942,9 @@ void app_main(void)
     ex07();
     ex08();
     ex09();
+    ex10();
+    ex11();
+    ex12();
 
     printf("SUMMARY checks_ok=%d checks_fail=%d\n", s_ok, s_fail);
     printf("END\n");

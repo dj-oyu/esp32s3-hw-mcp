@@ -1,5 +1,12 @@
 # ex11 (proposed) — 8x8 integer block transform, the eight columns in the SIMD lanes
 
+> **Status (integrated)**: this kernel now lives at `examples/firmware/main/ex11_block8x8.S`, is listed in
+> `examples/firmware/main/CMakeLists.txt`, and is called from `main.c`'s `ex11()`. It builds and the host
+> checker (`tools/selftest_examples_checker.py`) passes; it has **not been run on hardware**. The body below
+> still says `proposed/` and "not wired in" because it records the state before the move (the pasted
+> command transcripts are the originals, and the `.S` was moved byte for byte), and the heading still
+> carries the old `(proposed)`.
+
 `examples/firmware/main/proposed/ex11_block8x8.S` — the transform MP3 (IMDCT / hybrid filterbank), JPEG
 (integer DCT) and H.264 (4x4 / 8x8 integer transform) all reduce to:
 
