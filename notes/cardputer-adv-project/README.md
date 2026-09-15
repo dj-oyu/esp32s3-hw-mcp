@@ -27,6 +27,7 @@
 |---|---|---|
 | `pie-cost-model.md` | あちらの**実機で較正されたコストモデルと落とし穴**（1命令1サイクル、`VST.128.IP` のみ +0.6、実動作 1.3〜1.4倍、索引ロードの値段、`loopgtz` 256B、early-clobber、ISR 不可、スカラー除算・数学関数の値段、ビルド間15%ぶれ、計測の落とし穴） | cardputer-adv-pocketjs `docs/pie-simd.md` §3.5〜§3.13、§5〜§9 |
 | `vm-pie-fit.md` | あちらの **QuickJS 改 VM に PIE が刺さるかの判定**（呼び出し経路／アロケータ／自己管理スタック／中止可能プロセスモデルの4領域）。結論は「刺さらない」＋その理由の分類と、唯一形が合う候補（定数一括充填）＋整列の壁 | cardputer-adv-pocketjs @ vm/main (74e704d) の実コード |
+| `flower-perf.md` | **flower シーンの実測内訳と、次に手を入れる順**: `decor` が未分割の 14–16 ms の塊であること、`sqrtf` が 4,051–4,113 calls（フレームの6%）、既に入った最適化と消えた量、§3.8〜§3.13 の当てはめ、PIE 候補の床つき優先度（林冠 2.0 ms／装飾光線 3.9 ms／楕円体棄却 0.53 ms） | cardputer-adv-pocketjs の既存実機ログと `docs/pie-simd.md`、`docs/flower-*.md` |
 | `codec.md` | **Opus / minimp3 を PIE で組むときに効く事実**: この木で走るのは CELT だけ、pre-rotate が 4 レーン化できない理由（置換群の全列挙つき）、**CELT は飽和しない**、ステレオの丸め/飽和の順序、コンブのタップ契約、minimp3 は float なのでビット一致しない（実測 LSB 差）、ACCX と QACC の使い分け（実測 74 vs 90 命令） | cardputer-adv-pocketjs の `components/opus`・`components/minimp3`・`.cache/codecs/*`、および草案 ex16〜ex18 |
 
 ## これから入るもの（予定）
