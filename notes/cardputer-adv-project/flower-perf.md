@@ -47,6 +47,8 @@
 
 ## 2. 計器の穴（いま一番安い改善）
 
+**この節の2件は 2026-09-15 に実機で実施・計測済み。結果は §2.1 / §2.2 に追記した。**
+
 1. **`decor` が未分割**。命令数の床では、装飾光線 3.9 ms + 林冠 2.0 ms + 幹 0.30 ms + 草 0.12 ms =
    **6.3 ms しか説明できない**。実測は 14–17 ms。**穴の正体（ロード・分岐・行の足場・遷移時の 2 回走査）
    を割らないと、次にどこへ手を入れるかが決まらない。**
@@ -61,6 +63,43 @@
    と書いているが、`shell.c:572` の `overlay_paint` も 17 回呼ばれ、実機では overlay アプリが
    running（`boot-device.log:81`）なので **`ovl=1.50-1.62 ms` が実際に計上されている**。
    `hud_ovl_cy` のブラケットが `overlay_paint` を含むため。
+
+### 2.1 実装と実測（2026-09-15、cardputer-adv-pocketjs @ vm/design-contracts + ブラケット）
+
+`garden.c` に `garden_prof_vegetation()` / `garden_prof_rays()` / `garden_prof_dissolve()` を追加し、
+`garden_atmosphere_row` の `garden_decor_row` と `garden_vegetation_row` の3呼び出しを括った。
+出力は **SPLIT3**（SPLIT / SPLIT2 はこのリポジトリ自身の規約で凍結されているので触らない）。
+
+計測条件: `vm-L1-60-g8779e3e` + ブラケット、MODE 3 FLOWER（fps 表示 OFF）、ホストからBACKを送って
+overlay を抜いた状態で 100 秒、60 フレーム窓 ×36（species 1 / 10 / 11 / 12）。
+ログと読み出し: `cardputer-adv-pocketjs` の `.cache/hosttests/logs/flower-instrument-20260915.log`、
+`python tools/flower_instrument_summary.py <log>`。**実機計測**。
+
+| 項目 | 実測 (ms/frame) | cy/row | 命令数の床 |
+|---|---:|---:|---:|
+| rays（装飾光線の補助パス） | 7.6–13.7（代表 ~10） | 13,450–24,300 | 3.9 |
+| vegetation（林冠＋幹＋草） | 5.0–5.9 | 8,900–10,460 | 2.4 |
+| rest（行の足場＋dissolve の memcpy/mix） | 0.24–0.36 | — | 数えていない |
+
+分かったこと:
+
+- **穴は「4つ目の仕事」ではなかった。** rays と vegetation がそれぞれ命令数の床の **約2.4倍** かかって
+  いる。つまり decor の未説明 8–10 ms はスカラー行コードの命令単価（分岐・ロード・キャッシュ）で、
+  行の足場は 0.24 ms しかない。**「1命令1サイクル」の床はこのコードでは約2.4倍甘い**（実測値）。
+- **装飾光線が decor の最大項**（代表 ~10 ms）。`docs/flower-decor-cost.md` の「6..12 ms」という
+  見積もりは、実測 7.6–13.7 ms でバンドの上端に当たった。PIE 化の上限はこの実測が上限になる。
+- **遷移（dissolve）は別の仕事量**: 135行中105行が dissolve 中の窓では veg 9.61 ms / 240 passes、
+  rest 3.37 ms（定常は 5.7 ms / 135 passes / 0.26 ms）。`dissolve_rows` を出さないと 60 フレーム平均が
+  2つの違う仕事量の平均になる、という §2.1 の懸念は実測で裏が取れた。
+
+### 2.2 `snprintf(meter, ...)` の移動
+
+`shell.c` の `char meter[16]; meter[0]=0; if(show_fps) snprintf(...)` に変更（FPS OFF では書かない）。
+同じランの PERF（mode=3、n=50）: **`fmt=0.000`（全50サンプル、min=max=0.000）**、変更前の
+`fmt=0.28–0.32` が消えた。`hud` は 1.24–1.42 ms。ただし**このランは overlay が走っていない**
+（ホストから BACK を送って HOME に戻した）ので `ovl=0.06–0.19`、`hud` の総量を当時の
+1.93–2.11 ms と直接比べてはいけない（当時は overlay アプリ running = `ovl≈1.5`）。
+`fmt` の 0 だけがこの変更の効果で、それは全サンプルで確認できた。
 
 ---
 
