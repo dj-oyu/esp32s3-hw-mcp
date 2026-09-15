@@ -1,4 +1,6 @@
-# 09 — VM に PIE（EE.*）は刺さるか（兄弟プロジェクトの実コードからの判定）
+# VM に PIE（EE.*）は刺さるか（兄弟プロジェクトの実コードからの判定）
+
+→ このディレクトリの索引は `README.md`。数値の規約もそちらにある。
 
 対象は **兄弟プロジェクト cardputer-adv-pocketjs の QuickJS 改 VM**（ブランチ `vm/main`、HEAD
 `74e704d`、作業ツリー `/workspace/pjs-vm`）。本ノートの中の `components/...` `main/...` `docs/...` は
