@@ -8,11 +8,17 @@ sequence on silicon, and C cannot express "issue these two instructions one cycl
 For each case and issue distance `d` two functions are emitted:
 
   m_<id>_d<d>_dep    : <producer> ; (d-1) x filler ; <consumer_dep>
-  m_<id>_d<d>_indep  : <producer> ; (d-1) x filler ; <consumer_indep>
+  m_<id>_d<d>_indep  : <producer_indep or producer> ; (d-1) x filler ; <consumer_indep>
 
 Both run <iterations> times and return the CCOUNT delta. The independent variant has the same instruction
-count and the same producer, only the consumer reads different registers, so the difference per iteration is
-the interlock caused by the dependency. Loop overhead cancels between the two.
+count and the same fillers, and differs only in the register the consumed value comes from, so the
+difference per iteration is the interlock caused by the dependency. Loop overhead cancels between the two.
+
+A case may state `producer_indep` when the consumer has no register-independent form: the QACC pair
+EE.VMULAS.U16.QACC -> EE.SRCMB.S16.QACC is one, because every EE.SRCMB.*.QACC reads QACC_H/QACC_L by
+definition. There, keeping the *consumer* identical and swapping the producer's accumulator target
+(QACC -> ACCX) isolates the QACC dependency without also changing the consumer instruction, its memory
+store, or its cost.
 
     .venv/bin/python tools/gen_pie_timing_asm.py                 # write measure.S / measure.h
     .venv/bin/python tools/gen_pie_timing_asm.py --check         # fail if regeneration differs (CI)
@@ -97,8 +103,10 @@ def build(cases: dict) -> tuple[str, str]:
         cid = case["id"]
         for d in case["distances"]:
             for variant, consumer in (("dep", case["consumer_dep"]), ("indep", case["consumer_indep"])):
+                producer = list(case.get("producer_indep") or case["producer"]) if variant == "indep" \
+                    else list(case["producer"])
                 name = f"m_{cid}_d{d}_{variant}"
-                body = list(case["producer"]) + filler * (d - 1) + list(consumer)
+                body = producer + filler * (d - 1) + list(consumer)
                 asm.append(func(name, body, iterations))
                 decls.append((name, d))
 
@@ -108,6 +116,14 @@ def build(cases: dict) -> tuple[str, str]:
         decls.append((name, 1))
 
     hdr = [HEADER, "#ifndef MEASURE_H", "#define MEASURE_H", "#include <stdint.h>", ""]
+    # Invariant: one function name per measurement. A duplicate id anywhere in cases.json (a case repeated,
+    # or an `alone` id that collides with one) assembles to `symbol already defined`, which is a build error
+    # 40 seconds into a flash run rather than here.
+    seen: set[str] = set()
+    for name, _d in decls:
+        if name in seen:
+            raise SystemExit(f"cases.json defines {name} twice (duplicate case or alone id)")
+        seen.add(name)
     for name, _d in decls:
         hdr.append(f"uint32_t {name}(void *buf);")
     hdr += ["", "#endif", ""]

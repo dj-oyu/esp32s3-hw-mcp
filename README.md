@@ -187,15 +187,18 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python server/esp32s3_mcp.py --list      # ツール面を人向けに表示
 .venv/bin/python server/esp32s3_mcp.py             # MCP（stdio）として起動
-.venv/bin/python tools/test_mcp_server.py          # stdio越しに33項目のE2E検査（ツールチェーン検査は無ければ skip）
+.venv/bin/python tools/test_mcp_server.py          # stdio越しに79項目のE2E検査（ツールチェーン検査は無ければ skip）
+.venv/bin/python tools/verify_measured_costs.py     # ④層のデータと出典文書の突き合わせ（sha256・引用・数値。文書が無ければ skip）
 ```
 
 クライアントへの登録は各クライアントの流儀に従う（Hermes なら `hermes mcp add` → `hermes mcp test`）。
 
-実装済みツール（15ツール）。**4つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
+実装済みツール（17ツール）。**4つの層を混ぜない**: ①一次情報（PDF）は必ず文書・版・印字ページを添える、
 ②ツールチェーン（アセンブラ）は「実際に何に符号化されるか」を答える、③実機の計測（段・ストール）は測った値と
-その有効性検査の結果を返す、④実機の**意味**（`examples/` のカーネルが装置上で確かめた挙動）は測定条件と
-一緒に返す。
+その有効性検査の結果を返す、④実機の**意味とコスト**は測定条件と一緒に返す。④には2種類あり、
+**このリポジトリで測ったもの**（`data/pie_examples_measured.json`、`data/pie_timing_measured.json`）と
+**兄弟プロジェクト cardputer-adv-pocketjs で測られたもの**（`data/pie_measured_costs.json`）を
+`provenance.measured_in_this_repository` で必ず区別する。両者を混ぜたり平均したりしない。
 
 | ツール | 層 | 内容 |
 |---|---|---|
@@ -210,11 +213,14 @@ python3 -m venv .venv && .venv/bin/pip install pypdf pymupdf  # 依存
 | `instruction_encoding(name)` | ② | マニュアルの図にオペランドを代入した語と、アセンブラが出した語を比較。不一致なら最初に違うビット位置を返す |
 | `decode_instruction(word)` | ② | 命令語 → ニーモニック（逆方向の照合） |
 | `toolchain_status()` | ② | どの as/objdump を使っているか（版つき）。無ければ「無い」と言う |
-| `measured_timing(instruction)` | ③ | 実機で測ったストール。`valid`（有効性ゲート通過）とアンカー、限界を併せて返す |
+| `measured_timing(instruction)` | ③ | 実機で測ったストール。`valid`（有効性ゲート通過）とアンカー、限界を併せて返す。`interlocks` / `predictions` に「予測 vs 実測」の対ごとの表（`confound` 付き）を含む |
 | `manual_errata(instruction)` | ②③ | マニュアルとアセンブラが食い違う命令の一覧（`data/pie_encoding_errata.json`） |
 | `example_measured_semantics(instruction)` | ④ | `examples/` のカーネルが実機で確かめた**意味**（`data/pie_examples_measured.json`）。TRM の疑似コードと実機の一致／不一致、レーンの実値、どの読みが反証されたか、解釈保留の生データ |
+| `measured_costs(section, query)` | ④ | **兄弟プロジェクトの実機で較正されたコストモデルと落とし穴**（`data/pie_measured_costs.json`）。1命令1サイクル・`VST.128.IP` のみ +0.6・下限の式・実動作 1.3〜1.4倍・索引ロードの値段・スカラー除算/数学関数の値段・計測作法など。全項目に出典行の逐字引用と `provenance` が付く |
+| `pie_cost_estimate(blocks, instructions_per_block, stores_per_block, stalls_per_block, runs, cycles_outside_loop_per_run, divisions_in_row_setup)` | ④ | 同じデータの定数で下限を計算する（命令数＋0.6×ストア数＋ストール数、×ブロック数、＋run の足場、×1.3〜1.4 のレンジ）。定数は必ず出典付きで返し、較正の場所以外への外挿には警告を付ける |
 
-リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256）。
+リソース: `esp32s3://trm/pie-hazards`（1.7 の原文）、`esp32s3://docs/sources`（出所とsha256。**兄弟プロジェクトの文書は
+一次情報と別枠**で digest 付きに列挙）、`esp32s3://pocketjs/pie-costs`（④層のデータ本体）。
 
 設計上の約束:
 

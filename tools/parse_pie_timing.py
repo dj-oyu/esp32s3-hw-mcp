@@ -13,6 +13,11 @@ The harness's own validity gate: cases whose expected stall the TRM states (a st
 stage-1 consumer, and two zero-stall controls) must reproduce. If they do not, `valid` is false and the
 derived QR results are reported as unusable rather than guessed.
 
+Cases may also carry a `predict` block: the model's expectation for a pair whose stages Table 1.7-2 *does*
+state, but which silicon has never checked. Those are reported under `predictions` as prediction-versus-
+measurement, and they never enter the validity gate -- a miss there is a finding about the manual, not
+evidence that the method is broken (see `predict_note` in cases.json).
+
     .venv/bin/python tools/parse_pie_timing.py <log> [--out data/pie_timing_measured.json]
 """
 from __future__ import annotations
@@ -61,6 +66,8 @@ def main() -> int:
     ap.add_argument("log")
     ap.add_argument("--out", default=os.path.join(ROOT, "data/pie_timing_measured.json"))
     ap.add_argument("--firmware-rev", default="", help="git revision of the flashed firmware, for provenance")
+    ap.add_argument("--app-image-sha256", default="",
+                    help="sha256 of the application image that was flashed; ties the log to exact bytes")
     a = ap.parse_args()
 
     env, runs, iterations = parse(a.log)
@@ -131,6 +138,39 @@ def main() -> int:
                                      f"Table 1.7-2; measured interlock {s} cycles",
                             "citation": "measured"})
 
+    # Prediction-versus-measurement for the pairs whose staging the table states but silicon had never
+    # checked. Kept out of `valid` on purpose: the anchors test the *method*, this tests the *manual*.
+    predictions = []
+    for cid, case in case_by_id.items():
+        p = case.get("predict")
+        if not p:
+            continue
+        case_rows = sorted([r for r in rows if r["case"] == cid], key=lambda r: r["distance"])
+        at_d1 = next((r for r in case_rows if r["distance"] == 1), None)
+        if at_d1 is None:
+            continue
+        measured = at_d1["stall_cycles"]
+        predictions.append({
+            "case": cid,
+            "producer": case["producer"],
+            "consumer": case["consumer_dep"],
+            "registers": list(p.get("registers", [])),
+            "predicted_stall_at_d1": p["stall_cycles"],
+            "measured_stall_at_d1": measured,
+            "predicted_min_issue_distance_D": int(p["stall_cycles"]) + 1,
+            "measured_min_issue_distance_D": distance_zero(cid),
+            "distances_measured": sorted(r["distance"] for r in case_rows),
+            "match": abs(measured - p["stall_cycles"]) < 0.25,
+            "stall_by_distance": {str(r["distance"]): r["stall_cycles"] for r in case_rows},
+            "noise_cycles_at_d1": at_d1["noise_cycles"],
+            "min_cycles_dep": at_d1["min_cycles_dep"], "min_cycles_indep": at_d1["min_cycles_indep"],
+            "why": p["why"],
+            "basis": f"measured stall (min_cycles_dep - min_cycles_indep) / {iterations} at issue "
+                     f"distance 1, dep={at_d1['min_cycles_dep']} indep={at_d1['min_cycles_indep']}; the same "
+                     f"row feeds `measurements`",
+            **({"confound": case["predict_confound"]} if case.get("predict_confound") else {}),
+        })
+
     out = {
         "provenance": {
             "kind": "measured_on_hardware",
@@ -139,6 +179,7 @@ def main() -> int:
                     "method reproduced the manual's own numbers.",
             "log": os.path.basename(a.log),
             "firmware_git_rev": a.firmware_rev or None,
+            "firmware_image_sha256": a.app_image_sha256 or None,
             "iterations_per_measurement": iterations,
             "environment": env,
         },
@@ -146,12 +187,16 @@ def main() -> int:
         "anchors": anchors,
         "measurements": rows,
         "derived": derived,
+        "predictions": predictions,
         "problems": problems,
         "caveats": [
             "Adjacent-pair interlocks only; hardware-resource (1.7.2) and control (1.7.3) hazards are untouched.",
             "Stall counts are quoted in whole cycles: the reported noise floor bounds the resolution.",
             "A stage derived from a stall difference assumes the rule of TRM 1.7.1 holds on this silicon; the "
             "anchors are what test that assumption.",
+            "`predictions` compares the model against the same raw rows as `measurements`, and deliberately does "
+            "not gate `valid`: a miss there says the manual's table does not match this silicon, which is the "
+            "finding, not a broken run.",
         ],
     }
     json.dump(out, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -162,6 +207,11 @@ def main() -> int:
               f"noise {x['noise_cycles']:.3f} {'ok' if x['ok'] else 'FAIL'}")
     for d in derived:
         print(f"  derived {d['instruction']:8s} {d['attribute']:26s} -> stage {d['stage']}")
+    for p in predictions:
+        print(f"  predict {p['case']:40s} predicted {p['predicted_stall_at_d1']} measured "
+              f"{p['measured_stall_at_d1']:.3f} (D predicted {p['predicted_min_issue_distance_D']}, "
+              f"measured {p['measured_min_issue_distance_D']}) "
+              f"{'HIT' if p['match'] else 'MISS'}")
     if problems:
         for p in problems:
             print(f"  problem {p}")

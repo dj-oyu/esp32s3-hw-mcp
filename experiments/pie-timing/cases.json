@@ -11,8 +11,13 @@
   "register_notes": {
     "qr": "QR registers are q0-q7 in the assembler; the TRM's role names (qx, qy, qa, qz, qm, qu, qv, qs, qs0, qs1) are NOT accepted by this binutils, so each role is mapped to a concrete q number here and the mapping is what makes a case dependent or independent.",
     "as": "The TRM's 'as' is the address operand slot of a PIE memory instruction: whatever AR is passed there.",
-    "filler": "add a14, a13, a12 is a native 1-cycle instruction, independent of every PIE register, used as issue-distance filler. It cancels between the dependent and independent variants of a case."
+    "filler": "add a14, a13, a12 is a native 1-cycle instruction, independent of every PIE register, used as issue-distance filler. It cancels between the dependent and independent variants of a case.",
+    "qacc": "QACC_H/QACC_L are the 320-bit accumulators (QACC_L = bits 0-159, QACC_H = bits 160-319) written by the VMULAS/MOV family and read by the SRCMB/ST.QACC family. They are not QR registers, so no q number names them; a case reaches them only through the instructions' own accumulator target/source. The cases below zero them once per iteration with EE.ZERO.QACC (QACC def at stage 1, Table 1.7-2 p74), which is in both variants of a case and therefore cancels."
   },
+  "predict_note": [
+    "`predict` is the model's expectation (TRM Table 1.7-2 stages + rule 1.7.1) for a case whose staging the table *does* state, but which has never been checked against silicon.",
+    "It is deliberately NOT `expect`: `expect` is the validity gate (the anchors), where a miss means the measurement method is broken and the whole run is unusable. A missed `predict` is a finding about the manual, not a broken run, so tools/parse_pie_timing.py reports the comparison under `predictions` and never lets it touch `valid`."
+  ],
   "cases": [
     {
       "id": "anchor_accx_M_to_E",
@@ -209,6 +214,168 @@
         2,
         3
       ]
+    },
+    {
+      "id": "qacc_HL_vmulas_u16_to_srcmb_s16",
+      "question": "What does one QACC_H/QACC_L def->use pair cost when the producer is EE.VMULAS.U16.QACC and the consumer is EE.SRCMB.S16.QACC (the pattern that appears 17 times in cardputer-adv-pocketjs, mostly once per pixel-block iteration)?",
+      "predict": {
+        "stall_cycles": 1,
+        "registers": [
+          "QACC_H",
+          "QACC_L"
+        ],
+        "why": "TRM Table 1.7-2 (p72) defs QACC_H/QACC_L at 2 (M) for EE.VMULAS.U16.QACC, and Table 1.7-2 (p68) uses them at 1 (E) for EE.SRCMB.S16.QACC, so rule 1.7.1 gives D = max(2 - 1 + 1, 0) = 2: one cycle of stall when the two are issued back to back."
+      },
+      "producer": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.QACC q0, q1"
+      ],
+      "producer_indep": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.ACCX q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ],
+      "consumer_indep": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "qacc_HL_vmulas_s16_to_srcmb_s16",
+      "question": "Same QACC_H/QACC_L pair with the signed 16-bit multiply-accumulate (EE.VMULAS.S16.QACC), which Table 1.7-2 stages identically to the unsigned form.",
+      "predict": {
+        "stall_cycles": 1,
+        "registers": [
+          "QACC_H",
+          "QACC_L"
+        ],
+        "why": "TRM Table 1.7-2 (p70) defs QACC_H/QACC_L at 2 (M) for EE.VMULAS.S16.QACC and the consumer uses them at 1 (E) (p68), so D = 2."
+      },
+      "producer": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.S16.QACC q0, q1"
+      ],
+      "producer_indep": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.S16.ACCX q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ],
+      "consumer_indep": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "qacc_HL_vmulas_u16_to_vmulas_u16",
+      "question": "Control for the pair above: both instructions def and use QACC_H/QACC_L at stage 2, so D = 1 and the second one should cost nothing (the accumulator-target twin EE.VMULAS.U16.ACCX is the independent consumer, so the two variants differ only in which accumulator is read).",
+      "predict": {
+        "stall_cycles": 0,
+        "registers": [
+          "QACC_H",
+          "QACC_L"
+        ],
+        "why": "TRM Table 1.7-2 (p72): EE.VMULAS.U16.QACC defs and uses QACC_H/QACC_L at 2 (M), so D = max(2 - 2 + 1, 0) = 1 and there is no stall at issue distance 1."
+      },
+      "producer": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.QACC q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.VMULAS.U16.QACC q2, q3"
+      ],
+      "consumer_indep": [
+        "EE.VMULAS.U16.ACCX q2, q3"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep",
+      "question": "Cross-check of the first QACC case with the harness's original independent-consumer shape (EE.ANDQ instead of the producer's accumulator twin): if EE.SRCMB.S16.QACC and EE.ANDQ do not cost the same per iteration, this is where that shows up as an offset in the measured stall.",
+      "predict": {
+        "stall_cycles": 1,
+        "registers": [
+          "QACC_H",
+          "QACC_L"
+        ],
+        "why": "Same model as qacc_HL_vmulas_u16_to_srcmb_s16 (D = 2). The prediction is kept identical on purpose: the point of the case is whether a different independent consumer changes the answer, which it must not if the two consumer instructions cost the same."
+      },
+      "predict_confound": "This case is confounded by construction and its HIT must not be read as a stall. The dependent variant ends in EE.SRCMB.S16.QACC and the independent one in EE.ANDQ, so their per-iteration cost difference is inside the number. calib_srcmb_s16_vs_andq_cost measures that difference with no QACC dependency at all and gets the same 1.000 cycles -- which is why the twin-producer cases (same consumer in both variants) are the ones that decide the question.",
+      "producer": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.QACC q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q3, q4, q1"
+      ],
+      "distances": [
+        1
+      ]
+    },
+    {
+      "id": "qacc_L_vmulas_u16_to_stqacc_l",
+      "question": "Second QACC consumer: do EE.VMULAS.U16.QACC -> EE.ST.QACC_L.L.128.IP stall at issue distance 1? Table 1.7-2 stages this pair exactly like the SRCMB one (producer defs QACC_L at 2, consumer uses it at 1), so it is predicted to stall; measuring a second consumer separates 'this is how EE.SRCMB.S16.QACC behaves' from 'this is how a QACC_H/QACC_L def->use behaves'.",
+      "predict": {
+        "stall_cycles": 1,
+        "registers": [
+          "QACC_L"
+        ],
+        "why": "TRM Table 1.7-2 (p68) uses QACC_L at 1 (E) for EE.ST.QACC_L.L.128.IP and Table 1.7-2 (p72) defs QACC_L at 2 (M) for EE.VMULAS.U16.QACC, so D = max(2 - 1 + 1, 0) = 2."
+      },
+      "producer": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.QACC q0, q1"
+      ],
+      "producer_indep": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.ACCX q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.ST.QACC_L.L.128.IP a3, 16"
+      ],
+      "consumer_indep": [
+        "EE.ST.QACC_L.L.128.IP a3, 16"
+      ],
+      "distances": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "calib_srcmb_s16_vs_andq_cost",
+      "question": "Calibration for the dep/indep pattern itself, not for the model: with a producer that writes no QACC_H/QACC_L value either variant reads (EE.VMULAS.U16.ACCX in both), how much more per iteration does an EE.SRCMB.S16.QACC consumer cost than the EE.ANDQ independent consumer the other cases use? That difference is the constant offset carried by qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep, and it has to be subtracted before that case's number can be called an interlock. No `predict`: the TRM does not tabulate instruction throughput.",
+      "producer": [
+        "EE.ZERO.QACC",
+        "EE.VMULAS.U16.ACCX q0, q1"
+      ],
+      "consumer_dep": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ],
+      "consumer_indep": [
+        "EE.ANDQ q3, q4, q1"
+      ],
+      "distances": [
+        1
+      ]
     }
   ],
   "alone": [
@@ -246,6 +413,30 @@
       "id": "alone_EE_LD_128_USAR_IP",
       "body": [
         "EE.LD.128.USAR.IP q0, a3, 16"
+      ]
+    },
+    {
+      "id": "alone_EE_SRCMB_S16_QACC",
+      "body": [
+        "EE.SRCMB.S16.QACC q2, a3, 0"
+      ]
+    },
+    {
+      "id": "alone_EE_VMULAS_U16_QACC",
+      "body": [
+        "EE.VMULAS.U16.QACC q0, q1"
+      ]
+    },
+    {
+      "id": "alone_EE_VMULAS_U16_ACCX",
+      "body": [
+        "EE.VMULAS.U16.ACCX q0, q1"
+      ]
+    },
+    {
+      "id": "alone_EE_ZERO_QACC",
+      "body": [
+        "EE.ZERO.QACC"
       ]
     },
     {

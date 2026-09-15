@@ -1,0 +1,3435 @@
+{
+ "provenance": {
+  "kind": "measured_on_hardware",
+  "measured_in_this_repository": false,
+  "origin_project": "cardputer-adv-pocketjs",
+  "origin_repository": "https://github.com/dj-oyu/cardputer-adv-pocketjs",
+  "origin_revision": "8b03b3b218dab3f92e16ad7f9b1f88c7422248f4",
+  "where": "Sibling project cardputer-adv-pocketjs, on a M5Stack Cardputer ADV (ESP32-S3FN8, 240 MHz, no PSRAM) -- the same author and the same class of board as this repository's runs, but a different tree, firmware and harness.",
+  "note": "These figures are the sibling project's own device measurements, quoted from its docs/pie-simd.md together with the line they were read from. They were NOT measured in this repository. This repository's own device measurements are data/pie_timing_measured.json (pipeline stages and interlocks) and data/pie_examples_measured.json (instruction semantics). Never present a figure here as this repository's measurement, and never average the two: only the provenance line tells a caller which tree a number came from.",
+  "how_measured": "Each item carries `how_measured`: the sibling document's own description of the method (swept loop bodies, two builds differing in one switch flashed from a frozen tree, objdump counts, back-calculations from measured savings).",
+  "estimates": "An item the source marks as an estimate carries estimate=true and estimate_marker, the exact word the source uses (e.g. 見積もり, 逆算, はず); everything else is presented by its source as a measurement, a count or a derivation. No number here was added by this repository.",
+  "gated_by": "tools/verify_measured_costs.py: every quote must be the byte-exact slice of the pinned document's cited lines, every listed number must appear on those lines, every number in a statement or caveat must come from them too, and every linked entry must resolve in this repository's own data files with the stated value."
+ },
+ "source": {
+  "project": "cardputer-adv-pocketjs",
+  "repository": "https://github.com/dj-oyu/cardputer-adv-pocketjs",
+  "path": "docs/pie-simd.md",
+  "document": "PIE（SIMD）で描画カーネルを書く",
+  "version": "git 8b03b3b218da (this file clean)",
+  "revision": "8b03b3b218dab3f92e16ad7f9b1f88c7422248f4",
+  "file_clean_at_read_time": true,
+  "sha256": "2f3c0799febddc75db8383a803bb49bb405f0cac11bc43fcfdcfe700b8efc70b",
+  "lines_total": 751,
+  "checked_by_its_author": "2026-09-07",
+  "device": "M5Stack Cardputer ADV / ESP32-S3FN8, 240 MHz, no PSRAM",
+  "url": "https://github.com/dj-oyu/cardputer-adv-pocketjs/blob/8b03b3b218dab3f92e16ad7f9b1f88c7422248f4/docs/pie-simd.md",
+  "citation_convention": "The TRM tier cites printed pages because its source is a PDF. This tier's source is a Markdown file in another repository, so every citation carries the line range plus the verbatim lines, pinned by the file's sha256 -- if that repository's file moves, the quotes stop matching and tools/verify_measured_costs.py fails instead of quietly serving a stale number."
+ },
+ "section_index": [
+  {
+   "name": "cost_model",
+   "question": "What does one PIE instruction cost, what is the floor for a block loop, and how much does a real frame add on top?",
+   "items": 12
+  },
+  {
+   "name": "scaffold_and_formula",
+   "question": "What does the per-block floor leave out, and how is a row counted when it is not one loop?",
+   "items": 5
+  },
+  {
+   "name": "scalar_routines",
+   "question": "What does a scalar division or a math library call cost on this core, and why is it invisible in the disassembly?",
+   "items": 10
+  },
+  {
+   "name": "pitfalls",
+   "question": "What breaks silently when writing a PIE kernel?",
+   "items": 8
+  },
+  {
+   "name": "measurement_discipline",
+   "question": "What makes a number measured on this board untrustworthy, and what has to be true for a comparison to mean anything?",
+   "items": 8
+  },
+  {
+   "name": "disagreements",
+   "question": "Where do the sources conflict -- inside the document, and against esp-dl's PIE skill?",
+   "items": 3
+  }
+ ],
+ "read_this_with": {
+  "same_facts_measured_here": [
+   "data/pie_examples_measured.json (kind=measured_on_hardware, this repository): instruction semantics -- post-increment steps, ACCX saturation, R2BF lane order, the silent truncation of 128-bit addresses, the VMUL.S16/U16 shift pair.",
+   "data/pie_timing_measured.json (kind=measured_on_hardware, this repository): pipeline stages and interlocks, including the anchor anchor_qs_M_to_E (EE.VRELU.S16 -> EE.MOV.S16.QACC, 1.0 stall) that refutes the '0-1 cycle' def stage attributed to esp-dl."
+  ],
+  "same_facts_from_the_primary_source": [
+   "data/pie_pipeline.json (TRM Table 1.7-2) for the def stages the cost model is expressed in."
+  ]
+ },
+ "cost_model": [
+  {
+   "id": "pie_instruction_is_one_cycle_whatever_the_kind",
+   "statement": "A PIE instruction costs one cycle regardless of kind: 40-instruction loop bodies of EE.VADDS.S16, of EE.VMUL.S16 and of a mix containing 12 EE.VPRELU/EE.VRELU all measure 40.9 cycles per block, and a loop with a single instruction measures 1.7.",
+   "numbers": [
+    {
+     "as_printed": "40",
+     "unit": "instructions",
+     "what": "loop body size in the 40-instruction runs",
+     "value": 40
+    },
+    {
+     "as_printed": "40.9",
+     "unit": "cycles/block",
+     "what": "EE.VADDS.S16 x40",
+     "value": 40.9
+    },
+    {
+     "as_printed": "12",
+     "unit": "instructions",
+     "what": "EE.VPRELU/EE.VRELU mixed into a 40-instruction body",
+     "value": 12
+    },
+    {
+     "as_printed": "1.7",
+     "unit": "cycles/block",
+     "what": "one instruction per loop iteration",
+     "value": 1.7
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 60,
+     "line_end": 68,
+     "quote": "まず命令の種類を変えて（40命令、依存なし）:\n\n| ループ本体 | サイクル/ブロック |\n| --- | --- |\n| `EE.VADDS.S16` を40命令 | **40.9** |\n| `EE.VMUL.S16` を40命令 | 40.9 |\n| `EE.VPRELU`/`EE.VRELU` を12本混ぜて40命令 | 40.9 |\n| 40命令のうち1本を `EE.VST.128.IP` に | 41.5 |\n| ループ1回に1命令だけ | 1.7 |",
+     "what": "the three body types, and the one-instruction loop"
+    }
+   ],
+   "how_measured": "A 30-block loop whose body is replaced wholesale; no dependencies between instructions.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "only_the_128bit_store_costs_extra",
+   "statement": "Replacing one instruction of a 40-instruction body with EE.VST.128.IP raises the block from 40.9 to 41.5 cycles, and the document states that the only exception to one cycle per instruction is the 128-bit store, at +0.6 cycles.",
+   "numbers": [
+    {
+     "as_printed": "40.9",
+     "unit": "cycles/block",
+     "what": "the same body without the store",
+     "value": 40.9
+    },
+    {
+     "as_printed": "41.5",
+     "unit": "cycles/block",
+     "what": "with one EE.VST.128.IP of 40",
+     "value": 41.5
+    },
+    {
+     "as_printed": "0.6",
+     "unit": "cycles",
+     "what": "the stated extra cost of a 128-bit store",
+     "value": 0.6
+    },
+    {
+     "as_printed": "128",
+     "unit": "bits",
+     "what": "width of the store that costs extra",
+     "value": 128
+    },
+    {
+     "as_printed": "1",
+     "unit": "cycle",
+     "what": "per instruction, all other kinds",
+     "value": 1
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 64,
+     "line_end": 68,
+     "quote": "| `EE.VADDS.S16` を40命令 | **40.9** |\n| `EE.VMUL.S16` を40命令 | 40.9 |\n| `EE.VPRELU`/`EE.VRELU` を12本混ぜて40命令 | 40.9 |\n| 40命令のうち1本を `EE.VST.128.IP` に | 41.5 |\n| ループ1回に1命令だけ | 1.7 |",
+     "what": "the 41.5 row of the table"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 86,
+     "line_end": 90,
+     "quote": "**唯一の例外は128bitストアで、+0.6サイクル。** それ以外は種類を問わず1サイクルです。したがって理論値は:\n\n```\nサイクル/ブロック = 命令数 + 0.6 × ストア数 + ストール数\n```",
+     "what": "the prose statement and the formula"
+    }
+   ],
+   "how_measured": "40-instruction body with one instruction swapped for the store, at 240 MHz.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "lower_bound_formula",
+   "statement": "The floor for a block loop is cycles/block = instruction count + 0.6 x store count + stall count.",
+   "numbers": [
+    {
+     "as_printed": "0.6",
+     "unit": "cycles per 128-bit store",
+     "what": "the coefficient in the formula",
+     "value": 0.6
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 88,
+     "line_end": 90,
+     "quote": "```\nサイクル/ブロック = 命令数 + 0.6 × ストア数 + ストール数\n```",
+     "what": "the formula as printed"
+    }
+   ],
+   "how_measured": "Result of the two sweeps above; every term has its own measurement above this line.",
+   "provenance_kind": "derived_from_measurement",
+   "estimate": false
+  },
+  {
+   "id": "fused_loads_are_free",
+   "statement": "Holding the body at 41 instructions and varying the number of .LD.INCP fused loads from 0 to 32 (and 16 spread one per instruction) moves the block between 41.9 and 42.2 cycles, so a fused load adds nothing.",
+   "numbers": [
+    {
+     "as_printed": "41",
+     "unit": "instructions",
+     "what": "fixed body size for the sweep",
+     "value": 41
+    },
+    {
+     "as_printed": "0",
+     "unit": "fused loads",
+     "what": "lower end of the sweep",
+     "value": 0
+    },
+    {
+     "as_printed": "8",
+     "unit": "fused loads",
+     "what": "a point of the sweep",
+     "value": 8
+    },
+    {
+     "as_printed": "16",
+     "unit": "fused loads",
+     "what": "a point of the sweep",
+     "value": 16
+    },
+    {
+     "as_printed": "24",
+     "unit": "fused loads",
+     "what": "a point of the sweep",
+     "value": 24
+    },
+    {
+     "as_printed": "32",
+     "unit": "fused loads",
+     "what": "upper end of the sweep",
+     "value": 32
+    },
+    {
+     "as_printed": "41.9",
+     "unit": "cycles/block",
+     "what": "0 fused loads, and 16 spread out",
+     "value": 41.9
+    },
+    {
+     "as_printed": "42.0",
+     "unit": "cycles/block",
+     "what": "8 and 16 fused loads",
+     "value": 42.0
+    },
+    {
+     "as_printed": "42.1",
+     "unit": "cycles/block",
+     "what": "24 fused loads",
+     "value": 42.1
+    },
+    {
+     "as_printed": "42.2",
+     "unit": "cycles/block",
+     "what": "32 fused loads",
+     "value": 42.2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 70,
+     "line_end": 74,
+     "quote": "次に、**本体を41命令に固定して融合ロードの本数だけ動かします**:\n\n| `.LD.INCP` の本数（41命令中） | 0 | 8 | 16 | 24 | 32 | 16（1命令おきに分散） |\n| --- | --- | --- | --- | --- | --- | --- |\n| サイクル/ブロック | 41.9 | 42.0 | 42.0 | 42.1 | 42.2 | 41.9 |",
+     "what": "the fused-load sweep"
+    }
+   ],
+   "how_measured": "Same 30-block harness, body padded to 41 instructions in every configuration.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "indexed_loads_are_free_but_interleaved_tables_read_slightly_higher",
+   "statement": "With the body at 42 instructions, varying the EE.LDXQ.32 count from 0 to 24 (scattered in a 4KB table, all into the same register, or with 8, 16 and 24 in total) keeps the block at 42.9 to 43.3 cycles; the one configuration with 24 loads alternating between two registers reads 44.0 against the 42.9 the rest of the row shows, and the prose about the indexed load being free does not mention that column.",
+   "numbers": [
+    {
+     "as_printed": "42",
+     "unit": "instructions",
+     "what": "fixed body size for the sweep",
+     "value": 42
+    },
+    {
+     "as_printed": "43.3",
+     "unit": "cycles/block",
+     "what": "0 indexed loads",
+     "value": 43.3
+    },
+    {
+     "as_printed": "43.2",
+     "unit": "cycles/block",
+     "what": "8 indexed loads",
+     "value": 43.2
+    },
+    {
+     "as_printed": "42.9",
+     "unit": "cycles/block",
+     "what": "16, 24, 24 scattered and 24 into one register",
+     "value": 42.9
+    },
+    {
+     "as_printed": "44.0",
+     "unit": "cycles/block",
+     "what": "24 loads alternating between two registers",
+     "value": 44.0
+    },
+    {
+     "as_printed": "24",
+     "unit": "indexed loads",
+     "what": "widest point of the sweep",
+     "value": 24
+    },
+    {
+     "as_printed": "4",
+     "unit": "kilobytes",
+     "what": "the scattered table's size",
+     "value": 4
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 76,
+     "line_end": 82,
+     "quote": "**融合ロードは無料です。** 42命令に固定して `EE.LDXQ.32` の本数を動かしても同じでした:\n\n| `EE.LDXQ.32` の本数（42命令中） | 0 | 8 | 16 | 24 | 24（4KB表に散在） | 24（全部同じレジスタへ） | 24（2本を交互） |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| サイクル/ブロック | 43.3 | 43.2 | 42.9 | 42.9 | 42.9 | 42.9 | 44.0 |\n\n**索引ロードも無料**で、アドレスが散っていても、同じレジスタの別レーンに連続で書いても変わりません。長らく疑っていた「1レーン書き込みがread-modify-writeになっている」説は、ここで完全に否定されました。",
+     "what": "the indexed-load sweep and the claim drawn from it"
+    }
+   ],
+   "caveats": [
+    "The table's last column (24 loads alternating between two registers, 44.0) is above every other column, and the prose does not address it; the 'free' claim is the prose's, the row is the data."
+   ],
+   "how_measured": "Same harness as the fused-load sweep, on a real 4KB lookup table.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "ldxq_reads_one_lane_per_instruction",
+   "statement": "EE.LDXQ.32 is the only indexed load and reads one 32-bit lane per instruction: eight elements cost eight instructions and two tables cost 16; the instruction itself is one cycle, so the expense of a table lookup is structural rather than a slow instruction.",
+   "numbers": [
+    {
+     "as_printed": "32",
+     "unit": "bits",
+     "what": "the width of the one lane read",
+     "value": 32
+    },
+    {
+     "as_printed": "1",
+     "unit": "lane per instruction",
+     "what": "the granularity of the indexed load",
+     "value": 1
+    },
+    {
+     "as_printed": "8",
+     "unit": "instructions",
+     "what": "to gather eight elements",
+     "value": 8
+    },
+    {
+     "as_printed": "16",
+     "unit": "instructions",
+     "what": "to gather from two tables",
+     "value": 16
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 44,
+     "line_end": 46,
+     "quote": "索引ロードは `EE.LDXQ.32`（§1.8.37）だけで、**1命令につき32bitレーン1本**しか読めません。8要素を引くには8命令、2つの表を引けば16命令かかります。\n\n命令そのものは1サイクルで、他のどのPIE命令とも変わりません（§3.5で本数を振って確認済み）。**高いのは、8要素を集めるのに8命令使うという構造のほうです。**",
+     "what": "the indexed load's granularity and the conclusion about where the cost is"
+    }
+   ],
+   "how_measured": "Counted, not timed: the granularity is the instruction's definition; the per-instruction cost is the sweep above.",
+   "provenance_kind": "derived_from_measurement",
+   "estimate": false
+  },
+  {
+   "id": "table_lookup_versus_approximation_measured_effect",
+   "statement": "Replacing two sine tables with a parabola approximation in the ocean kernel removed 16 ldxq, two vunzip and two masks, taking the kernel from 62 instructions to 40 and from 1.06 ms to 0.89 ms, at the cost of bit-exactness.",
+   "numbers": [
+    {
+     "as_printed": "16",
+     "unit": "ldxq instructions removed",
+     "what": "the two sine tables",
+     "value": 16
+    },
+    {
+     "as_printed": "2",
+     "unit": "vunzip instructions removed",
+     "what": "and two masks alongside them",
+     "value": 2
+    },
+    {
+     "as_printed": "62",
+     "unit": "instructions",
+     "what": "before",
+     "value": 62
+    },
+    {
+     "as_printed": "40",
+     "unit": "instructions",
+     "what": "after",
+     "value": 40
+    },
+    {
+     "as_printed": "1.06",
+     "unit": "ms",
+     "what": "before",
+     "value": 1.06
+    },
+    {
+     "as_printed": "0.89",
+     "unit": "ms",
+     "what": "after",
+     "value": 0.89
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 48,
+     "line_end": 48,
+     "quote": "**設計上の含意**: PIEカーネルで正弦表などを引く設計は、スカラーコードほど有利ではありません。海面カーネルでは、2つの正弦表を放物線近似（`u(128-|u|)` と補正項1つ）で置き換えて **16本の `ldxq` と2本の `vunzip`、2本のマスクが丸ごと消え**、命令数が62から40へ、時間が1.06msから0.89msになりました。§8の但し書きどおり、これはビット一致を捨てる判断です。",
+     "what": "the ocean kernel's replacement of the tables"
+    }
+   ],
+   "how_measured": "Ocean kernel timing on the device, before and after the substitution.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "approximation_trade_off_is_recorded",
+   "statement": "The 1.06 ms to 0.89 ms step is not bit-exact: 10.1% of the pixels change their RGB565 value, with steps of at most 1 in R/B and at most 2 in G.",
+   "numbers": [
+    {
+     "as_printed": "1.06",
+     "unit": "ms",
+     "what": "before",
+     "value": 1.06
+    },
+    {
+     "as_printed": "0.89",
+     "unit": "ms",
+     "what": "after",
+     "value": 0.89
+    },
+    {
+     "as_printed": "10.1",
+     "unit": "percent of pixels",
+     "what": "whose RGB565 value changes",
+     "value": 10.1
+    },
+    {
+     "as_printed": "1",
+     "unit": "value step",
+     "what": "maximum step in R/B",
+     "value": 1
+    },
+    {
+     "as_printed": "2",
+     "unit": "value step",
+     "what": "maximum step in G",
+     "value": 2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 622,
+     "line_end": 622,
+     "quote": "カーネルは原則として**ビット一致**で書き、近似はそれ以外に手がなくなってから、絵を見比べて判断します。海面カーネルだけが近似で（`d266ecf`、RGB565が変わる画素10.1%、段差はR/B最大1・G最大2）、これは表引きを消すのに他の方法が無かったためです。ビット一致を原則とする理由は2つあります。",
+     "what": "the recorded trade-off of the parabola approximation"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 672,
+     "line_end": 672,
+     "quote": "| 海面 v3 | 同上（放物線近似、**ビット一致でない**） | 1.06ms | **0.89ms** | 1.19× | `d266ecf` |",
+     "what": "the timing the trade-off bought"
+    }
+   ],
+   "how_measured": "Pixel count against the bit-exact kernel.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "ocean_row_pie_floor_standalone_and_prologue",
+   "statement": "The real kernel ocean_row_pie is 40 instructions with one store, so its floor is 40.6 cycles per block, while running it alone measures 45.5; the difference of about 4 is the per-row prologue (21 constants built and broadcast) divided over 30 blocks.",
+   "numbers": [
+    {
+     "as_printed": "40",
+     "unit": "instructions",
+     "what": "ocean_row_pie",
+     "value": 40
+    },
+    {
+     "as_printed": "40.6",
+     "unit": "cycles/block",
+     "what": "the floor (40 instructions + 0.6 for the store)",
+     "value": 40.6
+    },
+    {
+     "as_printed": "45.5",
+     "unit": "cycles/block",
+     "what": "measured standalone",
+     "value": 45.5
+    },
+    {
+     "as_printed": "21",
+     "unit": "constants",
+     "what": "built and broadcast per row",
+     "value": 21
+    },
+    {
+     "as_printed": "30",
+     "unit": "blocks",
+     "what": "the divisor of the prologue",
+     "value": 30
+    },
+    {
+     "as_printed": "4",
+     "unit": "cycles/block",
+     "what": "rough size of the prologue's share",
+     "value": 4
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 92,
+     "line_end": 92,
+     "quote": "実カーネル `ocean_row_pie`（40命令、ストア1本）は下限40.6に対し**単独実測45.5**。差の約4は行あたりの前処理（定数21個の構築とブロードキャスト）を30ブロックで割ったぶんです。**カーネル本体に無駄はありません。**",
+     "what": "the floor, the standalone measurement and the prologue"
+    }
+   ],
+   "how_measured": "Kernel run alone on the device at 240 MHz; the floor is the formula's arithmetic.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false,
+   "caveats": [
+    "The standalone figure (45.5) includes the row prologue that the per-block floor excludes, which is why the two differ by an amount that is not a kernel defect."
+   ]
+  },
+  {
+   "id": "real_operation_is_1_3_to_1_4_times_the_floor",
+   "statement": "Inside a real frame the same kernel reads 2 to 3 tenths higher than standalone (1 row alone is 1365 cycles, 98 rows in 0.557 ms, against kernel=0.69 to 0.74 ms in the frame), and against the floor the overshoot is 3 to 4 tenths: ocean v3 goes 40.6 floor, 45.5 standalone, 56 in real operation and wave v2 goes 69.6 to 95. The document's factor for real operation is 1.3 to 1.4, attributed to task switches saving and restoring the eight QR registers because PIE is coprocessor 3.",
+   "numbers": [
+    {
+     "as_printed": "1365",
+     "unit": "cycles/row",
+     "what": "ocean kernel run alone",
+     "value": 1365
+    },
+    {
+     "as_printed": "98",
+     "unit": "rows",
+     "what": "the ocean kernel's row count",
+     "value": 98
+    },
+    {
+     "as_printed": "0.557",
+     "unit": "ms",
+     "what": "98 rows standalone",
+     "value": 0.557
+    },
+    {
+     "as_printed": "0.69",
+     "unit": "ms",
+     "what": "kernel inside the frame, low end",
+     "value": 0.69
+    },
+    {
+     "as_printed": "0.74",
+     "unit": "ms",
+     "what": "kernel inside the frame, high end",
+     "value": 0.74
+    },
+    {
+     "as_printed": "40.6",
+     "unit": "cycles/block",
+     "what": "ocean v3 floor",
+     "value": 40.6
+    },
+    {
+     "as_printed": "45.5",
+     "unit": "cycles/block",
+     "what": "ocean v3 standalone",
+     "value": 45.5
+    },
+    {
+     "as_printed": "56",
+     "unit": "cycles/block",
+     "what": "ocean v3 in real operation",
+     "value": 56
+    },
+    {
+     "as_printed": "69.6",
+     "unit": "cycles/block",
+     "what": "wave v2 floor",
+     "value": 69.6
+    },
+    {
+     "as_printed": "95",
+     "unit": "cycles/block",
+     "what": "wave v2 in real operation",
+     "value": 95
+    },
+    {
+     "as_printed": "1.3",
+     "unit": "factor",
+     "what": "real-operation factor, low end",
+     "value": 1.3
+    },
+    {
+     "as_printed": "1.4",
+     "unit": "factor",
+     "what": "real-operation factor, high end",
+     "value": 1.4
+    },
+    {
+     "as_printed": "8",
+     "unit": "QR registers",
+     "what": "saved and restored on a task switch",
+     "value": 8
+    },
+    {
+     "as_printed": "5",
+     "unit": "ms",
+     "what": "the key-scan task's period among the interrupters",
+     "value": 5
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 110,
+     "line_end": 114,
+     "quote": "もう一つ、下限表では説明できない差が残ります。海面カーネルを単独で回すと1行1365サイクル（98行で0.557ms）ですが、実際のフレームの中では `kernel=0.69〜0.74ms` と**2〜3割高く**出ます。行あたりの前処理を足すと、下限に対しては3〜4割増しです。波も同じ比率でした。\n\nこれは描画タスクが他のタスク（5msごとのキー走査、音、USB）に割り込まれるためで、PIEはコプロセッサ3なので切り替えのたびに8本のQRを含む状態の退避と復元が起きます。**カーネルの問題ではないので、カーネル側で対処できることはありません。**\n\n実測を下限と比べると、海面 v3 は 40.6 → 単独45.5 → 実動作56、波 v2 は 69.6 → 実動作95。どちらも **下限の3〜4割増し**に収まります（行あたり前処理で約1割、プリエンプションで約2割）。新しいカーネルがこの範囲に入っていれば正常で、それ以上外れているときだけ疑ってください。",
+     "what": "standalone versus in-frame, the floor comparison and the factor"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 175,
+     "line_end": 175,
+     "quote": "そのうえで実動作は 1.3〜1.4 倍。**掛ける前の中身を数え落としていると、係数をいくら正確にしても当たりません。**",
+     "what": "the factor restated after the correction"
+    }
+   ],
+   "how_measured": "Device measurements of whole kernels inside frames and standalone, at 240 MHz.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false,
+   "caveats": [
+    "The factor is calibrated on kernels whose per-row scaffolding is about a tenth of the total; the document says so and shows where it does not hold (see floor_is_per_loop_body_not_per_row)."
+   ]
+  },
+  {
+   "id": "the_residual_was_a_denominator_error",
+   "statement": "The ocean kernel appeared to cost 123 cycles per block at 64 instructions (1.9 cycles per instruction) and the leftover 33 cycles was chased as a mystery; it was the loop figure being divided by the wrong denominator. The loop's 0.89 ms per frame contains the ocean kernel's 98 rows at 0.69 ms, a scalar fill of 37 rows at 0.08 ms, 34 timer calls at 0.03 ms and about 0.09 ms of loop scaffolding and preemption, while the scalar fill alone runs at 2.2 cycles per pixel (80 us) and each timer call is 0.90 us.",
+   "numbers": [
+    {
+     "as_printed": "64",
+     "unit": "instructions",
+     "what": "the ocean kernel as it looked then",
+     "value": 64
+    },
+    {
+     "as_printed": "123",
+     "unit": "cycles/block",
+     "what": "the figure that looked unexplained",
+     "value": 123
+    },
+    {
+     "as_printed": "1.9",
+     "unit": "cycles/instruction",
+     "what": "the ratio it implied",
+     "value": 1.9
+    },
+    {
+     "as_printed": "33",
+     "unit": "cycles",
+     "what": "the residual that was chased",
+     "value": 33
+    },
+    {
+     "as_printed": "0.69",
+     "unit": "ms",
+     "what": "ocean kernel, 98 rows",
+     "value": 0.69
+    },
+    {
+     "as_printed": "0.08",
+     "unit": "ms",
+     "what": "scalar fill of 37 rows",
+     "value": 0.08
+    },
+    {
+     "as_printed": "0.03",
+     "unit": "ms",
+     "what": "34 timer calls",
+     "value": 0.03
+    },
+    {
+     "as_printed": "0.09",
+     "unit": "ms",
+     "what": "loop scaffolding and preemption",
+     "value": 0.09
+    },
+    {
+     "as_printed": "0.89",
+     "unit": "ms",
+     "what": "the loop total that was mistaken for the kernel",
+     "value": 0.89
+    },
+    {
+     "as_printed": "2.2",
+     "unit": "cycles/pixel",
+     "what": "the scalar fill",
+     "value": 2.2
+    },
+    {
+     "as_printed": "80",
+     "unit": "us",
+     "what": "the scalar fill's time",
+     "value": 80
+    },
+    {
+     "as_printed": "0.90",
+     "unit": "us",
+     "what": "one esp_timer_get_time call",
+     "value": 0.9
+    },
+    {
+     "as_printed": "37",
+     "unit": "rows",
+     "what": "painted scalar above the horizon",
+     "value": 37
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 54,
+     "line_end": 54,
+     "quote": "海面カーネルは64命令で123サイクル/ブロック（1.9サイクル/命令）に見え、ストールを全部取り除いても、`ldxq` を全廃しても「残差」が消えませんでした。3つのエージェントが独立に「`ldxq` の部分書き込みがread-modify-writeになっている」と推測し、その前提で近似化まで実施しました。",
+     "what": "what the 123 and 1.9 were read from"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 96,
+     "line_end": 106,
+     "quote": "`loop` という計測値に**カーネル以外のものが入っていました**。海面は水平線より上の37行を1ピクセルずつ塗っており（2.2サイクル/ピクセル、80µs）、そこに毎ストリップ2回の `esp_timer_get_time()`（1回0.90µs、フレームあたり30µs）とループの足場が乗ります。\n\n| 内訳（OCEAN、1フレーム） | |\n| --- | --- |\n| 海面カーネル 98行 | 0.69ms |\n| 空の塗りつぶし 37行（スカラー） | 0.08ms |\n| タイマ呼び出し34回 | 0.03ms |\n| ループの足場・プリエンプション | 約0.09ms |\n| **`loop` 合計** | **0.89ms** |\n\nこれを30ブロック×98行で割ってカーネルのせいにしたのが「残差33サイクル」の正体でした。**割り算の分母が間違っていただけです。**",
+     "what": "the breakdown of the loop figure and the conclusion"
+    }
+   ],
+   "how_measured": "Device measurements of the parts separately, after the composite figure was split.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false,
+   "caveats": [
+    "Three independent agents agreed on the wrong explanation before this was measured; the document's lesson is that agreement is not evidence."
+   ]
+  },
+  {
+   "id": "sweep_the_coefficient_and_do_not_trust_agreement",
+   "statement": "The first coefficient for a fused load, 0.37 cycles, came from a single point with a miscount; sweeping 0 to 32 loads gave the correct answer, 0.",
+   "numbers": [
+    {
+     "as_printed": "0.37",
+     "unit": "cycles per fused load",
+     "what": "the first, wrong coefficient",
+     "value": 0.37
+    },
+    {
+     "as_printed": "0",
+     "unit": "cycles per fused load",
+     "what": "the answer after the sweep",
+     "value": 0
+    },
+    {
+     "as_printed": "1",
+     "unit": "point",
+     "what": "how many were measured to get 0.37",
+     "value": 1
+    },
+    {
+     "as_printed": "32",
+     "unit": "fused loads",
+     "what": "top of the sweep that corrected it",
+     "value": 32
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 120,
+     "line_end": 120,
+     "quote": "- **係数は本数を振って決めること。** 最初に「融合ロード1本0.37サイクル」という係数を出しましたが、これは1点だけを測って命令数を数え違えた結果でした。0本から32本まで振ったら、正しい答えは0でした。",
+     "what": "the lesson about sweeping the coefficient"
+    }
+   ],
+   "how_measured": "The same harness as the sweeps above, run over the whole range of load counts.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  }
+ ],
+ "scaffold_and_formula": [
+  {
+   "id": "floor_is_per_loop_body_not_per_row",
+   "statement": "Making the garden pixel loop a PIE kernel was predicted at 38 to 44 ms from the per-block floor and measured 48.9 ms: the formula was right, and what it does not cover was left out.",
+   "numbers": [
+    {
+     "as_printed": "38",
+     "unit": "ms",
+     "what": "predicted, low end",
+     "value": 38
+    },
+    {
+     "as_printed": "44",
+     "unit": "ms",
+     "what": "predicted, high end",
+     "value": 44
+    },
+    {
+     "as_printed": "48.9",
+     "unit": "ms",
+     "what": "measured",
+     "value": 48.9
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 127,
+     "line_end": 131,
+     "quote": "## 3.6 「下限」はループ本体の下限であって、1行の下限ではない\n\nこの節も失敗の記録です。§3.5 の式は正しいのに、それを使った予測が 2 割外れました。\n\n庭（`main/scene/garden.c`）の画素ループを PIE 化したとき、`kernel=` を 38〜44 ms と予測して**実測 48.9 ms** でした。ストールはゼロ、命令数も設計どおり、`test_kernels.py` は全画素一致。式は合っていて、**式に入れなかったものが足りませんでした**。",
+     "what": "the prediction and the measurement"
+    }
+   ],
+   "how_measured": "Kernel time on the device, against a prediction built from the per-block floor.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "row_breakdown_of_a_run_split_kernel",
+   "statement": "Counting one row of the garden kernel in objdump gives 5,424 cycles for the vector body (30 blocks of 180.8), 2,306 for the per-run scaffolding (13.25 runs of 174) against an estimate of 1,170, 204 for the pixel pass's prologue and epilogue (95 for building k[40] plus 109 broadcast), and 1,447 for the row setup (12 corners, three reciprocals, one motion), a total of 9,381 where 7,024 was predicted; the vector body is therefore only 58% of a row, and the other 42% sits outside the assembly. The total is 9,381 x 135 rows = 1.27M cycles = 5.28 ms against a 3.95 ms prediction, which becomes 6.9 to 7.4 ms after the 1.3 to 1.4 real-operation factor. The per-row prologue had been guessed at about 1600 cycles and was never counted.",
+   "numbers": [
+    {
+     "as_printed": "5,424",
+     "unit": "cycles/row",
+     "what": "vector body, 30 blocks x 180.8",
+     "value": 5424
+    },
+    {
+     "as_printed": "30",
+     "unit": "blocks",
+     "what": "the vector body's block count",
+     "value": 30
+    },
+    {
+     "as_printed": "180.8",
+     "unit": "cycles/block",
+     "what": "the vector body's per-block cost",
+     "value": 180.8
+    },
+    {
+     "as_printed": "2,306",
+     "unit": "cycles/row",
+     "what": "per-run scaffolding, 13.25 runs x 174",
+     "value": 2306
+    },
+    {
+     "as_printed": "13.25",
+     "unit": "runs per row",
+     "what": "the row is cut into runs",
+     "value": 13.25
+    },
+    {
+     "as_printed": "174",
+     "unit": "cycles/run",
+     "what": "the scaffolding per run",
+     "value": 174
+    },
+    {
+     "as_printed": "1,170",
+     "unit": "cycles/row",
+     "what": "the estimate that was off by a factor of 2",
+     "value": 1170
+    },
+    {
+     "as_printed": "204",
+     "unit": "cycles/row",
+     "what": "pixel pass prologue and epilogue",
+     "value": 204
+    },
+    {
+     "as_printed": "95",
+     "unit": "cycles",
+     "what": "building k[40]",
+     "value": 95
+    },
+    {
+     "as_printed": "109",
+     "unit": "cycles",
+     "what": "broadcasting the constants",
+     "value": 109
+    },
+    {
+     "as_printed": "1,447",
+     "unit": "cycles/row",
+     "what": "row setup: corners, reciprocals, motion",
+     "value": 1447
+    },
+    {
+     "as_printed": "12",
+     "unit": "corners",
+     "what": "per row",
+     "value": 12
+    },
+    {
+     "as_printed": "3",
+     "unit": "reciprocals",
+     "what": "per row",
+     "value": 3
+    },
+    {
+     "as_printed": "9,381",
+     "unit": "cycles/row",
+     "what": "total measured",
+     "value": 9381
+    },
+    {
+     "as_printed": "7,024",
+     "unit": "cycles/row",
+     "what": "total predicted",
+     "value": 7024
+    },
+    {
+     "as_printed": "58",
+     "unit": "percent of a row",
+     "what": "the vector body's share",
+     "value": 58
+    },
+    {
+     "as_printed": "42",
+     "unit": "percent of a row",
+     "what": "the share outside the assembly",
+     "value": 42
+    },
+    {
+     "as_printed": "135",
+     "unit": "rows",
+     "what": "the garden's row count",
+     "value": 135
+    },
+    {
+     "as_printed": "1.27",
+     "unit": "million cycles",
+     "what": "9,381 x 135 rows",
+     "value": 1.27
+    },
+    {
+     "as_printed": "5.28",
+     "unit": "ms",
+     "what": "the same, as time",
+     "value": 5.28
+    },
+    {
+     "as_printed": "3.95",
+     "unit": "ms",
+     "what": "predicted",
+     "value": 3.95
+    },
+    {
+     "as_printed": "1.3",
+     "unit": "factor",
+     "what": "real operation, low end",
+     "value": 1.3
+    },
+    {
+     "as_printed": "1.4",
+     "unit": "factor",
+     "what": "real operation, high end",
+     "value": 1.4
+    },
+    {
+     "as_printed": "6.9",
+     "unit": "ms",
+     "what": "after the factor, low end",
+     "value": 6.9
+    },
+    {
+     "as_printed": "7.4",
+     "unit": "ms",
+     "what": "after the factor, high end",
+     "value": 7.4
+    },
+    {
+     "as_printed": "1600",
+     "unit": "cycles/row",
+     "what": "the uncounted per-row prologue estimate",
+     "value": 1600
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 135,
+     "line_end": 145,
+     "quote": "予測は「1 ブロック 180.8 サイクル × 30 ブロック ＋ 行あたりの前処理**約 1600 サイクル**」でした。この 1600 は見積もりで、数えていません。`objdump` で数えると:\n\n| 1 行の内訳 | サイクル | |\n| --- | --- | --- |\n| ベクタ本体 3 ループ（30 ブロック × 180.8） | 5,424 | §3.5 の式が当てる部分 |\n| run ごとの足場（13.25 run × 174） | 2,306 | 見積もりは 1,170。**2 倍の数え落とし** |\n| 画素パスの前後（k[40] の構築 95 ＋ ブロードキャスト 109） | 204 | |\n| 行のセットアップ（corner 12 回、逆数 3 本、motion 1 回） | 1,447 | ほぼ丸ごと勘定に入れていなかった |\n| **合計** | **9,381** | 予測は 7,024 |\n\n**ベクタ本体は 1 行の 58% しかありません。** 残り 42% はアセンブリの外側です。9,381 × 135 行 = 1.27M サイクル = **5.28 ms**（予測は 3.95 ms）。ここに §3.5 の実動作係数 1.3〜1.4 を掛けて 6.9〜7.4 ms。",
+     "what": "the new count and what it changes"
+    }
+   ],
+   "how_measured": "objdump -d on one build, counting static instructions outside the inner loops, plus device timing for the totals.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false,
+   "caveats": [
+    "The 1,170 and the 1600 are the document's own estimates, named as estimates where they appear; every other figure in this item was counted or measured."
+   ]
+  },
+  {
+   "id": "count_the_static_instructions_outside_the_inner_loop",
+   "statement": "The per-call cost is the static instruction count outside loopgtz/bnez, counted in objdump: garden_broadcast is 7 static with 2 in the body and 5 outside, garden_coarse_pie 57 with 22 inside and 32 outside (plus an 8-iteration rcv fill), garden_pixels_pie 230 with 135 inside and 95 outside. The 0.6 per ee.vst.128.ip must not be forgotten: a broadcast of nk stores is, for 40 constants, +24 cycles.",
+   "numbers": [
+    {
+     "as_printed": "7",
+     "unit": "instructions",
+     "what": "garden_broadcast, static",
+     "value": 7
+    },
+    {
+     "as_printed": "2",
+     "unit": "instructions",
+     "what": "in the body",
+     "value": 2
+    },
+    {
+     "as_printed": "5",
+     "unit": "instructions",
+     "what": "outside",
+     "value": 5
+    },
+    {
+     "as_printed": "57",
+     "unit": "instructions",
+     "what": "garden_coarse_pie, static",
+     "value": 57
+    },
+    {
+     "as_printed": "22",
+     "unit": "instructions",
+     "what": "in the body",
+     "value": 22
+    },
+    {
+     "as_printed": "32",
+     "unit": "instructions",
+     "what": "outside",
+     "value": 32
+    },
+    {
+     "as_printed": "8",
+     "unit": "iterations",
+     "what": "the rcv fill",
+     "value": 8
+    },
+    {
+     "as_printed": "230",
+     "unit": "instructions",
+     "what": "garden_pixels_pie, static",
+     "value": 230
+    },
+    {
+     "as_printed": "135",
+     "unit": "instructions",
+     "what": "in the body",
+     "value": 135
+    },
+    {
+     "as_printed": "95",
+     "unit": "instructions",
+     "what": "outside",
+     "value": 95
+    },
+    {
+     "as_printed": "0.6",
+     "unit": "cycles",
+     "what": "per 128-bit store, added per broadcast",
+     "value": 0.6
+    },
+    {
+     "as_printed": "40",
+     "unit": "constants",
+     "what": "a full broadcast set",
+     "value": 40
+    },
+    {
+     "as_printed": "24",
+     "unit": "cycles",
+     "what": "the stores' share for 40 constants",
+     "value": 24
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 155,
+     "line_end": 163,
+     "quote": "見積もらずに `objdump -d` で数えます。**`loopgtz` / `bnez` の外側にある静的命令数が、そのまま 1 回の呼び出しあたりのコスト**です。\n\n```\ngarden_broadcast    static   7   ループ本体 2   ループ外  5\ngarden_coarse_pie   static  57   ループ本体 22  ループ外 32   （+ 8 反復の rcv 充填）\ngarden_pixels_pie   static 230   ループ本体 135 ループ外 95\n```\n\n`ee.vst.128.ip` の 0.6 を忘れないこと。ブロードキャストは nk 本のストアなので、40 定数なら +24 サイクルです。",
+     "what": "the counting rule and the three functions"
+    }
+   ],
+   "how_measured": "objdump -d; the store surcharge is the measured 0.6 from the cost model.",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "corrected_formula_adds_the_scaffold_and_the_row_setup",
+   "statement": "The corrected form is: cycles/row = blocks x (instructions + 0.6 x stores + stalls) + runs x (driver + the kernel's outside-the-loop code + the call) + the row setup, with divisions counted at 32 cycles each; then real operation is 1.3 to 1.4 times that. If the part before the factor is undercounted, no accuracy in the factor will save the estimate.",
+   "numbers": [
+    {
+     "as_printed": "0.6",
+     "unit": "cycles per store",
+     "what": "inside the per-block term",
+     "value": 0.6
+    },
+    {
+     "as_printed": "32",
+     "unit": "cycles per division",
+     "what": "as counted in the row setup in this section",
+     "value": 32
+    },
+    {
+     "as_printed": "1.3",
+     "unit": "factor",
+     "what": "real operation, low end",
+     "value": 1.3
+    },
+    {
+     "as_printed": "1.4",
+     "unit": "factor",
+     "what": "real operation, high end",
+     "value": 1.4
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 169,
+     "line_end": 175,
+     "quote": "```\nサイクル/行 = ブロック数 × (命令数 + 0.6×ストア数 + ストール数)      §3.5 が当てる部分\n            + run 数     × (ドライバ + カーネルのループ外 + 呼び出し)   objdump で数える\n            + 行のセットアップ（除算は 1 本 32 サイクルで数える）\n```\n\nそのうえで実動作は 1.3〜1.4 倍。**掛ける前の中身を数え落としていると、係数をいくら正確にしても当たりません。**",
+     "what": "the corrected formula and the warning"
+    }
+   ],
+   "how_measured": "Assembled from the measurements in this section; the 32 cycles per division is the figure this section uses and section 3.7 later replaces (see the disagreement entry).",
+   "provenance_kind": "derived_from_measurement",
+   "estimate": false,
+   "caveats": [
+    "The 32 cycles per division printed here is contradicted later in the same document by roughly half that, from a back-calculation; see the disagreement entry for the two figures."
+   ]
+  },
+  {
+   "id": "run_split_rows_are_not_covered_by_the_factor",
+   "statement": "The 3 to 4 tenths factor was calibrated on kernels where one row is one loop (ocean and wave, whose only per-row scaffolding is the broadcast of 21 constants, the 'difference of about 4' the other section mentions). The garden kernel cuts a row into runs, which adds 13 calls, 13 constant broadcasts and 13 loopgtz startups per row, making the scaffold term the same order as the vector term, and the factor does not hold there.",
+   "numbers": [
+    {
+     "as_printed": "21",
+     "unit": "constants",
+     "what": "ocean/wave per-row scaffolding",
+     "value": 21
+    },
+    {
+     "as_printed": "4",
+     "unit": "cycles/block",
+     "what": "the difference the other section mentions",
+     "value": 4
+    },
+    {
+     "as_printed": "13",
+     "unit": "calls per row",
+     "what": "in the garden kernel",
+     "value": 13
+    },
+    {
+     "as_printed": "1",
+     "unit": "loop",
+     "what": "per row for ocean and wave",
+     "value": 1
+    },
+    {
+     "as_printed": "1",
+     "unit": "tenth",
+     "what": "the scaffold's share for ocean and wave",
+     "value": 1
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 149,
+     "line_end": 151,
+     "quote": "**`ocean_row_pie` と `wave_row_pie` は 1 行 = 1 ループです。** 行あたりの足場は「定数 21 個のブロードキャスト」だけで、§3.5 が単独実測 45.5 に対して「差の約 4」と書いているのがそれです。第 2 項が第 1 項の 1 割しかないので、下限に係数を掛ければ当たります。\n\n庭のカーネルは**行を run に切ります**（格子セルの境界でコーナー値が変わるため）。すると 1 行に 13 回の関数呼び出し、13 回の定数ブロードキャスト、13 回の `loopgtz` 立ち上げが入り、**第 2 項が第 1 項と同じ桁になります**。§3.5 の「下限の 3〜4 割増し」は前者で較正された数字で、後者には効きません。",
+     "what": "why the factor held for ocean/wave and not for garden"
+    }
+   ],
+   "how_measured": "Comparison of the two kernels' row structure with the counted breakdown above.",
+   "provenance_kind": "derived_from_measurement",
+   "estimate": false
+  }
+ ],
+ "scalar_routines": [
+  {
+   "id": "sqrtf_174_to_188_cycles",
+   "statement": "sqrtf measures 174 to 188 cycles, from a standalone measurement on the device. The table of prices is dated 2026-09-09 and notes that the 150 to 250 that stood there before was an estimate that was off by a factor of 4.",
+   "numbers": [
+    {
+     "as_printed": "174",
+     "unit": "cycles",
+     "what": "sqrtf, low end",
+     "value": 174
+    },
+    {
+     "as_printed": "188",
+     "unit": "cycles",
+     "what": "sqrtf, high end",
+     "value": 188
+    },
+    {
+     "as_printed": "150",
+     "unit": "cycles",
+     "what": "the withdrawn estimate, low end",
+     "value": 150
+    },
+    {
+     "as_printed": "250",
+     "unit": "cycles",
+     "what": "the withdrawn estimate, high end",
+     "value": 250
+    },
+    {
+     "as_printed": "4",
+     "unit": "factor",
+     "what": "how far the withdrawn estimate was off",
+     "value": 4
+    },
+    {
+     "as_printed": "2026-09-09",
+     "unit": "date",
+     "what": "when the table was measured"
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 234,
+     "line_end": 240,
+     "quote": "### 値段（2026-09-09 実測。ここにあった 150〜250 は推定で、4 倍外していました）\n\n| ルーチン | サイクル | どう測ったか |\n| --- | --- | --- |\n| `sqrtf` | **174〜188** | 実機で単体計測 |\n| `__divsf3` | **55〜67**（観測の幅から 43〜91） | 下記、スイッチ 1 個の 2 本焼き |\n| `floorf` / `ceilf` | **約 78** | 下記、スイッチ 1 個の 2 本焼き |",
+     "what": "the price table, its date and the note about the old estimate"
+    }
+   ],
+   "how_measured": "Standalone measurement on the device (the table's own 'how measured' column).",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "divsf3_55_to_67_cycles",
+   "statement": "__divsf3 measures 55 to 67 cycles, and 43 to 91 at the two ends of the observed spread. It was obtained from two builds made from a frozen tree and flashed directly, differing in one switch (FLOWER_NO_BAND_INVA) on calla (species 6): bell 9.05-9.55 ms and 1,258-1,348 cycles per visit against 7.74-8.20 ms and 1,041-1,158, a difference of 1.33 ms per frame, with the bell:sqrt call count unchanged at 4,765-4,774 against 4,766-4,774, which is what makes the two comparable. 1.33 ms x 240,000 / 4,770 gives 67 cycles each; because the same switch also removed three other operations per band, that is an upper bound, and restoring them gives 55 to 65.",
+   "numbers": [
+    {
+     "as_printed": "55",
+     "unit": "cycles",
+     "what": "__divsf3, low end",
+     "value": 55
+    },
+    {
+     "as_printed": "67",
+     "unit": "cycles",
+     "what": "__divsf3, high end",
+     "value": 67
+    },
+    {
+     "as_printed": "43",
+     "unit": "cycles",
+     "what": "low end of the range from the observed spread",
+     "value": 43
+    },
+    {
+     "as_printed": "91",
+     "unit": "cycles",
+     "what": "high end of the range from the observed spread",
+     "value": 91
+    },
+    {
+     "as_printed": "9.05",
+     "unit": "ms",
+     "what": "build A bell, low end",
+     "value": 9.05
+    },
+    {
+     "as_printed": "9.55",
+     "unit": "ms",
+     "what": "build A bell, high end",
+     "value": 9.55
+    },
+    {
+     "as_printed": "1,258",
+     "unit": "cycles/visit",
+     "what": "build A, low end",
+     "value": 1258
+    },
+    {
+     "as_printed": "1,348",
+     "unit": "cycles/visit",
+     "what": "build A, high end",
+     "value": 1348
+    },
+    {
+     "as_printed": "7.74",
+     "unit": "ms",
+     "what": "build B bell, low end",
+     "value": 7.74
+    },
+    {
+     "as_printed": "8.20",
+     "unit": "ms",
+     "what": "build B bell, high end",
+     "value": 8.2
+    },
+    {
+     "as_printed": "1,041",
+     "unit": "cycles/visit",
+     "what": "build B, low end",
+     "value": 1041
+    },
+    {
+     "as_printed": "1,158",
+     "unit": "cycles/visit",
+     "what": "build B, high end",
+     "value": 1158
+    },
+    {
+     "as_printed": "1.33",
+     "unit": "ms/frame",
+     "what": "the difference between the builds",
+     "value": 1.33
+    },
+    {
+     "as_printed": "240,000",
+     "unit": "cycles/ms",
+     "what": "the clock at 240 MHz",
+     "value": 240000
+    },
+    {
+     "as_printed": "4,770",
+     "unit": "calls",
+     "what": "the division count per frame",
+     "value": 4770
+    },
+    {
+     "as_printed": "4,765",
+     "unit": "calls",
+     "what": "build A lower bound",
+     "value": 4765
+    },
+    {
+     "as_printed": "4,774",
+     "unit": "calls",
+     "what": "build A upper bound",
+     "value": 4774
+    },
+    {
+     "as_printed": "4,766",
+     "unit": "calls",
+     "what": "build B lower bound",
+     "value": 4766
+    },
+    {
+     "as_printed": "55",
+     "unit": "cycles",
+     "what": "after restoring the three removed operations, low end",
+     "value": 55
+    },
+    {
+     "as_printed": "65",
+     "unit": "cycles",
+     "what": "after restoring them, high end",
+     "value": 65
+    },
+    {
+     "as_printed": "6",
+     "unit": "species",
+     "what": "calla",
+     "value": 6
+    },
+    {
+     "as_printed": "2",
+     "unit": "builds",
+     "what": "differing in one switch",
+     "value": 2
+    },
+    {
+     "as_printed": "3",
+     "unit": "operations",
+     "what": "also removed per band by the same switch",
+     "value": 3
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 239,
+     "line_end": 239,
+     "quote": "| `__divsf3` | **55〜67**（観測の幅から 43〜91） | 下記、スイッチ 1 個の 2 本焼き |",
+     "what": "the price table row and its range"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 242,
+     "line_end": 250,
+     "quote": "**`__divsf3`。** `FLOWER_NO_BAND_INVA` を切った 2 本を、静止させたツリーから焼きました（`esptool` で既存のバイナリを直接。あいだにビルドを走らせないため）。calla（species 6）で:\n\n```\nA  bell 9.05-9.55 ms   1,258-1,348 cy/visit\nB  bell 7.74-8.20 ms   1,041-1,158 cy/visit     差 1.33 ms/frame\nbell:sqrt calls        A 4,765-4,774   B 4,766-4,774   （不変＝二本は比較可能）\n```\n\n**消えた除算の本数は推定ではありません。** 除算は `disc >= 0` の帯でだけ走り、平方根も同じ条件なので、**`bell:sqrt` の calls がそのまま除算の本数**です（§3.11）。1.33 ms × 240,000 ÷ 4,770 = **67 サイクル/本**。同じスイッチが帯あたり 3 演算（`dr` と `a` の再計算）も一緒に消しているので、これは**上限**で、そのぶんを戻すと 55〜65。観測された幅の両端で割ると 43〜91。",
+     "what": "how the two builds were made and what the difference means"
+    }
+   ],
+   "how_measured": "Two binaries from one frozen tree, flashed with esptool directly (no build in between), measured on the device; the division count comes from bell:sqrt calls, which equal the number of surviving disc >= 0 bands.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false,
+   "caveats": [
+    "The measured value is a difference of two builds divided by a call count, so it is an average per call, not a single-call latency.",
+    "The bell cycles-per-visit figures include rejected visits in their denominator; the calculation avoids that by dividing with per-frame call counts instead."
+   ]
+  },
+  {
+   "id": "floorf_and_ceilf_about_78_cycles",
+   "statement": "floorf and ceilf measure about 78 cycles, from two builds that differ in one switch (FLOWER_NO_IFLOOR) on species 13 (25 parts), where prep: petals= reads 2,679-2,741 cycles per part against 2,379-2,411, a difference of about 310 divided by 4 calls per part.",
+   "numbers": [
+    {
+     "as_printed": "78",
+     "unit": "cycles",
+     "what": "floorf/ceilf, approximate",
+     "value": 78
+    },
+    {
+     "as_printed": "2,679",
+     "unit": "cycles/part",
+     "what": "one build, low end",
+     "value": 2679
+    },
+    {
+     "as_printed": "2,741",
+     "unit": "cycles/part",
+     "what": "one build, high end",
+     "value": 2741
+    },
+    {
+     "as_printed": "2,379",
+     "unit": "cycles/part",
+     "what": "the other build, low end",
+     "value": 2379
+    },
+    {
+     "as_printed": "2,411",
+     "unit": "cycles/part",
+     "what": "the other build, high end",
+     "value": 2411
+    },
+    {
+     "as_printed": "310",
+     "unit": "cycles/part",
+     "what": "the difference",
+     "value": 310
+    },
+    {
+     "as_printed": "4",
+     "unit": "calls per part",
+     "what": "the divisor",
+     "value": 4
+    },
+    {
+     "as_printed": "13",
+     "unit": "species",
+     "what": "the species used",
+     "value": 13
+    },
+    {
+     "as_printed": "25",
+     "unit": "parts",
+     "what": "that species' part count",
+     "value": 25
+    },
+    {
+     "as_printed": "2",
+     "unit": "builds",
+     "what": "differing in one switch",
+     "value": 2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 240,
+     "line_end": 240,
+     "quote": "| `floorf` / `ceilf` | **約 78** | 下記、スイッチ 1 個の 2 本焼き |",
+     "what": "the table row"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 254,
+     "line_end": 259,
+     "quote": "**`floorf` / `ceilf`。** `FLOWER_NO_IFLOOR` を切った 2 本、species 13（25 部品）の `prep: petals=`:\n\n```\nB  2,679-2,741 cy/part\nD  2,379-2,411 cy/part     差 約 310、部品あたり 4 本 → 約 78 サイクル/本\n```",
+     "what": "how the two builds were made and the arithmetic"
+    }
+   ],
+   "how_measured": "Two builds from a frozen tree, differenced, on the device.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "integer_division_about_16_cycles_back_calculated",
+   "statement": "Hardware integer division is about 16 cycles, and this is not a direct measurement but a back-calculation from commit 0ecf16e: that commit contains only two exact substitutions whose removed division counts were both counted (canopy 10,454 plus garden_corner 1,620 = 12,074 per frame), and the measured saving of 0.82 ms = 196,800 cycles divided by them gives 16.3, or about 18 after restoring the multiplies and shifts that replaced them.",
+   "numbers": [
+    {
+     "as_printed": "16",
+     "unit": "cycles",
+     "what": "integer division, approximate",
+     "value": 16
+    },
+    {
+     "as_printed": "0ecf16e",
+     "unit": "commit",
+     "what": "the commit the back-calculation is from"
+    },
+    {
+     "as_printed": "10,454",
+     "unit": "divisions/frame",
+     "what": "canopy",
+     "value": 10454
+    },
+    {
+     "as_printed": "1,620",
+     "unit": "divisions/frame",
+     "what": "garden_corner",
+     "value": 1620
+    },
+    {
+     "as_printed": "12,074",
+     "unit": "divisions/frame",
+     "what": "the total",
+     "value": 12074
+    },
+    {
+     "as_printed": "0.82",
+     "unit": "ms",
+     "what": "the measured saving",
+     "value": 0.82
+    },
+    {
+     "as_printed": "196,800",
+     "unit": "cycles",
+     "what": "the same as cycles at 240 MHz",
+     "value": 196800
+    },
+    {
+     "as_printed": "16.3",
+     "unit": "cycles",
+     "what": "196,800 / 12,074",
+     "value": 16.3
+    },
+    {
+     "as_printed": "18",
+     "unit": "cycles",
+     "what": "after restoring the multiplies and shifts",
+     "value": 18
+    },
+    {
+     "as_printed": "2",
+     "unit": "substitutions",
+     "what": "in that commit",
+     "value": 2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 261,
+     "line_end": 261,
+     "quote": "**整数の除算のほうは呼び出しではなく、ハードウェア除算器で約 16 サイクル**です。これは直接の計測ではなく、`0ecf16e` からの逆算です: あのコミットは 2 つの厳密な置き換えだけを含み、消えた除算の本数が両方とも数えてあります（林冠 10,454 + `garden_corner` 1,620 = 12,074 本/フレーム）。実測の節約 0.82 ms = 196,800 サイクルを割って 16.3、置き換えた乗算とシフトのぶんを戻して約 18。",
+     "what": "the integer divider's price and its derivation"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 263,
+     "line_end": 263,
+     "quote": "整数側のこの数字が要ったのは、**私が 32 と仮定して 2 倍外した**からです。浮動小数側は長らく誰も測っておらず（`div=` を名乗ったカウンタは乗算を囲っていました）、上の表がその最初の実測です。",
+     "what": "the assumption it replaces"
+    }
+   ],
+   "how_measured": "Back-calculation from a measured saving and two counted division counts, not a standalone measurement of the divider.",
+   "provenance_kind": "estimate_in_the_source",
+   "estimate": true,
+   "estimate_marker": "逆算",
+   "caveats": [
+    "The document states this is not a direct measurement; §3.6 had said about 32 cycles, and §3.7 says the 32 was an assumption that was off by a factor of 2."
+   ]
+  },
+  {
+   "id": "no_fpu_divide_or_sqrt_and_gcc_never_emits_seeds",
+   "statement": "The FPU has no divide and no square-root instruction, and GCC never emits the seed instructions div0.s, recip0.s or sqrt0.s, with or without -fno-math-errno: the whole image contains 14 of them and all 14 are in Wi-Fi and ROM code. Two people made the same counting mistake twice.",
+   "numbers": [
+    {
+     "as_printed": "14",
+     "unit": "seed instructions",
+     "what": "found in the whole image",
+     "value": 14
+    },
+    {
+     "as_printed": "2",
+     "unit": "times",
+     "what": "the same mistake was made independently",
+     "value": 2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 179,
+     "line_end": 181,
+     "quote": "**浮動小数のコードをプロファイルする前に、この節を読んでください。** 私と team lead は同じ数え間違いを 2 回、独立にしました。\n\nESP32-S3 の FPU には**除算命令も平方根命令もありません**。GCC は seed 命令（`div0.s` / `recip0.s` / `sqrt0.s`）を**一度も出しません**（`-fno-math-errno` を付けても変わりません。イメージ全体で 14 本見つかりますが、全て Wi-Fi と ROM のコードです）。したがって:",
+     "what": "the missing instructions and the never-emitted seeds"
+    }
+   ],
+   "how_measured": "Search of the linked image, not of the C source; the source-level view is the .s counting further down.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "divsf3_is_invisible_in_the_disassembly_under_mlongcalls",
+   "statement": "-mlongcalls splits a call into two instructions, l32r (load the literal) and callx8, so searching for the mnemonic div or for 'call8 <symbol>' finds nothing: __divsf3 is at the ROM address 40002274, marked A, and appears in neither nm's T nor its W list. The same function was first reported as having no division and actually had 16.",
+   "numbers": [
+    {
+     "as_printed": "2",
+     "unit": "instructions",
+     "what": "a call is split into this many under -mlongcalls",
+     "value": 2
+    },
+    {
+     "as_printed": "40002274",
+     "unit": "ROM address",
+     "what": "where __divsf3 lives"
+    },
+    {
+     "as_printed": "16",
+     "unit": "divisions",
+     "what": "in ray_row, missed by the first count",
+     "value": 16
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 194,
+     "line_end": 201,
+     "quote": "`-mlongcalls` が呼び出しを 2 命令に割ります:\n\n```\nl32r    a8, 4207f298 <...>  (42096134 <__divsf3>)\ncallx8  a8\n```\n\n**`div` を mnemonic 検索しても、`call8 <symbol>` を検索しても出ません。** `__divsf3` は `40002274 A`、つまり ROM の絶対アドレスで、`nm` の T にも W にも並びません。私は最初「`ray_row` に除算は無い」と報告しました。実際には **16 本**ありました。",
+     "what": "the split call and the missed count"
+    }
+   ],
+   "how_measured": "objdump of the linked image; the literal before callx8 was resolved by hand.",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "count_calls_per_function_in_the_s_output",
+   "statement": "A cheaper way to find the calls is to emit .s: the l32r/callx8 split happens in the assembler, so the compiler's output still reads call8 __divsf3, and the command can be taken from compile_commands.json. Per function: flower_draw sqrtf x2 __divsf3 x2, shade sqrtf x1 __divsf3 x1 floorf x2, flower_prepare __divsf3 x19 sqrtf x4 floorf x2 ceilf x2 sinf x3 cosf x1. The three lines take 5 seconds.",
+   "numbers": [
+    {
+     "as_printed": "2",
+     "unit": "calls",
+     "what": "sqrtf and __divsf3 in flower_draw",
+     "value": 2
+    },
+    {
+     "as_printed": "1",
+     "unit": "call",
+     "what": "sqrtf and __divsf3 in shade",
+     "value": 1
+    },
+    {
+     "as_printed": "19",
+     "unit": "calls",
+     "what": "__divsf3 in flower_prepare",
+     "value": 19
+    },
+    {
+     "as_printed": "4",
+     "unit": "calls",
+     "what": "sqrtf in flower_prepare",
+     "value": 4
+    },
+    {
+     "as_printed": "3",
+     "unit": "calls",
+     "what": "sinf in flower_prepare",
+     "value": 3
+    },
+    {
+     "as_printed": "5",
+     "unit": "seconds",
+     "what": "to produce the three lines",
+     "value": 5
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 205,
+     "line_end": 213,
+     "quote": "**もっと安い見つけ方: `.s` を出すと名前で数えられます。** `l32r`+`callx8` への分割はアセンブラの仕事で、**コンパイラの出力にはまだ `call8 __divsf3` と書いてあります**。`build_*/compile_commands.json` からそのファイルのコマンドを取り、`-c <file> -o <obj>` を `-S <file> -o <file>.s` に替えて回すだけです（インクルードパスと `-D` が本物と同じでないと意味がないので、コマンドは手で書かずにここから取ること）。関数ごとに数えられます:\n\n```\nflower_draw   sqrtf x2  __divsf3 x2   (ray_row と bell_hit を inline したもの)\nshade         sqrtf x1  __divsf3 x1  floorf x2\nflower_prepare __divsf3 x19  sqrtf x4  floorf x2  ceilf x2  sinf x3  cosf x1\n```\n\nこの 3 行は 5 秒で出ます。リテラルを辿る 1 パスは、それが要る場面（最終バイナリしか無いとき）に取っておけます。",
+     "what": "the .s method and the three lines"
+    }
+   ],
+   "how_measured": "Counted in the compiler's own output, so it is a count and not a timing.",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "soft_float_calls_spill_every_live_float",
+   "statement": "The soft-float ABI passes arguments in integer registers, so every call needs rfr (float to AR) and wfr (AR to float) and spills every live float: one '/' inside a loop body makes that loop's working set travel to memory each iteration. In flower.c, ray_row goes from 637 instructions with 61 float stores, 97 float loads, 37 rfr/wfr and calls of __divsf3 x12 and sqrtf x2 to 586 with 49 stores, 80 loads, 27 rfr/wfr and __divsf3 x4 and sqrtf x2; shade goes from 544 instructions with 20 stores, 50 loads and 116 rfr/wfr to 467 with 6 stores, 24 loads and 98 rfr/wfr, having had more register-file moves (116) than operations (110).",
+   "numbers": [
+    {
+     "as_printed": "637",
+     "unit": "instructions",
+     "what": "ray_row before",
+     "value": 637
+    },
+    {
+     "as_printed": "61",
+     "unit": "float stores",
+     "what": "ray_row before",
+     "value": 61
+    },
+    {
+     "as_printed": "97",
+     "unit": "float loads",
+     "what": "ray_row before",
+     "value": 97
+    },
+    {
+     "as_printed": "37",
+     "unit": "rfr/wfr",
+     "what": "ray_row before",
+     "value": 37
+    },
+    {
+     "as_printed": "12",
+     "unit": "calls",
+     "what": "__divsf3 in ray_row before",
+     "value": 12
+    },
+    {
+     "as_printed": "586",
+     "unit": "instructions",
+     "what": "ray_row after",
+     "value": 586
+    },
+    {
+     "as_printed": "49",
+     "unit": "float stores",
+     "what": "ray_row after",
+     "value": 49
+    },
+    {
+     "as_printed": "80",
+     "unit": "float loads",
+     "what": "ray_row after",
+     "value": 80
+    },
+    {
+     "as_printed": "27",
+     "unit": "rfr/wfr",
+     "what": "ray_row after",
+     "value": 27
+    },
+    {
+     "as_printed": "4",
+     "unit": "calls",
+     "what": "__divsf3 in ray_row after",
+     "value": 4
+    },
+    {
+     "as_printed": "544",
+     "unit": "instructions",
+     "what": "shade before",
+     "value": 544
+    },
+    {
+     "as_printed": "20",
+     "unit": "float stores",
+     "what": "shade before",
+     "value": 20
+    },
+    {
+     "as_printed": "50",
+     "unit": "float loads",
+     "what": "shade before",
+     "value": 50
+    },
+    {
+     "as_printed": "116",
+     "unit": "rfr/wfr",
+     "what": "shade before",
+     "value": 116
+    },
+    {
+     "as_printed": "467",
+     "unit": "instructions",
+     "what": "shade after",
+     "value": 467
+    },
+    {
+     "as_printed": "6",
+     "unit": "float stores",
+     "what": "shade after",
+     "value": 6
+    },
+    {
+     "as_printed": "24",
+     "unit": "float loads",
+     "what": "shade after",
+     "value": 24
+    },
+    {
+     "as_printed": "98",
+     "unit": "rfr/wfr",
+     "what": "shade after",
+     "value": 98
+    },
+    {
+     "as_printed": "110",
+     "unit": "operations",
+     "what": "in shade, against 116 register-file moves",
+     "value": 110
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 221,
+     "line_end": 232,
+     "quote": "soft-float ABI は引数を**整数レジスタ**で渡します。だから 1 回の呼び出しごとに `rfr`（float→AR）と `wfr`（AR→float）が要り、さらに**生きている float が全部スピル**します。ループ本体の中に `/` が 1 本あるだけで、そのループの作業集合が毎周メモリを往復します。\n\n`main/scene/flower.c` の実測（`objdump`、同一ビルド）:\n\n| | 命令 | float st | float ld | `rfr`/`wfr` | 呼び出し |\n| --- | --- | --- | --- | --- | --- |\n| `ray_row` 前 | 637 | 61 | 97 | 37 | `__divsf3` ×12, `sqrtf` ×2 |\n| `ray_row` 後 | 586 | 49 | 80 | 27 | `__divsf3` ×4, `sqrtf` ×2 |\n| `shade` 前 | 544 | 20 | 50 | **116** | `fmaxf` ×6, `__divsf3` ×4, `sqrtf` ×1 |\n| `shade` 後 | 467 | **6** | **24** | 98 | `__divsf3` ×2, `sqrtf` ×1 |\n\n`shade` は**演算（110）より register-file 間の移動（116）のほうが多い**状態でした。",
+     "what": "the ABI's cost and the before/after counts"
+    }
+   ],
+   "how_measured": "objdump of the same build, before and after the call-heavy code was rewritten.",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "floorf_becomes_one_instruction_but_only_for_the_right_identity",
+   "statement": "floorf and ceilf are calls like the others; a C (int) cast is the single instruction trunc.s and differs only in which way it rounds negatives, so the replacement must be an identity about the representation rather than an argument that the values happen to be non-negative. flower.c had 6 of them: 2 in shade's checkerboard (per fritillaria checkerboard pixel) and floorf x2 plus ceilf x2 in flower_prepare's screen box (per part, up to 224 per frame for the largest species), and after the replacement there are 0. The identity was checked against the library over all 2^32 float bit patterns, 26.5 hundred million matches in 10 seconds.",
+   "numbers": [
+    {
+     "as_printed": "1",
+     "unit": "instruction",
+     "what": "the (int) cast's replacement",
+     "value": 1
+    },
+    {
+     "as_printed": "6",
+     "unit": "calls",
+     "what": "in flower.c",
+     "value": 6
+    },
+    {
+     "as_printed": "2",
+     "unit": "calls",
+     "what": "in shade's checkerboard",
+     "value": 2
+    },
+    {
+     "as_printed": "224",
+     "unit": "calls/frame",
+     "what": "floorf/ceilf in flower_prepare for the largest species",
+     "value": 224
+    },
+    {
+     "as_printed": "0",
+     "unit": "calls",
+     "what": "after the replacement",
+     "value": 0
+    },
+    {
+     "as_printed": "2^32",
+     "unit": "bit patterns",
+     "what": "the exhaustive check"
+    },
+    {
+     "as_printed": "26.5",
+     "unit": "hundred million",
+     "what": "matching bit patterns",
+     "value": 26.5
+    },
+    {
+     "as_printed": "10",
+     "unit": "seconds",
+     "what": "the check's runtime",
+     "value": 10
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 517,
+     "line_end": 519,
+     "quote": "`floorf` / `ceilf` も §3.7 の呼び出しです。C の `(int)` キャストは `trunc.s` 1 命令で、負の側の丸め方だけが違います。\n\n`main/scene/flower.c` には 6 本ありました — `shade` の市松模様に 2 本（fritillaria の鐘の画素ごと）、`flower_prepare` の画面ボックスに `floorf` 2 本と `ceilf` 2 本（部品ごと、最大の種で 224 本/フレーム）。`.s` で数えて、置換後は**全部 0 本**です。",
+     "what": "the cast, the count and the replacement"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 528,
+     "line_end": 528,
+     "quote": "`(float)t != x` は「小数部があった」そのもので、符号がキャストの間違えた向きを選びます。**主張が表現についてなら、総当たりで決着します** — `tools/test_flower_floor.c` が 2^32 個の float ビットパターン全部をライブラリと突き合わせ、NaN・無限大・int に入らない大きさ（どちらも未定義）だけを外して **26.5 億通り一致**します。10 秒です。",
+     "what": "the exhaustive verification of the identity"
+    }
+   ],
+   "how_measured": "Counted in .s (calls) and exhaustively enumerated on the host (the identity).",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "seed_instructions_exist_on_the_chip_but_no_compiler_flag_reaches_them",
+   "statement": "All 11 seed mnemonics assemble with xtensa-esp32s3-elf-gcc (esp-15.2.0_20251204), which is why the image contains 14 of them: they are instructions this chip executes. But -mhard-float-div, -mhard-float-sqrt, -mhard-float-recip and -mhard-float-rsqrt do not exist in this toolchain (unrecognized command-line option) and the only floating-point entry in --help=target is -mfused-madd, so it is not a flag but a Newton-Raphson sequence written by hand. The price guidance is that a seed plus two iterations should be in the 10-instruction range, which if it holds would be an order of magnitude cheaper. The benchmark to beat is sqrtf at 174 to 188 cycles, and bell_hit calls it 4.5 to 5.4 times per surviving visit, which is 780 to 940 cycles per visit; the document's decision is not to start until a defensible estimate exists, and if written, to follow the ISA's sequence because seed precision is implementation-defined.",
+   "numbers": [
+    {
+     "as_printed": "11",
+     "unit": "seed mnemonics",
+     "what": "all of them assemble",
+     "value": 11
+    },
+    {
+     "as_printed": "14",
+     "unit": "seed instructions",
+     "what": "in the image, because the chip executes them",
+     "value": 14
+    },
+    {
+     "as_printed": "2",
+     "unit": "iterations",
+     "what": "a Newton-Raphson seed plus this many",
+     "value": 2
+    },
+    {
+     "as_printed": "10",
+     "unit": "instructions",
+     "what": "the order of magnitude the seed sequence should take",
+     "value": 10
+    },
+    {
+     "as_printed": "1",
+     "unit": "order of magnitude",
+     "what": "the hoped-for gain",
+     "value": 1
+    },
+    {
+     "as_printed": "174",
+     "unit": "cycles",
+     "what": "sqrtf, low end",
+     "value": 174
+    },
+    {
+     "as_printed": "188",
+     "unit": "cycles",
+     "what": "sqrtf, high end",
+     "value": 188
+    },
+    {
+     "as_printed": "4.5",
+     "unit": "calls/visit",
+     "what": "sqrtf in bell_hit, low end",
+     "value": 4.5
+    },
+    {
+     "as_printed": "5.4",
+     "unit": "calls/visit",
+     "what": "sqrtf in bell_hit, high end",
+     "value": 5.4
+    },
+    {
+     "as_printed": "780",
+     "unit": "cycles/visit",
+     "what": "the sqrtf share, low end",
+     "value": 780
+    },
+    {
+     "as_printed": "940",
+     "unit": "cycles/visit",
+     "what": "the sqrtf share, high end",
+     "value": 940
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 541,
+     "line_end": 545,
+     "quote": "**11 個すべて `xtensa-esp32s3-elf-gcc` のインラインアセンブリで組み立てが通ります**（esp-15.2.0_20251204）。§3.7 がイメージ中に 14 本見つけたのは、それらが実行される石だからです。\n\n一方で **`-mhard-float-div` / `-mhard-float-sqrt` / `-mhard-float-recip` / `-mhard-float-rsqrt` はこのツールチェインに存在しません**（`unrecognized command-line option`）。`--help=target` に浮動小数関係で出てくるのは `-mfused-madd` だけです。**つまりフラグ 1 つで手に入る話ではなく、Newton-Raphson の列を手で書く話です。**\n\n値段の目安: `sqrtf` は実測 174〜188 サイクル（§3.7）。種＋2 回の反復は 10 命令台のはずなので、当たれば 1 桁です。`bell_hit` は棄却を生き延びた visit あたり 4.5〜5.4 回の `sqrtf` を呼んでいるので（§3.11）、そこだけで visit あたり 780〜940 サイクルが対象になります。",
+     "what": "what assembles, what the toolchain lacks and the guidance"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 547,
+     "line_end": 547,
+     "quote": "**まだ誰も書いていませんし、いま書く価値は下がりました。** `__divsf3` が実測 55〜67 だった（§3.7）ということは、**ソフト浮動小数の話全体が、この日まで思われていたより小さい**ということです。`sqrtf` は依然としてこの中で最大の項ですが、除算が 4 分の 1 だったのと同じ理由 —「同じクラスのルーチンだから同じ値段だろう」— で `sqrtf` の 188 だけは**単体計測なので信用できます**。それでも、手書きの Newton-Raphson が買うのは 1 種のシーンの 1 関数であって、根拠のある見積もりが取れるまで着手しない、というのが現在の判断です。書くなら ISA が定める列をそのまま使うこと — 種の精度は実装定義なので、反復回数を勘で減らすとビット一致が黙って壊れます。",
+     "what": "the decision and the seed-precision caveat"
+    }
+   ],
+   "how_measured": "Assembled with the named toolchain; the flags were tried and rejected by the compiler. The price for the hand-written sequence is the document's own 目安/はず, not a measurement.",
+   "provenance_kind": "estimate_in_the_source",
+   "estimate": true,
+   "estimate_marker": "はず",
+   "caveats": [
+    "The 10-instruction and one-order-of-magnitude figures are marked as expectations in the source; nobody has written or measured the sequence."
+   ]
+  }
+ ],
+ "pitfalls": [
+  {
+   "id": "loopgtz_body_must_fit_in_256_bytes",
+   "statement": "A loopgtz body must fit in 256 bytes; PIE instructions are about 3 to 4 bytes, so the practical limit is about 70 instructions. Past that, use an ordinary addi/bnez loop, as the blend kernel (292 bytes of body) does, which costs 2 extra instructions per block, and remember the other direction too: unrolling the body past 256 bytes makes loopgtz unavailable, so a kernel can lose even with fewer instructions (the ocean kernel's 2x unroll would buy 1 mov per 2 blocks and was dropped for that reason).",
+   "numbers": [
+    {
+     "as_printed": "256",
+     "unit": "bytes",
+     "what": "the body limit",
+     "value": 256
+    },
+    {
+     "as_printed": "3",
+     "unit": "bytes",
+     "what": "PIE instruction size, low end",
+     "value": 3
+    },
+    {
+     "as_printed": "4",
+     "unit": "bytes",
+     "what": "PIE instruction size, high end",
+     "value": 4
+    },
+    {
+     "as_printed": "70",
+     "unit": "instructions",
+     "what": "the practical limit",
+     "value": 70
+    },
+    {
+     "as_printed": "292",
+     "unit": "bytes",
+     "what": "the blend kernel's body",
+     "value": 292
+    },
+    {
+     "as_printed": "2",
+     "unit": "instructions per block",
+     "what": "the cost of addi/bnez",
+     "value": 2
+    },
+    {
+     "as_printed": "1",
+     "unit": "mov per 2 blocks",
+     "what": "what the ocean 2x unroll would have bought",
+     "value": 1
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 612,
+     "line_end": 618,
+     "quote": "## 7. loopgtz の256バイト制限\n\n`loopgtz` のループ本体は**256バイト以内**でなければなりません。PIE命令はおおむね3〜4バイトなので、実質70命令程度が上限です。\n\n超える場合は `addi` / `bnez` の通常ループにします。blendカーネル（本体292B）はこちらです。1ブロックあたり2命令の追加コストで済むので、無理にアンロールを減らすより素直です。\n\n逆に、**アンロールで本体を256B超にしてしまうと `loopgtz` が使えなくなる**ため、命令数が減っても損をすることがあります。海面カーネルの2倍アンロールは、得られるのが `mov` 1本/2ブロックだけなのに対して制限ぎりぎりになるため見送りました。",
+     "what": "the 256-byte limit, the fallback and the unrolling trap"
+    }
+   ],
+   "how_measured": "The limit is the instruction's definition; the fallback's cost and the unroll's gain are counted in the kernel's assembly.",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "early_clobber_ampersand_a_is_required_for_a_walking_pointer",
+   "statement": "A pointer that walks a constant table inside inline asm needs the early-clobber constraint \"=&a\". With \"+a\" GCC may allocate kp and k to the same register, the rewind mov is then dropped, the rewind degenerates into an increment, and from the second block on the kernel reads outside the table. It compiles, and depending on the test it may pass.",
+   "numbers": [
+    {
+     "as_printed": "2",
+     "unit": "block",
+     "what": "from the second block on, the table is left behind",
+     "value": 2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 596,
+     "line_end": 608,
+     "quote": "定数表を歩くポインタには **early-clobber 制約 `\"=&a\"` が必須**です。\n\n```c\nconst int16_t *kp;\n__asm__ volatile(\n    \"2:\\n\"\n    \"  mov %[kp], %[k]\\n\"      /* ブロックごとに巻き戻す */\n    ...\n    : [kp] \"=&a\"(kp)\n    : [k] \"a\"(k), ...);\n```\n\n`\"+a\"(kp)` と書くと、GCCは `kp` と `k` に**同じレジスタを割り当てることがあります**。そうなると `mov` が無効化され、巻き戻しが単なるインクリメントになり、2ブロック目以降が表の範囲外を読みます。コンパイルは通り、テストによっては通ってしまいます。",
+     "what": "the constraint, the failure mode and the compiler's silence"
+    }
+   ],
+   "how_measured": "Observed in generated code with the wrong constraint; the failure is silent by design.",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "loopgtz_must_not_sit_inside_a_compiler_driven_loop",
+   "statement": "loopgtz manipulates the hardware loop registers, so it must not be placed inside a loop the compiler drives; the kernel is cut out as its own non-inlined function.",
+   "numbers": [],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 610,
+     "line_end": 610,
+     "quote": "同様に、`loopgtz` はハードウェアループレジスタを操作するため、**コンパイラが駆動するループの内側に置いてはいけません**。カーネルは `__attribute__((noinline))` で切り出します。",
+     "what": "the placement rule and the noinline requirement"
+    }
+   ],
+   "how_measured": "Structural rule from the instruction's definition (hardware loop registers).",
+   "provenance_kind": "counted_not_measured",
+   "estimate": false
+  },
+  {
+   "id": "pie_is_coprocessor_3_so_it_cannot_be_used_in_an_interrupt_handler",
+   "statement": "PIE is implemented as coprocessor 3, and its state is saved and restored on a task switch the way the FPU's is, so it is safe inside a task and cannot be used inside an interrupt handler. The same save/restore is the document's explanation for a kernel costing more inside a real frame than standalone, since the drawing task is interrupted by a 5 ms key scan, audio and USB and each switch moves the 8 QR registers.",
+   "numbers": [
+    {
+     "as_printed": "3",
+     "unit": "coprocessor",
+     "what": "PIE's place in the coprocessor space",
+     "value": 3
+    },
+    {
+     "as_printed": "128",
+     "unit": "bits",
+     "what": "PIE's SIMD width",
+     "value": 128
+    },
+    {
+     "as_printed": "8",
+     "unit": "QR registers",
+     "what": "moved on a task switch",
+     "value": 8
+    },
+    {
+     "as_printed": "5",
+     "unit": "ms",
+     "what": "the key-scan period among the interrupters",
+     "value": 5
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 9,
+     "line_end": 9,
+     "quote": "PIE（Processor Instruction Extensions）はESP32-S3のXtensaコアに載る128bit SIMDです。**コプロセッサ3**として実装されており、FPUと同じくタスク切り替え時に退避・復元されます。したがって**タスク内では安全、割り込みハンドラ内では使えません**。",
+     "what": "PIE as coprocessor 3, and where it is usable"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 112,
+     "line_end": 112,
+     "quote": "これは描画タスクが他のタスク（5msごとのキー走査、音、USB）に割り込まれるためで、PIEはコプロセッサ3なので切り替えのたびに8本のQRを含む状態の退避と復元が起きます。**カーネルの問題ではないので、カーネル側で対処できることはありません。**",
+     "what": "the save/restore as the explanation for the in-frame overhead"
+    }
+   ],
+   "linked_entries": [
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "open_after_this_run",
+      "field": null,
+      "value": "COP3"
+     },
+     "what": "this repository's own run left the question of the COP3 save area open"
+    }
+   ],
+   "how_measured": "Stated as a hardware fact in the sibling document; this repository's device run has the task-switch question still open (linked).",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "there_is_no_16bit_lane_shift_spell_it_as_a_vmul_with_a_fixed_sar",
+   "statement": "There is no instruction that shifts 16-bit lanes, so shifts are spelled EE.VMUL.S16 / EE.VMUL.U16, which return the low 16 bits of the 32-bit product shifted right by SAR: with SAR fixed, the multiplier chooses the direction. With SAR=11, x << 3 is a multiply by 16384 (x * 2^14 >> 11), x >> 2 is 512 (x * 2^9 >> 11), x << 4 is 32768 (the limit; x << 8 has to be split into two steps) and x >> 3 is 256. wsr.sar runs once at the top of the function, because switching SAR mid-function costs two instructions each way and usually eats the gain by itself. The left shift tops out at x16, so RGB565 packing needs 32768 twice to move red up by 8 bits, which the document checked is still cheaper than switching SAR.",
+   "numbers": [
+    {
+     "as_printed": "16",
+     "unit": "bits",
+     "what": "the lane width that has no shift instruction",
+     "value": 16
+    },
+    {
+     "as_printed": "11",
+     "unit": "SAR",
+     "what": "the fixed shift amount in the worked example",
+     "value": 11
+    },
+    {
+     "as_printed": "3",
+     "unit": "bits",
+     "what": "the left shift in the example",
+     "value": 3
+    },
+    {
+     "as_printed": "16384",
+     "unit": "multiplier",
+     "what": "x << 3 with SAR=11",
+     "value": 16384
+    },
+    {
+     "as_printed": "2^14",
+     "unit": "shift",
+     "what": "the same as a multiply"
+    },
+    {
+     "as_printed": "512",
+     "unit": "multiplier",
+     "what": "x >> 2 with SAR=11",
+     "value": 512
+    },
+    {
+     "as_printed": "2^9",
+     "unit": "shift",
+     "what": "the same as a multiply"
+    },
+    {
+     "as_printed": "4",
+     "unit": "bits",
+     "what": "the left shift at the limit",
+     "value": 4
+    },
+    {
+     "as_printed": "32768",
+     "unit": "multiplier",
+     "what": "x << 4, the limit",
+     "value": 32768
+    },
+    {
+     "as_printed": "8",
+     "unit": "bits",
+     "what": "x << 8, which needs two steps",
+     "value": 8
+    },
+    {
+     "as_printed": "256",
+     "unit": "multiplier",
+     "what": "x >> 3 with SAR=11",
+     "value": 256
+    },
+    {
+     "as_printed": "1",
+     "unit": "wsr.sar",
+     "what": "executed once at the function's head",
+     "value": 1
+    },
+    {
+     "as_printed": "16",
+     "unit": "multiplier",
+     "what": "the left-shift ceiling, x16",
+     "value": 16
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 18,
+     "line_end": 18,
+     "quote": "| 16bitレーンのシフト命令 | **存在しない**（§2で回避法） |",
+     "what": "the constraint in the constraint table"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 27,
+     "line_end": 27,
+     "quote": "16bitレーンを直接シフトする命令が無いため、`EE.VMUL.S16` / `EE.VMUL.U16`（§1.8.122 / §1.8.128）を使います。この命令は32bit積の**下位16bitをSARだけ右シフトした値**を返すので、SARを固定しておけば乗数の選び方で左右どちらのシフトにもなります。",
+     "what": "why a multiply is the shift"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 29,
+     "line_end": 40,
+     "quote": "SAR=11 に固定した場合:\n\n```\nx << 3   →  EE.VMUL.U16 with 16384    (x * 2^14 >> 11)\nx >> 2   →  EE.VMUL.U16 with 512      (x * 2^9  >> 11)\nx << 4   →  EE.VMUL.U16 with 32768    (上限。x << 8 は2回に分ける)\nx >> 3   →  EE.VMUL.U16 with 256\n```\n\n`wsr.sar` は**関数の先頭で1回だけ**実行します。途中でSARを切り替えると往復2命令が増え、多くの場合それだけで利得が消えます。\n\n左シフトの上限が ×16 である点に注意してください。RGB565のパッキングで赤を8bit左へ寄せるには `×32768` を2回適用します。これは無駄に見えますが、SARを切り替えるより安いことを確認済みです。",
+     "what": "the worked SAR=11 table, the wsr.sar rule and the ceiling"
+    }
+   ],
+   "linked_entries": [
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "findings",
+      "field": "id",
+      "value": "vmul_s16_is_arithmetic_and_vmul_u16_is_logical"
+     },
+     "what": "this repository measured the same pair on its own device and reached the same rule",
+     "expect": {
+      "path": "claim",
+      "contains": "no shift-right instruction"
+     }
+    }
+   ],
+   "how_measured": "The substitution table is a device measurement; the ceiling and the cost of switching SAR are stated as what the project verified.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "srcmb_s16_qacc_takes_its_shift_from_an_ar_register",
+   "statement": "The exact division by 255 for x <= 65152 is (x + (x >> 8) + 1) >> 8, evaluated in the 40-bit QACC lanes because x does not fit in a 16-bit lane. Adding a constant to QACC is done with a multiply-add by 1 (the usual trick), and EE.SRCMB.S16.QACC takes its shift amount from an AR register rather than from SAR.",
+   "numbers": [
+    {
+     "as_printed": "255",
+     "unit": "divisor",
+     "what": "the division being made exact",
+     "value": 255
+    },
+    {
+     "as_printed": "65152",
+     "unit": "input limit",
+     "what": "up to which the formula is exact",
+     "value": 65152
+    },
+    {
+     "as_printed": "8",
+     "unit": "shift",
+     "what": "the shift in the formula",
+     "value": 8
+    },
+    {
+     "as_printed": "1",
+     "unit": "the addend, added by a multiply-add of 1",
+     "what": 1
+    },
+    {
+     "as_printed": "16",
+     "unit": "bits",
+     "what": "the lane width that cannot hold x",
+     "value": 16
+    },
+    {
+     "as_printed": "40",
+     "unit": "bits",
+     "what": "the QACC lane width",
+     "value": 40
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 639,
+     "line_end": 651,
+     "quote": "`floor(x/255)`（x ≤ 65152）は `(x + (x>>8) + 1) >> 8` と厳密に一致します（総当たりで確認）。ただし x が16bitに収まらないので、**QACC（8レーン×40bit）**で計算します:\n\n```\nEE.ZERO.QACC\nEE.VMULAS.U16.QACC diff, a'      ; QACC = x\nEE.VMULAS.U16.QACC k127, k1      ; QACC = x + 127\nEE.SRCMB.S16.QACC  q, sh8, 0     ; QACC = x >> 8 = t\nEE.VMULAS.U16.QACC diff, a'      ; QACC = t + x\nEE.VMULAS.U16.QACC k128, k1      ; QACC = t + x + 1\nEE.SRCMB.S16.QACC  q, sh8, 0     ; q = (x + t + 1) >> 8\n```\n\n`EE.SRCMB.S16.QACC`（§1.8.54）のシフト量は**SARではなくARレジスタ**から来ます。定数1との乗算加算は、QACCへ定数を足すための常套手段です。",
+     "what": "the exact /255 sequence and the AR rule under it"
+    }
+   ],
+   "linked_entries": [
+    {
+     "file": "data/pie_instructions.json",
+     "locate": {
+      "list": "instructions",
+      "field": "name",
+      "value": "EE.SRCMB.S16.QACC"
+     },
+     "what": "this repository's own extraction of the instruction the sequence uses",
+     "expect": {
+      "path": "source_page",
+      "equals": 130
+     }
+    }
+   ],
+   "how_measured": "The identity was verified by exhaustion; the AR rule is from the instruction's documentation.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "128bit_alignment_is_silently_truncated",
+   "statement": "A 128-bit access forces the low 4 address bits to zero and raises no exception, so a buffer that is not aligned is silently read or written elsewhere. Kernel buffers are declared aligned(16); a rectangle that starts mid-row advances scalar to the boundary and handles the tail scalar too; and a row whose length is a multiple of 16 bytes (240 pixels of 2 bytes = 480 bytes) keeps every row aligned once the base is.",
+   "numbers": [
+    {
+     "as_printed": "128",
+     "unit": "bits",
+     "what": "the access width that is truncated",
+     "value": 128
+    },
+    {
+     "as_printed": "16",
+     "unit": "bytes",
+     "what": "the alignment required",
+     "value": 16
+    },
+    {
+     "as_printed": "4",
+     "unit": "bits",
+     "what": "the low address bits forced to zero",
+     "value": 4
+    },
+    {
+     "as_printed": "240",
+     "unit": "pixels",
+     "what": "a row's width",
+     "value": 240
+    },
+    {
+     "as_printed": "2",
+     "unit": "bytes",
+     "what": "per pixel",
+     "value": 2
+    },
+    {
+     "as_printed": "480",
+     "unit": "bytes",
+     "what": "the row length that keeps rows aligned",
+     "value": 480
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 21,
+     "line_end": 21,
+     "quote": "| 128bitアクセスのアラインメント | 16バイト。**違反しても例外にならず、下位4bitが黙って0にされる**（§5） |",
+     "what": "the rule in the constraint table"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 588,
+     "line_end": 592,
+     "quote": "128bitアクセスはアドレスの**下位4bitを0に強制**します。例外は上がりません。アラインメントされていないバッファを渡すと、**意図しない場所を読み書きして静かに壊れます**。\n\n対策として、カーネルに渡すバッファには必ず `__attribute__((aligned(16)))` を付けます。`board.c` の共有ストリップバッファがその例です。行の途中から処理を始める場合（blendの矩形が奇数x始まりの場合など）は、**行頭を16バイト境界までスカラーで進めてから**ブロック処理に入り、末尾も同様にスカラーで処理します。\n\n行の長さが16の倍数であれば、基底さえ揃っていれば各行の先頭は自動的に揃います。240ピクセル×2バイト = 480バイトはその条件を満たします。",
+     "what": "the silence, the aligned(16) practice and the row arithmetic"
+    }
+   ],
+   "linked_entries": [
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "findings",
+      "field": "id",
+      "value": "vld128_drops_the_low_address_bits"
+     },
+     "what": "this repository measured the same truncation on its own device",
+     "expect": {
+      "path": "status",
+      "equals": "confirmed"
+     }
+    },
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "findings",
+      "field": "id",
+      "value": "pie_buffers_must_be_declared_aligned_16"
+     },
+     "what": "and measured the misaligned-buffer symptom rather than assuming it",
+     "expect": {
+      "path": "claim",
+      "contains": "16-byte aligned"
+     }
+    }
+   ],
+   "how_measured": "The rule is in the manual; the sibling document states the practice and the row arithmetic, and this repository's device run confirmed both consequences (linked).",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "def_stage_2_loads_and_multiplies_cost_one_cycle_if_consumed_immediately",
+   "statement": "TRM Table 1.7-2 puts the loads, EE.VMUL.S16/U16 and EE.VRELU.S16 at def stage 2 while consumers read their operands at stage 1, so a result consumed by the next instruction costs one cycle and one independent instruction between them removes it. Ocean kernel v1 (64 instructions) consumed the previous result in all 17 constant broadcasts, two unzips and two multiply chains, about 21 stalls per block; double-buffering the constants across q2/q6/q7, alternating the indexed-load destinations and not adding a multiply's result immediately took the kernel from 64 instructions, 1.43 ms, 123 cycles per block and 1.90 cycles per instruction to 62, 1.06 ms, 86 and 1.39, a 26% saving with no arithmetic changed.",
+   "numbers": [
+    {
+     "as_printed": "2",
+     "unit": "stage",
+     "what": "def stage of the loads and multiplies",
+     "value": 2
+    },
+    {
+     "as_printed": "1",
+     "unit": "stage",
+     "what": "the stage consumers read at, and the stall that follows",
+     "value": 1
+    },
+    {
+     "as_printed": "64",
+     "unit": "instructions",
+     "what": "ocean v1",
+     "value": 64
+    },
+    {
+     "as_printed": "17",
+     "unit": "constant broadcasts",
+     "what": "all of them consuming the previous result",
+     "value": 17
+    },
+    {
+     "as_printed": "2",
+     "unit": "unzips and 2 multiply chains",
+     "what": "also consuming the previous result",
+     "value": 2
+    },
+    {
+     "as_printed": "21",
+     "unit": "stalls per block",
+     "what": "in v1",
+     "value": 21
+    },
+    {
+     "as_printed": "1.43",
+     "unit": "ms",
+     "what": "v1",
+     "value": 1.43
+    },
+    {
+     "as_printed": "123",
+     "unit": "cycles/block",
+     "what": "v1",
+     "value": 123
+    },
+    {
+     "as_printed": "1.90",
+     "unit": "cycles/instruction",
+     "what": "v1",
+     "value": 1.9
+    },
+    {
+     "as_printed": "62",
+     "unit": "instructions",
+     "what": "v2",
+     "value": 62
+    },
+    {
+     "as_printed": "1.06",
+     "unit": "ms",
+     "what": "v2",
+     "value": 1.06
+    },
+    {
+     "as_printed": "86",
+     "unit": "cycles/block",
+     "what": "v2",
+     "value": 86
+    },
+    {
+     "as_printed": "1.39",
+     "unit": "cycles/instruction",
+     "what": "v2",
+     "value": 1.39
+    },
+    {
+     "as_printed": "26",
+     "unit": "percent",
+     "what": "the saving",
+     "value": 26
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 553,
+     "line_end": 565,
+     "quote": "TRM表1.7-2が各命令の use / def ステージを定めています。関係する値:\n\n| 命令 | use | def |\n| --- | --- | --- |\n| `EE.VLD.128.IP` / `EE.VLDBC.16.IP` / `EE.LDXQ.32` / `EE.VLD.L.64.IP` | 1 | **2** |\n| `EE.VMUL.S16` / `EE.VMUL.U16` | 1 | **2** |\n| `EE.VRELU.S16` | 1 | **2** |\n| `EE.VADDS` / `EE.VSUBS` / `EE.ANDQ` / `EE.ORQ` / `EE.VUNZIP` / `EE.VMIN` / `EE.VMAX` | 1 | 1 |\n| `EE.VST.128.IP` | 1 | — |\n\n必要間隔は §1.7.1 の `D = max(SA - SB + 1, 0)`。def 2 の命令の結果を use 1 の命令が読む場合 D=2 となり、**直後に置くと1サイクル止まります**。間に独立した命令を1本挟めば止まりません。\n\nロードだけでなく **`EE.VMUL` と `EE.VRELU` も def 2** である点が見落とされがちです（esp-dlの資料は「0-1 cycle」と記載していますが不正確）。",
+     "what": "the stage table, the rule and where it is missed"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 569,
+     "line_end": 584,
+     "quote": "海面カーネルv1（64命令）は、17本の定数ブロードキャストすべて、2本のunzip、2か所の乗算チェーンが「直後に使用」パターンでした。**約21ストール/ブロック**です。\n\n対策は3つとも機械的です:\n\n1. **定数を複数レジスタでダブルバッファする**。q2/q6/q7 の3本を回し、使用の2〜3命令前にロードする。\n2. **索引ロードの書き込み先を交互にする**。2つの表を A→B→A→B と交互に発行すれば、最後のロードとunzipの間が自然に空く。\n3. **乗算の結果をすぐ足さない**。独立した別チャネルの計算を挟む。\n\n結果（海面、出力はビット一致のまま）:\n\n| | 命令数 | loop | サイクル/ブロック | サイクル/命令 |\n| --- | --- | --- | --- | --- |\n| v1 | 64 | 1.43ms | 123 | 1.90 |\n| v2 | 62 | **1.06ms** | **86** | 1.39 |\n\n**26%の短縮が、演算を1つも変えずに得られました。** 新しくカーネルを書くときは最初からこの順序で書くべきです。",
+     "what": "what v1 did wrong and what v2 measured"
+    }
+   ],
+   "linked_entries": [
+    {
+     "file": "data/pie_pipeline.json",
+     "locate": {
+      "list": "instructions",
+      "field": "instruction",
+      "value": "EE.VMUL.S16"
+     },
+     "what": "this repository's own Table 1.7-2 extraction puts the multiply's result at M",
+     "expect": {
+      "path": "operands_def.0.stage",
+      "equals": 2
+     }
+    },
+    {
+     "file": "data/pie_pipeline.json",
+     "locate": {
+      "list": "instructions",
+      "field": "instruction",
+      "value": "EE.VRELU.S16"
+     },
+     "expect": {
+      "path": "operands_def.0.stage",
+      "equals": 2
+     }
+    },
+    {
+     "file": "data/pie_pipeline.json",
+     "locate": {
+      "list": "instructions",
+      "field": "instruction",
+      "value": "EE.LDXQ.32"
+     },
+     "expect": {
+      "path": "operands_def.0.stage",
+      "equals": 2
+     }
+    }
+   ],
+   "how_measured": "Device measurements of v1 and v2 with the same output; the stage table is the primary source, and the two conflict entries below record where a third-party description disagrees with it.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  }
+ ],
+ "measurement_discipline": [
+  {
+   "id": "the_same_code_reads_15_percent_different_across_builds",
+   "statement": "The same code measures differently from build to build: the wave kernel moved between 1.30 ms and 1.54 ms (15%) when unrelated code was added elsewhere in the image, because function placement shifts and the 16 KB instruction cache is shared by both cores. The same swing is 15% of a 6 ms kernel, which is 0.9 ms, and a claimed improvement of 1.0 ms was inside it. To argue a few percent, compare within one binary or exceed the swing.",
+   "numbers": [
+    {
+     "as_printed": "1.30",
+     "unit": "ms",
+     "what": "one build of the wave kernel",
+     "value": 1.3
+    },
+    {
+     "as_printed": "1.54",
+     "unit": "ms",
+     "what": "another build of the same code",
+     "value": 1.54
+    },
+    {
+     "as_printed": "15",
+     "unit": "percent",
+     "what": "the build-to-build swing",
+     "value": 15
+    },
+    {
+     "as_printed": "16",
+     "unit": "KB",
+     "what": "the instruction cache, shared by both cores",
+     "value": 16
+    },
+    {
+     "as_printed": "6",
+     "unit": "ms",
+     "what": "the kernel the swing was measured on",
+     "value": 6
+    },
+    {
+     "as_printed": "0.9",
+     "unit": "ms",
+     "what": "15% of that kernel",
+     "value": 0.9
+    },
+    {
+     "as_printed": "1.0",
+     "unit": "ms",
+     "what": "a claimed improvement that was inside the noise",
+     "value": 1.0
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 712,
+     "line_end": 712,
+     "quote": "**ビルドが変われば同じコードの実測も変わります。** 波のカーネルは、他の場所にコードを足しただけのビルドで 1.30ms と 1.54ms を行き来しました（15%）。関数の配置がずれて命令キャッシュ（16KB、両コア共有）の当たり方が変わるためです。**数%の差を主張するには、同じバイナリ内での比較にするか、この揺れを超える必要があります。**",
+     "what": "the build-to-build swing and what it takes to claim a few percent"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 349,
+     "line_end": 349,
+     "quote": "さらに悪いのは、それを作らせた 1.0 ms のほうです。あれは**群れの無いビルドと有るビルドを比べた値**でした。CLAUDE.md が言うとおり同じカーネルは i-cache のアラインメントでビルド間 15% 動き、6 ms の 15% は 0.9 ms。**1.0 ms は自分のノイズの中に入っていた**のです。",
+     "what": "the same swing stated as a kernel size"
+    }
+   ],
+   "how_measured": "The same kernel compiled into different images on the device.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "prove_the_builds_you_compare_came_from_one_tree",
+   "statement": "In a shared tree, prove the builds you compare came from the same source: make the builds back to back and ask whether the tree was touched inside that window (a find over *.c, *.h and CMakeLists.txt newer than the start time). On 2026-09-09 another session rewrote main.c, ui/shell.c and CMakeLists.txt during the 30 minutes in which four builds (A/B/C/D) were made, so D came from the old source while A and C came from the new, noticed only because A's size moved from 2,324,480 to 2,329,616. A build you did not change whose size moved is not your tree: rebuild all four and pass them out only after find returns nothing, which takes a window of 4 minutes.",
+   "numbers": [
+    {
+     "as_printed": "2026-09-09",
+     "unit": "date",
+     "what": "when the shared-tree incident happened"
+    },
+    {
+     "as_printed": "A/B/C/D",
+     "unit": "builds",
+     "what": "the four built in that window"
+    },
+    {
+     "as_printed": "4",
+     "unit": "builds",
+     "what": "made back to back",
+     "value": 4
+    },
+    {
+     "as_printed": "30",
+     "unit": "minutes",
+     "what": "the window they were built in",
+     "value": 30
+    },
+    {
+     "as_printed": "3",
+     "unit": "files",
+     "what": "rewritten by another session during it",
+     "value": 3
+    },
+    {
+     "as_printed": "2,324,480",
+     "unit": "bytes",
+     "what": "build A's size before",
+     "value": 2324480
+    },
+    {
+     "as_printed": "2,329,616",
+     "unit": "bytes",
+     "what": "build A's size after",
+     "value": 2329616
+    },
+    {
+     "as_printed": "4",
+     "unit": "minutes",
+     "what": "the window a clean rebuild needs",
+     "value": 4
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 714,
+     "line_end": 720,
+     "quote": "**共有ツリーでは、比較する複数のビルドが同じソースから出たことを確認してください。** これは疑いではなく検査で、1 コマンドです — 4 本のビルドを連続で回し、その窓の中でソースが触られていないかを後から聞きます:\n\n```\nfind main components apps -type f \\( -name '*.c' -o -name '*.h' -o -name CMakeLists.txt \\) -newermt \"<開始時刻>\"\n```\n\n2026-09-09、A/B/C/D の 4 本を作っている 30 分のあいだに別セッションが `main/main.c` と `main/ui/shell.c` と `main/CMakeLists.txt` を書き替えていました。**4 本のうち D だけが旧ソース、A と C が新ソース**で、気づいたのは A のサイズが 2,324,480 から 2,329,616 へ動いたからです。**変更を入れていないビルドのサイズが動いたら、それは自分のツリーではありません。** 4 本まとめて焼き直して、上の `find` が空を返してから渡すこと。窓は 4 分で済みます。",
+     "what": "the check command and the incident it would have caught"
+    }
+   ],
+   "how_measured": "The check is a find over mtimes; the incident is what it did not catch in time.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "suspect_the_variables_you_did_not_mean_to_change",
+   "statement": "In a shared tree, suspect the variables you did not mean to change: three wrong conclusions in one day came from builds that had picked up another session's uncommitted changes, one of them a physically impossible claim that making the instruction cache 32 KB had made a transfer 40% faster, whose real cause was an SPI clock change. Logging the configuration you are measuring at startup is the cheap defence.",
+   "numbers": [
+    {
+     "as_printed": "3",
+     "unit": "conclusions",
+     "what": "wrong, in one day",
+     "value": 3
+    },
+    {
+     "as_printed": "32",
+     "unit": "KB",
+     "what": "the instruction cache in the impossible claim",
+     "value": 32
+    },
+    {
+     "as_printed": "40",
+     "unit": "percent",
+     "what": "the invented speedup",
+     "value": 40
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 722,
+     "line_end": 722,
+     "quote": "**共有ツリーでは「自分が変えたつもりのない変数」を疑ってください。** 複数のセッションが同じ作業ツリーを使っていた日、他人の未コミット変更を拾ったビルドで3回誤った結論を出しました。うち1回は「命令キャッシュを32KBにしたら転送が40%速くなった」という物理的にありえない数字で、正体は別セッションが入れたSPIクロックの変更でした。**測定対象の設定値を起動時にログへ出す**のが安い対策です（`board.c` が `LCD SPI %d Hz` を出しているのはこのため）。",
+     "what": "the wrong conclusions and the defence"
+    }
+   ],
+   "how_measured": "A shared working tree; the defence is to put the configuration in the boot log.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "the_measurement_script_can_change_what_it_measures",
+   "statement": "Check whether the measurement script changes what it measures: jsperf.py pressed Enter every 0.2 s to force redraws, so a sound effect played throughout, and one effect's synthesis used 25.6 ms of CPU (43% of a 59.4 ms sound) on audio_task at priority 7, which IDF pins to the core that first used the FPU, time-sharing with the drawing task on core 0. The document marks the resulting numbers as tens of percent too high (a 3 to 4 tenths inflation), keeping the direction of a v1/v2 comparison but not the absolute values; generating the waveform once at boot fixed it, after which the run at 80 MHz reads turn 1.62 / render 7.92 / send 7.67. Earlier in the same section, the first 'pixels 18.6 ms' was loop 14.2 plus HUD 3.9 plus preparation 0.9, and the JS app's PIE kernel share was about 4 tenths with or without the sound (9.52/3.74 and 8.1/3.2).",
+   "numbers": [
+    {
+     "as_printed": "0.2",
+     "unit": "seconds",
+     "what": "how often Enter was pressed",
+     "value": 0.2
+    },
+    {
+     "as_printed": "25.6",
+     "unit": "ms",
+     "what": "CPU used to synthesise one sound effect",
+     "value": 25.6
+    },
+    {
+     "as_printed": "43",
+     "unit": "percent",
+     "what": "of the sound's length",
+     "value": 43
+    },
+    {
+     "as_printed": "59.4",
+     "unit": "ms",
+     "what": "the sound's length",
+     "value": 59.4
+    },
+    {
+     "as_printed": "7",
+     "unit": "priority",
+     "what": "audio_task's priority",
+     "value": 7
+    },
+    {
+     "as_printed": "3",
+     "unit": "tenths",
+     "what": "the inflation's low end",
+     "value": 3
+    },
+    {
+     "as_printed": "4",
+     "unit": "tenths",
+     "what": "the inflation's high end",
+     "value": 4
+    },
+    {
+     "as_printed": "80",
+     "unit": "MHz",
+     "what": "the clock of the corrected run",
+     "value": 80
+    },
+    {
+     "as_printed": "1.62",
+     "unit": "ms",
+     "what": "turn, corrected",
+     "value": 1.62
+    },
+    {
+     "as_printed": "7.92",
+     "unit": "ms",
+     "what": "render, corrected",
+     "value": 7.92
+    },
+    {
+     "as_printed": "7.67",
+     "unit": "ms",
+     "what": "send, corrected",
+     "value": 7.67
+    },
+    {
+     "as_printed": "18.6",
+     "unit": "ms",
+     "what": "the first, composite pixels figure",
+     "value": 18.6
+    },
+    {
+     "as_printed": "14.2",
+     "unit": "ms",
+     "what": "loop inside it",
+     "value": 14.2
+    },
+    {
+     "as_printed": "3.9",
+     "unit": "ms",
+     "what": "HUD inside it",
+     "value": 3.9
+    },
+    {
+     "as_printed": "0.9",
+     "unit": "ms",
+     "what": "preparation inside it",
+     "value": 0.9
+    },
+    {
+     "as_printed": "9.52",
+     "unit": "ms",
+     "what": "render_ms with sound",
+     "value": 9.52
+    },
+    {
+     "as_printed": "3.74",
+     "unit": "ms",
+     "what": "kernel_ms with sound",
+     "value": 3.74
+    },
+    {
+     "as_printed": "8.1",
+     "unit": "ms",
+     "what": "render_ms without sound",
+     "value": 8.1
+    },
+    {
+     "as_printed": "3.2",
+     "unit": "ms",
+     "what": "kernel_ms without sound",
+     "value": 3.2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 692,
+     "line_end": 704,
+     "quote": "JSアプリ（組み込みHello World）の内訳。`kernel_ms` はPIEカーネルが自分で数えたサイクルです:\n\n```\nPAINT render_ms=9.52 kernel_ms=3.74 send_ms=21.9 accel=53 software=2\n```\n\n> **この行の数値は過大です。** 計測に使った `jsperf.py` は0.2秒ごとにEnterを押して再描画を促すので、**その間ずっと効果音が鳴っていました**。\n>\n> 原因は判明しています。効果音1回の合成に **25.6msのCPU** を使っていました（音の長さ59.4msの43%）。`audio_task` は優先度7で、しかもIDFが「FPUを最初に使ったコア」にタスクを自動ピン留めするため、描画タスクと同じcore 0に張り付いてCPUを時分割していました。波形を起動時に一度だけ生成する方式（`bf82769`）で解消しています。\n>\n> **v1とv2の比較は同じ条件で取ったので方向は保たれます**が、絶対値は数割高いものとして読んでください。修正後・80MHzでの実測は `turn 1.62 / render 7.92 / send 7.67` です。\n\n**render_ms のうちPIEカーネルは4割弱で、残りはRust側のマスク生成**（`composite_mask` のper-pixelループ）です。アクセラレータの差し込み口の外なので、PIEでJSアプリをこれ以上速くする余地は小さいという結論になります。この比率自体は音の有無で変わりません（9.52/3.74 と 8.1/3.2 はどちらも約4割）。",
+     "what": "the sound-effect contamination and the corrected figures"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 708,
+     "line_end": 710,
+     "quote": "最初に得た「pixels 18.6ms」という数字は、**ループ(14.2)・HUD(3.9)・準備(0.9)を混ぜたもの**でした。分割した瞬間に優先順位が変わりました。カーネルを書く前に、まず**削ろうとしている部分だけを切り出して測る**べきです。\n\n**計測スクリプト自身が測定対象を変えていないか**も確認してください。上のJSアプリの数値は、再描画を促すために押していたEnterが効果音を鳴らし、それが3〜4割の水増しになっていました。**キー入力で画面を動かす計測は、その入力の副作用ごと測っています。**",
+     "what": "the composite figure and the rule about inputs"
+    }
+   ],
+   "how_measured": "Two runs of the same application, one of which pressed keys; the sound synthesis cost was measured separately.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "a_faster_kernel_does_not_always_move_the_frame_rate",
+   "statement": "A faster kernel does not always move the frame rate: on the home screen send=15.4 ms dominates, so taking the ocean loop from 1.43 ms to 1.06 ms left fps at 30.3; what the work bought was in the JS app's blend, where render_ms is the frame's main term.",
+   "numbers": [
+    {
+     "as_printed": "15.4",
+     "unit": "ms",
+     "what": "the dominating send term",
+     "value": 15.4
+    },
+    {
+     "as_printed": "1.43",
+     "unit": "ms",
+     "what": "the ocean loop before",
+     "value": 1.43
+    },
+    {
+     "as_printed": "1.06",
+     "unit": "ms",
+     "what": "the ocean loop after",
+     "value": 1.06
+    },
+    {
+     "as_printed": "30.3",
+     "unit": "fps",
+     "what": "unchanged",
+     "value": 30.3
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 724,
+     "line_end": 724,
+     "quote": "同じ理由で、**描画カーネルの高速化がフレームレートに効くとは限りません**。ホーム画面では `send=15.4ms` が支配的で、海面の `loop` を1.43msから1.06msにしてもfpsは30.3のまま動きません。効いたのはJSアプリのblendだけです（`render_ms` がフレーム時間の主要項だったため）。",
+     "what": "the dominant term and the unchanged frame rate"
+    }
+   ],
+   "how_measured": "Frame-level measurement on the device before and after the kernel change.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "optimisations_that_slowed_down_or_bought_nothing",
+   "statement": "Two recorded attempts to make things faster that did not: a version of the byte swap processing 32 bits at a time instead of 16 made the transfer worse, 16.5 ms to 24.2 ms, because board.c is built with the project's default -Os and the 4-byte memcpy stayed a function call; and replacing divisions with bit shifts or reciprocal multiplies produced no measurable difference, because this core has a hardware divider, and was reverted.",
+   "numbers": [
+    {
+     "as_printed": "32",
+     "unit": "bits",
+     "what": "the wide byte swap that was slower",
+     "value": 32
+    },
+    {
+     "as_printed": "16",
+     "unit": "bits",
+     "what": "the granularity it replaced",
+     "value": 16
+    },
+    {
+     "as_printed": "16.5",
+     "unit": "ms",
+     "what": "the transfer before",
+     "value": 16.5
+    },
+    {
+     "as_printed": "24.2",
+     "unit": "ms",
+     "what": "the transfer after",
+     "value": 24.2
+    },
+    {
+     "as_printed": "4",
+     "unit": "bytes",
+     "what": "the memcpy that stayed a call",
+     "value": 4
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 728,
+     "line_end": 730,
+     "quote": "バイトスワップを16bitずつではなく32bitずつ処理する版を書いたところ、転送が**16.5ms → 24.2ms に悪化**しました。`board.c` はプロジェクト既定の `-Os` でビルドされており、4バイトの `memcpy` が関数呼び出しのまま残っていたためです。\n\n最適化の前後は必ず実測してください。「明らかに速いはず」の変更が逆効果になることは実際に起きます。同様に、除算をビットシフトや逆数乗算に置き換える試みも**測定可能な差が出ませんでした**。このコアにはハードウェア除算器があるためで、これは元に戻しています。",
+     "what": "the two attempts and why they failed"
+    }
+   ],
+   "how_measured": "Device measurements before and after each attempt.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "instruction_counts_stop_predicting_time_under_register_pressure",
+   "statement": "Instructions stop predicting time when the register file overflows: rewriting bell_hit's setup was predicted at 0.2 to 0.4 ms from the instruction count and measured about 2.4 ms (1,580 to 1,163 cycles per visit), a 14x underestimate. The disassembly explains it: ray_row has 134 floating-point operations against 45 float stores and 89 float loads, because the band loop's live set exceeds 16 float registers, so removing one operation there also removes its spill/fill round trip. shade behaved the same way, losing 10 calls for 14% fewer instructions and 39% less time. Diagnosis: count ssi/lsi in objdump and compare with the arithmetic instructions in the .s output; near 1:1 means the function is spilling and an instruction count is only a lower bound.",
+   "numbers": [
+    {
+     "as_printed": "0.2",
+     "unit": "ms",
+     "what": "prediction, low end",
+     "value": 0.2
+    },
+    {
+     "as_printed": "0.4",
+     "unit": "ms",
+     "what": "prediction, high end",
+     "value": 0.4
+    },
+    {
+     "as_printed": "2.4",
+     "unit": "ms",
+     "what": "measured",
+     "value": 2.4
+    },
+    {
+     "as_printed": "1,580",
+     "unit": "cycles/visit",
+     "what": "before",
+     "value": 1580
+    },
+    {
+     "as_printed": "1,163",
+     "unit": "cycles/visit",
+     "what": "after",
+     "value": 1163
+    },
+    {
+     "as_printed": "14",
+     "unit": "x",
+     "what": "the underestimate",
+     "value": 14
+    },
+    {
+     "as_printed": "134",
+     "unit": "floating-point operations",
+     "what": "in ray_row",
+     "value": 134
+    },
+    {
+     "as_printed": "45",
+     "unit": "float stores",
+     "what": "in ray_row",
+     "value": 45
+    },
+    {
+     "as_printed": "89",
+     "unit": "float loads",
+     "what": "in ray_row",
+     "value": 89
+    },
+    {
+     "as_printed": "16",
+     "unit": "float registers",
+     "what": "the live set exceeds this",
+     "value": 16
+    },
+    {
+     "as_printed": "10",
+     "unit": "calls removed",
+     "what": "from shade",
+     "value": 10
+    },
+    {
+     "as_printed": "14",
+     "unit": "percent",
+     "what": "fewer instructions in shade",
+     "value": 14
+    },
+    {
+     "as_printed": "39",
+     "unit": "percent",
+     "what": "less time in shade",
+     "value": 39
+    },
+    {
+     "as_printed": "1",
+     "unit": "ratio",
+     "what": "ssi/lsi against arithmetic instructions, near 1:1",
+     "value": 1
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 358,
+     "line_end": 373,
+     "quote": "### 命令数はサイクルを予測しない — レジスタが溢れている領域では\n\n同じ日、逆向きの誤りもありました。`bell_hit` の setup を\n\n```\no[j] = dot(origin, axis[j]) * inv_radius[j]     9 乗算 + 6 加算\no[j] = dx * oax[j] + ob[j]                      3 乗算 + 3 加算\n```\n\nに書き換えたとき、**命令数から 0.2〜0.4 ms と予測して、実測は約 2.4 ms**（1,580 → 1,163 cy/visit）でした。14 倍の過小評価です。\n\n理由は逆アセンブルに出ています。`ray_row` は浮動小数演算 134 に対して **float ストア 45・ロード 89**。バンドループの生存集合が 16 本の float レジスタを超えていて、常に溢れています。**そこで演算を 1 つ減らすと、その演算とスピル/フィルの往復が一緒に消えます。** 命令数の比ではなく、圧力の比で効きます。\n\n`shade` も同じでした: 呼び出しを 10 本消して**命令数 14% 減、時間 39% 減**。§3.7 の soft-float ABI の話と同じ機構です。\n\n**見分け方**: `objdump` で `ssi`/`lsi`（float のストア・ロード）を数え、`.s` で終わる演算命令と比べます。1:1 に近ければその関数は溢れていて、命令数からの見積もりは下限にしかなりません。",
+     "what": "the 14x underestimate, the register pressure behind it and the diagnosis"
+    }
+   ],
+   "how_measured": "Device measurements before and after, with objdump counts of float stores/loads.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  },
+  {
+   "id": "a_switch_that_reverts_half_of_a_change_is_worse_than_no_switch",
+   "statement": "FLOWER_NO_BAND_INVA at first removed 6 divisions from bell_hit while leaving the 6 divisions in petal_reciprocals in both builds: the pixels matched either way, so the picture proved nothing, and the only symptom was that petals= did not move across the switch, which was read as a failed prediction. A switch that reverts half a change is worse than none, because it still produces a number and the number looks right. Name one instrument the switch must move, and confirm the switch compiles: of 4 switches written, 3 compiled, and the one that did not was the one that was needed (with rejection disabled, bell_reject is unused and -Werror stops the build).",
+   "numbers": [
+    {
+     "as_printed": "6",
+     "unit": "divisions removed",
+     "what": "from bell_hit",
+     "value": 6
+    },
+    {
+     "as_printed": "4",
+     "unit": "switches",
+     "what": "written",
+     "value": 4
+    },
+    {
+     "as_printed": "3",
+     "unit": "switches",
+     "what": "that compiled",
+     "value": 3
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 277,
+     "line_end": 281,
+     "quote": "### スイッチは変更の全部を戻すこと\n\n`FLOWER_NO_BAND_INVA` は最初、`bell_hit` から 6 本の除算を外しながら、それを肩代わりする `petal_reciprocals` の 6 本を**両方のビルドに残していました**。画素はどちらでも一致するので絵の証明は何も言わず、**`petals=` がスイッチをまたいで動かない**という形でだけ出ます。私はその不動を「予測が外れた」として報告される側に置きました。\n\n**半分だけ戻すスイッチは、スイッチが無いより悪い。** 無ければ数字は出ませんが、半分なら数字は出て、しかも正しく見えます。§3.8 の「スイッチは存在するだけでなくコンパイルが通ることを確認すること」に、もう一項: **切ったビルドで、そのスイッチが変更の全部を戻すことを確認すること。** 確認の仕方は、そのスイッチが動かすはずの計器を 1 つ名指ししておいて、動かなければスイッチを疑うことです。",
+     "what": "the half-reverted switch and the rule"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 384,
+     "line_end": 392,
+     "quote": "\n対策は 1 つだけです。**すべての最適化に、それを切るコンパイル時スイッチを付ける。** 両方焼いて引き算できます。\n\n```\nFLOWER_DIV_EXACT   FLOWER_NO_BAND_HOIST   FLOWER_NO_SPAN_AFFINE\nFLOWER_NO_BELL_REJECT   FLOWER_BELL_CHECK   GARDEN_NO_CANOPY_RECIP\n```\n\nそして**存在するだけでなく、コンパイルが通ることを確認すること。** 4 つ作って 3 つしか通らず、通らなかったのは、いちばん必要だった 1 つでした（棄却が無効だと `bell_reject` が未使用になり `-Werror` が止める）。",
+     "what": "the switches that did not compile and the one-command remedy"
+    }
+   ],
+   "how_measured": "Two builds differing in one switch; the failed switch was found by compiling it.",
+   "provenance_kind": "measured_on_hardware",
+   "estimate": false
+  }
+ ],
+ "disagreements": [
+  {
+   "id": "integer_division_16_vs_32_within_one_document",
+   "statement": "The same document prices the hardware integer divider twice. §3.6 writes that it is one instruction but about 32 cycles, and counts 28 divisions left in a garden row's scaffold (garden_corner 12, reciprocals 3, run driver 13) at 900 cycles per row and 0.5 ms per frame. §3.7 gives about 16 cycles from a back-calculation on commit 0ecf16e and says the author had assumed 32 and was off by a factor of 2. The later figure comes with a stated derivation; the earlier one is named in the later text as a wrong assumption. §3.6's advice to count divisions at 32 cycles each is therefore pessimistic by about half.",
+   "numbers": [
+    {
+     "as_printed": "32",
+     "unit": "cycles",
+     "what": "the figure §3.6 states",
+     "value": 32
+    },
+    {
+     "as_printed": "28",
+     "unit": "divisions",
+     "what": "left in the garden row scaffold",
+     "value": 28
+    },
+    {
+     "as_printed": "12",
+     "unit": "divisions",
+     "what": "in garden_corner",
+     "value": 12
+    },
+    {
+     "as_printed": "3",
+     "unit": "divisions",
+     "what": "reciprocals",
+     "value": 3
+    },
+    {
+     "as_printed": "13",
+     "unit": "divisions",
+     "what": "in the run driver",
+     "value": 13
+    },
+    {
+     "as_printed": "900",
+     "unit": "cycles/row",
+     "what": "their cost at 32 cycles each",
+     "value": 900
+    },
+    {
+     "as_printed": "0.5",
+     "unit": "ms/frame",
+     "what": "the same, per frame",
+     "value": 0.5
+    },
+    {
+     "as_printed": "16",
+     "unit": "cycles",
+     "what": "the figure §3.7 gives",
+     "value": 16
+    },
+    {
+     "as_printed": "2",
+     "unit": "factor",
+     "what": "how far the 32 assumption was off",
+     "value": 2
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 165,
+     "line_end": 165,
+     "quote": "もう一つ、スカラー側で見落としやすいもの: **このコアのハードウェア除算は 1 命令ですが約 32 サイクルです。** 庭は画素ループから除算を全廃したのに、行の足場に 28 本（`garden_corner` 12、逆数 3、run ドライバ 13）残っていました。1 行 900 サイクル、1 フレーム 0.5 ms です。ループから追い出した除算が、ループの外に溜まっていないか見ること。",
+     "what": "the 32-cycle statement and what it was used to count"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 261,
+     "line_end": 263,
+     "quote": "**整数の除算のほうは呼び出しではなく、ハードウェア除算器で約 16 サイクル**です。これは直接の計測ではなく、`0ecf16e` からの逆算です: あのコミットは 2 つの厳密な置き換えだけを含み、消えた除算の本数が両方とも数えてあります（林冠 10,454 + `garden_corner` 1,620 = 12,074 本/フレーム）。実測の節約 0.82 ms = 196,800 サイクルを割って 16.3、置き換えた乗算とシフトのぶんを戻して約 18。\n\n整数側のこの数字が要ったのは、**私が 32 と仮定して 2 倍外した**からです。浮動小数側は長らく誰も測っておらず（`div=` を名乗ったカウンタは乗算を囲っていました）、上の表がその最初の実測です。",
+     "what": "the 16-cycle back-calculation and the admission"
+    }
+   ],
+   "how_measured": "Neither figure is this repository's: both are in the sibling document, the later one from a stated back-calculation and the earlier one from an assumption the later text names as wrong. The conflict is quoted, not resolved by preference.",
+   "resolution": "Use the later, derived figure for estimation and expect §3.6's stated 32 to be about twice too high; the document never reconciles the two in one place, so both are kept here rather than picking one silently.",
+   "provenance_kind": "document_conflict",
+   "estimate": false
+  },
+  {
+   "id": "the_indexed_load_row_the_prose_does_not_discuss",
+   "statement": "The indexed-load table's own numbers are not all 'free': the body is fixed at 42 instructions and the row reads 43.3 (no indexed loads), 43.2 (8), 42.9 (16, 24, 24 scattered in a 4 KB table, and 24 into the same register) and 44.0 for 24 loads alternating between two registers, while the prose under the table says the indexed load is free and does not mention that column. The 44.0 column is above every other column and above the row with no indexed loads at all.",
+   "numbers": [
+    {
+     "as_printed": "42",
+     "unit": "instructions",
+     "what": "fixed body size",
+     "value": 42
+    },
+    {
+     "as_printed": "43.3",
+     "unit": "cycles/block",
+     "what": "no indexed loads",
+     "value": 43.3
+    },
+    {
+     "as_printed": "43.2",
+     "unit": "cycles/block",
+     "what": "8 indexed loads",
+     "value": 43.2
+    },
+    {
+     "as_printed": "42.9",
+     "unit": "cycles/block",
+     "what": "16 and 24 indexed loads",
+     "value": 42.9
+    },
+    {
+     "as_printed": "44.0",
+     "unit": "cycles/block",
+     "what": "24 loads alternating between two registers",
+     "value": 44.0
+    },
+    {
+     "as_printed": "4",
+     "unit": "KB",
+     "what": "the scattered table",
+     "value": 4
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 76,
+     "line_end": 82,
+     "quote": "**融合ロードは無料です。** 42命令に固定して `EE.LDXQ.32` の本数を動かしても同じでした:\n\n| `EE.LDXQ.32` の本数（42命令中） | 0 | 8 | 16 | 24 | 24（4KB表に散在） | 24（全部同じレジスタへ） | 24（2本を交互） |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| サイクル/ブロック | 43.3 | 43.2 | 42.9 | 42.9 | 42.9 | 42.9 | 44.0 |\n\n**索引ロードも無料**で、アドレスが散っていても、同じレジスタの別レーンに連続で書いても変わりません。長らく疑っていた「1レーン書き込みがread-modify-writeになっている」説は、ここで完全に否定されました。",
+     "what": "the table row and the claim drawn from it"
+    }
+   ],
+   "how_measured": "Read off the same table's row and the prose under it: the conflict is inside one figure, not between two runs.",
+   "resolution": "Recorded, not resolved: the prose is a generalisation over a row that contains one higher column, and the document does not say whether that column is noise (the same section's other tables move by about a tenth between neighbouring points) or a real scheduling effect.",
+   "provenance_kind": "document_conflict",
+   "estimate": false
+  },
+  {
+   "id": "esp_dl_puts_the_vmul_vrelu_def_stage_at_0_1_cycle",
+   "statement": "The document's stage table puts EE.VMUL.S16, EE.VMUL.U16 and EE.VRELU.S16 at def stage 2 (M), so a result consumed by the next instruction costs 1 cycle, and it says the esp-dl material states \"0-1 cycle\" for them and that this is inaccurate; §1 says the same skill is incomplete and partly incorrect, missing EE.LDXQ.32 and getting the pipeline-stage text wrong, with TRM Table 1.7-2 as the primary source.",
+   "numbers": [
+    {
+     "as_printed": "2",
+     "unit": "stage",
+     "what": "def stage for VMUL.VRELU in Table 1.7-2",
+     "value": 2
+    },
+    {
+     "as_printed": "1",
+     "unit": "cycle",
+     "what": "the stall when consumed immediately",
+     "value": 1
+    },
+    {
+     "as_printed": "0-1",
+     "unit": "cycle",
+     "what": "what esp-dl's material says, per this document"
+    }
+   ],
+   "sources": [
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 553,
+     "line_end": 565,
+     "quote": "TRM表1.7-2が各命令の use / def ステージを定めています。関係する値:\n\n| 命令 | use | def |\n| --- | --- | --- |\n| `EE.VLD.128.IP` / `EE.VLDBC.16.IP` / `EE.LDXQ.32` / `EE.VLD.L.64.IP` | 1 | **2** |\n| `EE.VMUL.S16` / `EE.VMUL.U16` | 1 | **2** |\n| `EE.VRELU.S16` | 1 | **2** |\n| `EE.VADDS` / `EE.VSUBS` / `EE.ANDQ` / `EE.ORQ` / `EE.VUNZIP` / `EE.VMIN` / `EE.VMAX` | 1 | 1 |\n| `EE.VST.128.IP` | 1 | — |\n\n必要間隔は §1.7.1 の `D = max(SA - SB + 1, 0)`。def 2 の命令の結果を use 1 の命令が読む場合 D=2 となり、**直後に置くと1サイクル止まります**。間に独立した命令を1本挟めば止まりません。\n\nロードだけでなく **`EE.VMUL` と `EE.VRELU` も def 2** である点が見落とされがちです（esp-dlの資料は「0-1 cycle」と記載していますが不正確）。",
+     "what": "the table, the rule and the esp-dl note"
+    },
+    {
+     "file": "docs/pie-simd.md",
+     "line_start": 23,
+     "line_end": 23,
+     "quote": "参考資料として[esp-dlのPIEスキル](https://github.com/espressif/esp-dl/tree/master/tools/agents/skills/esp32s3-pie-simd)がありますが、**不完全かつ一部不正確**です。`EE.LDXQ.32` の記載が無く、パイプライン段の記述（§4）も誤っています。TRMの表1.7-2が一次情報です。",
+     "what": "the assessment of the esp-dl skill in §1"
+    }
+   ],
+   "how_measured": "A third-party description (quoted by the sibling document) against two independent things on this side: TRM Table 1.7-2 as extracted here, and this repository's own device anchor for the same interlock.",
+   "linked_entries": [
+    {
+     "file": "data/pie_pipeline.json",
+     "locate": {
+      "list": "instructions",
+      "field": "instruction",
+      "value": "EE.VMUL.S16"
+     },
+     "what": "this repository's extraction of Table 1.7-2: the multiply's result is defined at M",
+     "expect": {
+      "path": "operands_def.0.stage",
+      "equals": 2
+     }
+    },
+    {
+     "file": "data/pie_pipeline.json",
+     "locate": {
+      "list": "instructions",
+      "field": "instruction",
+      "value": "EE.VMUL.U16"
+     },
+     "expect": {
+      "path": "operands_def.0.stage",
+      "equals": 2
+     }
+    },
+    {
+     "file": "data/pie_pipeline.json",
+     "locate": {
+      "list": "instructions",
+      "field": "instruction",
+      "value": "EE.VRELU.S16"
+     },
+     "expect": {
+      "path": "operands_def.0.stage",
+      "equals": 2
+     }
+    },
+    {
+     "file": "data/pie_timing_measured.json",
+     "locate": {
+      "list": "anchors",
+      "field": "case",
+      "value": "anchor_qs_M_to_E"
+     },
+     "what": "this repository's own device run measured the interlock the 0-1 cycle description denies",
+     "expect": {
+      "path": "measured_stall",
+      "equals": 1.0
+     }
+    },
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "open_after_this_run",
+      "field": null,
+      "value": "VZIP"
+     },
+     "what": "the only other place this repository mentions esp-dl's skill"
+    },
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "findings",
+      "field": "id",
+      "value": "vmul_s16_is_arithmetic_and_vmul_u16_is_logical"
+     },
+     "expect": {
+      "path": "claim",
+      "contains": "sign-extended"
+     },
+     "what": "what that file does say about EE.VMUL: this repository measured the S16/U16 shift pair itself -- semantics, not stage cost"
+    },
+    {
+     "file": "data/pie_examples_measured.json",
+     "locate": {
+      "list": "findings",
+      "field": "id",
+      "value": "vmul_truncates_it_does_not_saturate"
+     },
+     "what": "and that a vector multiply keeps the low 16 bits instead of saturating"
+    }
+   ],
+   "issue_claim_check": {
+    "claim": "Issue #2 says esp-dl's '0-1 cycle' line for EE.VMUL/EE.VRELU is already mentioned in data/pie_examples_measured.json and asks for a link to it.",
+    "result": "Not present. The file was searched for '0-1', '0 - 1' and the en dash form: 0 matches. It mentions esp-dl twice, both in open_after_this_run (that esp-dl's skill lists the EE.VZIP/EE.VZUNZIP and EE.MOVI.32.A/Q mnemonics without lane semantics, and that EE.BITREV's FFT_BIT_WIDTH register exists per that skill), neither about a def stage.",
+    "what_this_repository_has_instead": [
+     "data/pie_pipeline.json: EE.VMUL.S16, EE.VMUL.U16 and EE.VRELU.S16 carry def stage 2 from TRM Table 1.7-2 (source pages 70, 70 and 73).",
+     "data/pie_timing_measured.json: the anchor anchor_qs_M_to_E measured 1.0 stall for EE.VRELU.S16 -> EE.MOV.S16.QACC on real silicon, which is this repository's own refutation of the 0-1 cycle description.",
+     "data/pie_examples_measured.json: what it actually holds about these two instructions is their semantics -- vmul_s16_is_arithmetic_and_vmul_u16_is_logical (measured on this repository's own device) and vmul_truncates_it_does_not_saturate -- not a def stage, so it is linked here but is not the place the claim lives."
+    ],
+    "search": {
+     "file": "data/pie_examples_measured.json",
+     "patterns": [
+      "0-1",
+      "0 - 1",
+      "0–1"
+     ],
+     "matches": 0
+    },
+    "verifier": "tools/verify_measured_costs.py re-runs this search and fails if the count changes."
+   },
+   "resolution": "The sibling document agrees with this repository's primary source and with this repository's own measurement, and disagrees with esp-dl's description; the conflict is kept as a conflict, with the third-party claim quoted and the two sources that refute it named.",
+   "provenance_kind": "document_conflict",
+   "estimate": false
+  }
+ ]
+}

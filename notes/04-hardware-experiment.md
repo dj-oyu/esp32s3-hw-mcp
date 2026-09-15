@@ -67,8 +67,11 @@ C では「2命令を1サイクル差で並べる」ことを保証できない�
 
 ```
 m_<case>_d<d>_dep    : 生産命令 ; (d-1)個の独立フィラー ; 消費命令(生産先を読む)
-m_<case>_d<d>_indep  : 同じ命令数・同じ生産命令 ; 消費命令は無関係なレジスタを読む
+m_<case>_d<d>_indep  : 同じ命令数 ; (d-1)個の独立フィラー ; 消費命令(無関係な先を読む)
 ```
+
+（indep の生産側は既定で dep と同じ。`producer_indep` を書いたケースだけ、生産側のアキュムレータを
+差し替える — QACC のように「依存しない消費者」が存在しない対のため。issue #1 の節を参照。）
 
 各関数は `<iterations>` 回ループし、`rsr.ccount` の差を返す。1反復あたりのインターロックは
 
@@ -138,6 +141,74 @@ PORT=/dev/ttyACM0 bash tools/restore_flash.sh /workspace/backups/cardputer-s3-<�
 実測（この端末）: `bootloader @0x0 digest True / app @0x10000 digest True`、アプリは
 `cardputer_pocketjs 1-55-g97bd403-dirty`（ESP-IDF v6.0.1、2026-09-14 13:52:53 ビルド）で、
 `skk_dict` / `jp_font` / `storage` のデータ区間を持つ。**この退避は上書き前の唯一のコピー**。
+
+## issue #1 の結果: QACC_H/QACC_L の def→use（2026-09-15 実測）
+
+対象: `EE.VMULAS.U16.QACC` / `EE.VMULAS.S16.QACC` の直後に QACC を読む命令を置いたときのストール。
+予測（TRM Table 1.7-2 の QACC_H/L def 2(M) / use 1(E) と 1.7.1 の `D = max(SA - SB + 1, 0)`）は **D=2
+= 1サイクル**。測定はこの予測に対して **当たり／外れが分かれた**。
+
+| 消費者 | 予測 | 実測（発行間隔1、2000反復あたり） | D 予測→実測 | 判定 |
+|---|---|---|---|---|
+| `EE.SRCMB.S16.QACC`（U16 の生産者） | 1 | **0** | 2 → 1 | **外れ** |
+| `EE.SRCMB.S16.QACC`（S16 の生産者） | 1 | **0** | 2 → 1 | **外れ** |
+| `EE.VMULAS.U16.QACC`（対照、def/use とも段2） | 0 | 0 | 1 → 1 | 当たり |
+| `EE.ST.QACC_L.L.128.IP`（QACC_L を読む第2の消費者） | 1 | **1** | 2 → 2 | 当たり |
+
+つまり「QACC_H/QACC_L の def→use は必ず1サイクル」ではなく、**消費命令によって変わる**。同じシリコンで
+同じ生産者（`VMULAS.U16.QACC`）から、`EE.ST.QACC_L.L.128.IP` は予測どおり1サイクルを払い、
+`EE.SRCMB.S16.QACC` は何も払わない。cardputer-adv-pocketjs の 17 か所（`EE.VMULAS.*.QACC` →
+`EE.SRCMB.S16.QACC` の隣接）は、この実測の範囲では**予測された1サイクル/ブロックを失っていない**。
+
+### 測定の設計: 双子プロデューサ（`producer_indep`）
+
+`EE.SRCMB.S16.QACC` は定義上必ず QACC_H/QACC_L を読むので、この対には「依存しない消費者」が存在しない。
+そこで dep/indep の差を「消費命令のコスト差」から切り離すため、**消費者を両変種で同一に固定し、生産者の
+アキュムレータだけを変える**（`EE.VMULAS.U16.QACC` ↔ `EE.VMULAS.U16.ACCX`、命令クラスと命令数は同じ）:
+
+```
+dep   : EE.ZERO.QACC ; EE.VMULAS.U16.QACC q0,q1 ; EE.SRCMB.S16.QACC q2,a3,0
+indep : EE.ZERO.QACC ; EE.VMULAS.U16.ACCX q0,q1 ; EE.SRCMB.S16.QACC q2,a3,0
+```
+
+これが判定を決めた。既存の形（indep 側を `EE.ANDQ` にする）で同じ対を測ると **1.000 サイクル**が出るが、
+その数字はインターロックではない:
+
+- `qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep` = 1.000（既存パターン）
+- `calib_srcmb_s16_vs_andq_cost` = 1.000 ← **両変種とも QACC 依存が無い**のに 1.000
+
+後者は校正ケースで、生産者を両変種とも `EE.VMULAS.U16.ACCX` にしたもの。依存が存在しないので、この
+1.000 は `EE.SRCMB.S16.QACC` と `EE.ANDQ` の**1反復あたりのコスト差**（同じ 2000 反復で 19999 対
+17999）でしかない。よって「dep と indep で別命令を使う」従来の形は、消費命令のコスト差を定数として
+インターロックに混ぜ込む（アンカーが正しく出たのは `EE.ST.ACCX.IP` / `EE.LD.ACCX.IP` / `EE.ANDQ` の
+コストがたまたま揃っていたため）。`cases.json` では、この混入があるケースに `predict_confound` を付け、
+`tools/parse_pie_timing.py` が `predictions[].confound` としてそのまま返す。
+
+### 予測が外れた理由（**ここは仮説**、実測ではない）
+
+1. `EE.SRCMB.S16.QACC` は自分の実行のなかで QACC を読む時点が表の「use 1(E)」より遅い、または
+   QACC 用のバイパスが存在し、stage 2 の def が stage 1 の use にそのまま間に合っている。
+2. Table 1.7-2 の `EE.SRCMB.S16.QACC` の QACC 段が実際のハードウェアと合っていない（use が実質 2 なら
+   D=1 でストール0になる）。
+3. `EE.ST.QACC_L.L.128.IP` 側は表のとおりに1サイクル払うので、「段の差がストールになる」機構自体は
+   存在する。したがって 1. か 2. は「命令ごとの実装差」であって測定系の問題ではない。
+
+切り分けに必要な追加測定（未実施）: `EE.SRCMB.S16.QACC` の直後に別の QACC 消費者を置いた場合、
+`EE.MOV.S16.QACC`（QACC を書く側）との WAW、`EE.SRCMB.S8.QACC` 版、複数反復での重畳。
+
+### この回の証跡と限界
+
+- ログ `pie-timing-20260915T011819Z.log`（910行、`END` 到達）。flash 直後にアプリ区間を読み戻し、
+  ビルドした `pie_timing.bin`（sha256 `be4f5908…`）と一致を確認済み。
+- アンカー5件は全部一致（ノイズ床 最大 0.113 サイクル、ゲートは 0.5）。`valid: true`。
+- 限界1: レポートの先頭（`ENV` ブロック）が両回とも取得側で落ちた。`data/pie_timing_measured.json` の
+  `provenance.environment` は空。IRAM 実行の確認は `xtensa-esp32s3-elf-nm` で `m_*` が 0x4037xxxx に
+  あること（ホスト側の静的確認）と、上記の読み戻し一致で代用している。
+- 限界2: 1チップ・1周波数（240MHz）・1つのループ形（1反復＝7命令、ループ先頭で `as` を差し直す）での
+  測定。`alone` 系はどの命令でも 7.0 サイクル/反復で、1命令あたりのコストは分解できない（校正ケースが
+  その代わり）。
+- 限界3: `qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep` の 1.000 は上記のとおり混入値。ケースは残して
+  ある（従来パターンの落とし穴を記録するため）が、数字をインターロックとして引用してはいけない。
 
 ## 結果の扱い（一次情報との区別）
 

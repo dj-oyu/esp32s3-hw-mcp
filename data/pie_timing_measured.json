@@ -2,8 +2,9 @@
  "provenance": {
   "kind": "measured_on_hardware",
   "note": "These values come from a run on silicon, not from a document. Every entry keeps the log line basis in `basis`, and the harness anchors are listed so a reader can see whether the method reproduced the manual's own numbers.",
-  "log": "pie-timing-20260914T171755Z.log",
-  "firmware_git_rev": "dfc4e3b",
+  "log": "pie-timing-20260915T011819Z.log",
+  "firmware_git_rev": "bd60ab5+uncommitted-qacc-cases",
+  "firmware_image_sha256": "be4f5908195e9b39eb8688b55e4d42a01e1b3f9681f88636cb759e3240719389",
   "iterations_per_measurement": 2000,
   "environment": {}
  },
@@ -23,7 +24,7 @@
    "measured_stall": 1.0,
    "ok": true,
    "why": "TRM Table 1.7-2: EE.VRELU.S16 defs qs at 2 (M), EE.MOV.S16.QACC uses qs at 1 (E)",
-   "noise_cycles": 0.0
+   "noise_cycles": 0.0435
   },
   {
    "case": "anchor_qr_E_to_E",
@@ -31,7 +32,7 @@
    "measured_stall": 0.0,
    "ok": true,
    "why": "TRM Table 1.7-2: EE.ANDQ defs qa at 1 (E); reading it in E needs no delay",
-   "noise_cycles": 0.067
+   "noise_cycles": 0.0
   },
   {
    "case": "native_load_use",
@@ -39,7 +40,7 @@
    "measured_stall": 1.0,
    "ok": true,
    "why": "calibration against the base ISA: a native load consumed by the next instruction costs 1 cycle (forwarding), which is what the harness must be able to resolve",
-   "noise_cycles": 0.0015
+   "noise_cycles": 0.0
   },
   {
    "case": "native_alu_use",
@@ -47,7 +48,7 @@
    "measured_stall": 0.0,
    "ok": true,
    "why": "calibration: back-to-back native ALU with a dependency costs nothing",
-   "noise_cycles": 0.0595
+   "noise_cycles": 0.06
   }
  ],
  "measurements": [
@@ -63,7 +64,7 @@
    "case": "anchor_accx_M_to_E",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0755,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -79,7 +80,7 @@
    "case": "anchor_qs_M_to_E",
    "distance": 1,
    "stall_cycles": 1.0,
-   "noise_cycles": 0.0,
+   "noise_cycles": 0.0435,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 15999
   },
@@ -95,7 +96,7 @@
    "case": "anchor_qs_M_to_E",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.055,
+   "noise_cycles": 0.056,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -103,7 +104,7 @@
    "case": "anchor_qr_E_to_E",
    "distance": 1,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.067,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 15999,
    "min_cycles_indep": 15999
   },
@@ -119,7 +120,7 @@
    "case": "anchor_qr_E_to_E",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.056,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -127,7 +128,7 @@
    "case": "native_load_use",
    "distance": 1,
    "stall_cycles": 1.0,
-   "noise_cycles": 0.0015,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 15999
   },
@@ -135,7 +136,7 @@
    "case": "native_load_use",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.05,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -143,7 +144,7 @@
    "case": "native_load_use",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0505,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -151,7 +152,7 @@
    "case": "native_alu_use",
    "distance": 1,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0595,
+   "noise_cycles": 0.06,
    "min_cycles_dep": 15999,
    "min_cycles_indep": 15999
   },
@@ -167,44 +168,12 @@
    "case": "LD_QR_def_stage",
    "distance": 1,
    "stall_cycles": 1.0,
-   "noise_cycles": 0.07,
+   "noise_cycles": 0.076,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 15999
   },
   {
    "case": "LD_QR_def_stage",
-   "distance": 2,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0755,
-   "min_cycles_dep": 17999,
-   "min_cycles_indep": 17999
-  },
-  {
-   "case": "LD_QR_def_stage",
-   "distance": 3,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.0605,
-   "min_cycles_dep": 19999,
-   "min_cycles_indep": 19999
-  },
-  {
-   "case": "LD_QR_def_stage",
-   "distance": 4,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.062,
-   "min_cycles_dep": 21999,
-   "min_cycles_indep": 21999
-  },
-  {
-   "case": "MV_QR_def_stage",
-   "distance": 1,
-   "stall_cycles": 0.0,
-   "noise_cycles": 0.064,
-   "min_cycles_dep": 15999,
-   "min_cycles_indep": 15999
-  },
-  {
-   "case": "MV_QR_def_stage",
    "distance": 2,
    "stall_cycles": 0.0,
    "noise_cycles": 0.0,
@@ -212,10 +181,42 @@
    "min_cycles_indep": 17999
   },
   {
+   "case": "LD_QR_def_stage",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "LD_QR_def_stage",
+   "distance": 4,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 15999,
+   "min_cycles_indep": 15999
+  },
+  {
+   "case": "MV_QR_def_stage",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.065,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
    "case": "MV_QR_def_stage",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.056,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -223,7 +224,7 @@
    "case": "MV_QR_def_stage",
    "distance": 4,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.057,
+   "noise_cycles": 0.0575,
    "min_cycles_dep": 21999,
    "min_cycles_indep": 21999
   },
@@ -231,7 +232,7 @@
    "case": "ST_QR_use_stage",
    "distance": 1,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0615,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 15999,
    "min_cycles_indep": 15999
   },
@@ -239,7 +240,7 @@
    "case": "ST_QR_use_stage",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.074,
+   "noise_cycles": 0.0745,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -247,7 +248,7 @@
    "case": "ST_QR_use_stage",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0675,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -255,7 +256,7 @@
    "case": "LD_QR_reads_as",
    "distance": 1,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.112,
+   "noise_cycles": 0.1125,
    "min_cycles_dep": 15999,
    "min_cycles_indep": 15999
   },
@@ -263,7 +264,7 @@
    "case": "LD_QR_reads_as",
    "distance": 2,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0925,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 17999
   },
@@ -271,7 +272,7 @@
    "case": "LD_QR_reads_as",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0755,
+   "noise_cycles": 0.0,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
   },
@@ -279,7 +280,7 @@
    "case": "QR_load_to_QR_op",
    "distance": 1,
    "stall_cycles": 1.0,
-   "noise_cycles": 0.0,
+   "noise_cycles": 0.0685,
    "min_cycles_dep": 17999,
    "min_cycles_indep": 15999
   },
@@ -295,9 +296,121 @@
    "case": "QR_load_to_QR_op",
    "distance": 3,
    "stall_cycles": 0.0,
-   "noise_cycles": 0.0585,
+   "noise_cycles": 0.059,
    "min_cycles_dep": 19999,
    "min_cycles_indep": 19999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_srcmb_s16",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_srcmb_s16",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0155,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_srcmb_s16",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "qacc_HL_vmulas_s16_to_srcmb_s16",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "qacc_HL_vmulas_s16_to_srcmb_s16",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0365,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "qacc_HL_vmulas_s16_to_srcmb_s16",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_vmulas_u16",
+   "distance": 1,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_vmulas_u16",
+   "distance": 2,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_vmulas_u16",
+   "distance": 3,
+   "stall_cycles": 0.0205,
+   "noise_cycles": 0.002,
+   "min_cycles_dep": 22040,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "qacc_L_vmulas_u16_to_stqacc_l",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 17999
+  },
+  {
+   "case": "qacc_L_vmulas_u16_to_stqacc_l",
+   "distance": 2,
+   "stall_cycles": -0.0295,
+   "noise_cycles": 0.0025,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 20058
+  },
+  {
+   "case": "qacc_L_vmulas_u16_to_stqacc_l",
+   "distance": 3,
+   "stall_cycles": 0.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 21999,
+   "min_cycles_indep": 21999
+  },
+  {
+   "case": "calib_srcmb_s16_vs_andq_cost",
+   "distance": 1,
+   "stall_cycles": 1.0,
+   "noise_cycles": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 17999
   }
  ],
  "derived": [
@@ -330,10 +443,179 @@
    "citation": "measured"
   }
  ],
+ "predictions": [
+  {
+   "case": "qacc_HL_vmulas_u16_to_srcmb_s16",
+   "producer": [
+    "EE.ZERO.QACC",
+    "EE.VMULAS.U16.QACC q0, q1"
+   ],
+   "consumer": [
+    "EE.SRCMB.S16.QACC q2, a3, 0"
+   ],
+   "registers": [
+    "QACC_H",
+    "QACC_L"
+   ],
+   "predicted_stall_at_d1": 1,
+   "measured_stall_at_d1": 0.0,
+   "predicted_min_issue_distance_D": 2,
+   "measured_min_issue_distance_D": 1,
+   "distances_measured": [
+    1,
+    2,
+    3
+   ],
+   "match": false,
+   "stall_by_distance": {
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0
+   },
+   "noise_cycles_at_d1": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999,
+   "why": "TRM Table 1.7-2 (p72) defs QACC_H/QACC_L at 2 (M) for EE.VMULAS.U16.QACC, and Table 1.7-2 (p68) uses them at 1 (E) for EE.SRCMB.S16.QACC, so rule 1.7.1 gives D = max(2 - 1 + 1, 0) = 2: one cycle of stall when the two are issued back to back.",
+   "basis": "measured stall (min_cycles_dep - min_cycles_indep) / 2000 at issue distance 1, dep=19999 indep=19999; the same row feeds `measurements`"
+  },
+  {
+   "case": "qacc_HL_vmulas_s16_to_srcmb_s16",
+   "producer": [
+    "EE.ZERO.QACC",
+    "EE.VMULAS.S16.QACC q0, q1"
+   ],
+   "consumer": [
+    "EE.SRCMB.S16.QACC q2, a3, 0"
+   ],
+   "registers": [
+    "QACC_H",
+    "QACC_L"
+   ],
+   "predicted_stall_at_d1": 1,
+   "measured_stall_at_d1": 0.0,
+   "predicted_min_issue_distance_D": 2,
+   "measured_min_issue_distance_D": 1,
+   "distances_measured": [
+    1,
+    2,
+    3
+   ],
+   "match": false,
+   "stall_by_distance": {
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0
+   },
+   "noise_cycles_at_d1": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 19999,
+   "why": "TRM Table 1.7-2 (p70) defs QACC_H/QACC_L at 2 (M) for EE.VMULAS.S16.QACC and the consumer uses them at 1 (E) (p68), so D = 2.",
+   "basis": "measured stall (min_cycles_dep - min_cycles_indep) / 2000 at issue distance 1, dep=19999 indep=19999; the same row feeds `measurements`"
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_vmulas_u16",
+   "producer": [
+    "EE.ZERO.QACC",
+    "EE.VMULAS.U16.QACC q0, q1"
+   ],
+   "consumer": [
+    "EE.VMULAS.U16.QACC q2, q3"
+   ],
+   "registers": [
+    "QACC_H",
+    "QACC_L"
+   ],
+   "predicted_stall_at_d1": 0,
+   "measured_stall_at_d1": 0.0,
+   "predicted_min_issue_distance_D": 1,
+   "measured_min_issue_distance_D": 1,
+   "distances_measured": [
+    1,
+    2,
+    3
+   ],
+   "match": true,
+   "stall_by_distance": {
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0205
+   },
+   "noise_cycles_at_d1": 0.0,
+   "min_cycles_dep": 17999,
+   "min_cycles_indep": 17999,
+   "why": "TRM Table 1.7-2 (p72): EE.VMULAS.U16.QACC defs and uses QACC_H/QACC_L at 2 (M), so D = max(2 - 2 + 1, 0) = 1 and there is no stall at issue distance 1.",
+   "basis": "measured stall (min_cycles_dep - min_cycles_indep) / 2000 at issue distance 1, dep=17999 indep=17999; the same row feeds `measurements`"
+  },
+  {
+   "case": "qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep",
+   "producer": [
+    "EE.ZERO.QACC",
+    "EE.VMULAS.U16.QACC q0, q1"
+   ],
+   "consumer": [
+    "EE.SRCMB.S16.QACC q2, a3, 0"
+   ],
+   "registers": [
+    "QACC_H",
+    "QACC_L"
+   ],
+   "predicted_stall_at_d1": 1,
+   "measured_stall_at_d1": 1.0,
+   "predicted_min_issue_distance_D": 2,
+   "measured_min_issue_distance_D": null,
+   "distances_measured": [
+    1
+   ],
+   "match": true,
+   "stall_by_distance": {
+    "1": 1.0
+   },
+   "noise_cycles_at_d1": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 17999,
+   "why": "Same model as qacc_HL_vmulas_u16_to_srcmb_s16 (D = 2). The prediction is kept identical on purpose: the point of the case is whether a different independent consumer changes the answer, which it must not if the two consumer instructions cost the same.",
+   "basis": "measured stall (min_cycles_dep - min_cycles_indep) / 2000 at issue distance 1, dep=19999 indep=17999; the same row feeds `measurements`",
+   "confound": "This case is confounded by construction and its HIT must not be read as a stall. The dependent variant ends in EE.SRCMB.S16.QACC and the independent one in EE.ANDQ, so their per-iteration cost difference is inside the number. calib_srcmb_s16_vs_andq_cost measures that difference with no QACC dependency at all and gets the same 1.000 cycles -- which is why the twin-producer cases (same consumer in both variants) are the ones that decide the question."
+  },
+  {
+   "case": "qacc_L_vmulas_u16_to_stqacc_l",
+   "producer": [
+    "EE.ZERO.QACC",
+    "EE.VMULAS.U16.QACC q0, q1"
+   ],
+   "consumer": [
+    "EE.ST.QACC_L.L.128.IP a3, 16"
+   ],
+   "registers": [
+    "QACC_L"
+   ],
+   "predicted_stall_at_d1": 1,
+   "measured_stall_at_d1": 1.0,
+   "predicted_min_issue_distance_D": 2,
+   "measured_min_issue_distance_D": 2,
+   "distances_measured": [
+    1,
+    2,
+    3
+   ],
+   "match": true,
+   "stall_by_distance": {
+    "1": 1.0,
+    "2": -0.0295,
+    "3": 0.0
+   },
+   "noise_cycles_at_d1": 0.0,
+   "min_cycles_dep": 19999,
+   "min_cycles_indep": 17999,
+   "why": "TRM Table 1.7-2 (p68) uses QACC_L at 1 (E) for EE.ST.QACC_L.L.128.IP and Table 1.7-2 (p72) defs QACC_L at 2 (M) for EE.VMULAS.U16.QACC, so D = max(2 - 1 + 1, 0) = 2.",
+   "basis": "measured stall (min_cycles_dep - min_cycles_indep) / 2000 at issue distance 1, dep=19999 indep=17999; the same row feeds `measurements`"
+  }
+ ],
  "problems": [],
  "caveats": [
   "Adjacent-pair interlocks only; hardware-resource (1.7.2) and control (1.7.3) hazards are untouched.",
   "Stall counts are quoted in whole cycles: the reported noise floor bounds the resolution.",
-  "A stage derived from a stall difference assumes the rule of TRM 1.7.1 holds on this silicon; the anchors are what test that assumption."
+  "A stage derived from a stall difference assumes the rule of TRM 1.7.1 holds on this silicon; the anchors are what test that assumption.",
+  "`predictions` compares the model against the same raw rows as `measurements`, and deliberately does not gate `valid`: a miss there says the manual's table does not match this silicon, which is the finding, not a broken run."
  ]
 }

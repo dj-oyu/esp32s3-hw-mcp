@@ -1316,6 +1316,618 @@ m_QR_load_to_QR_op_d3_indep:
 
     .section .iram1,"ax",@progbits
     .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_d1_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_d2_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_d3_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep
+    .type m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep,@function
+m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.S16.QACC q0, q1
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep, .-m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep
+    .type m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep,@function
+m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.S16.ACCX q0, q1
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep, .-m_qacc_HL_vmulas_s16_to_srcmb_s16_d1_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep
+    .type m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep,@function
+m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.S16.QACC q0, q1
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep, .-m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep
+    .type m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep,@function
+m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.S16.ACCX q0, q1
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep, .-m_qacc_HL_vmulas_s16_to_srcmb_s16_d2_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep
+    .type m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep,@function
+m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.S16.QACC q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep, .-m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep
+    .type m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep,@function
+m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.S16.ACCX q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep, .-m_qacc_HL_vmulas_s16_to_srcmb_s16_d3_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep
+    .type m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep,@function
+m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    EE.VMULAS.U16.QACC q2, q3
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep, .-m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep
+    .type m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep,@function
+m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    EE.VMULAS.U16.ACCX q2, q3
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep, .-m_qacc_HL_vmulas_u16_to_vmulas_u16_d1_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep
+    .type m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep,@function
+m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    EE.VMULAS.U16.QACC q2, q3
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep, .-m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep
+    .type m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep,@function
+m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    EE.VMULAS.U16.ACCX q2, q3
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep, .-m_qacc_HL_vmulas_u16_to_vmulas_u16_d2_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep
+    .type m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep,@function
+m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.VMULAS.U16.QACC q2, q3
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep, .-m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep
+    .type m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep,@function
+m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.VMULAS.U16.ACCX q2, q3
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep, .-m_qacc_HL_vmulas_u16_to_vmulas_u16_d3_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep
+    .type m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep,@function
+m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    EE.ANDQ q3, q4, q1
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep, .-m_qacc_HL_vmulas_u16_to_srcmb_s16_andq_indep_d1_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep
+    .type m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep,@function
+m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    EE.ST.QACC_L.L.128.IP a3, 16
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep, .-m_qacc_L_vmulas_u16_to_stqacc_l_d1_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep
+    .type m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep,@function
+m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    EE.ST.QACC_L.L.128.IP a3, 16
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep, .-m_qacc_L_vmulas_u16_to_stqacc_l_d1_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep
+    .type m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep,@function
+m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    EE.ST.QACC_L.L.128.IP a3, 16
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep, .-m_qacc_L_vmulas_u16_to_stqacc_l_d2_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep
+    .type m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep,@function
+m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    add a14, a13, a12
+    EE.ST.QACC_L.L.128.IP a3, 16
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep, .-m_qacc_L_vmulas_u16_to_stqacc_l_d2_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep
+    .type m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep,@function
+m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.QACC q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.ST.QACC_L.L.128.IP a3, 16
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep, .-m_qacc_L_vmulas_u16_to_stqacc_l_d3_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep
+    .type m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep,@function
+m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    add a14, a13, a12
+    add a14, a13, a12
+    EE.ST.QACC_L.L.128.IP a3, 16
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep, .-m_qacc_L_vmulas_u16_to_stqacc_l_d3_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_calib_srcmb_s16_vs_andq_cost_d1_dep
+    .type m_calib_srcmb_s16_vs_andq_cost_d1_dep,@function
+m_calib_srcmb_s16_vs_andq_cost_d1_dep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_calib_srcmb_s16_vs_andq_cost_d1_dep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_calib_srcmb_s16_vs_andq_cost_d1_dep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_calib_srcmb_s16_vs_andq_cost_d1_dep, .-m_calib_srcmb_s16_vs_andq_cost_d1_dep
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_calib_srcmb_s16_vs_andq_cost_d1_indep
+    .type m_calib_srcmb_s16_vs_andq_cost_d1_indep,@function
+m_calib_srcmb_s16_vs_andq_cost_d1_indep:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_calib_srcmb_s16_vs_andq_cost_d1_indep:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    EE.VMULAS.U16.ACCX q0, q1
+    EE.ANDQ q3, q4, q1
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_calib_srcmb_s16_vs_andq_cost_d1_indep
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_calib_srcmb_s16_vs_andq_cost_d1_indep, .-m_calib_srcmb_s16_vs_andq_cost_d1_indep
+
+    .section .iram1,"ax",@progbits
+    .align 4
     .global m_alone_LD_QR_alone
     .type m_alone_LD_QR_alone,@function
 m_alone_LD_QR_alone:
@@ -1427,6 +2039,82 @@ m_alone_EE_LD_128_USAR_IP_alone:
     sub a2, a2, a7
     retw.n
     .size m_alone_EE_LD_128_USAR_IP_alone, .-m_alone_EE_LD_128_USAR_IP_alone
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_alone_EE_SRCMB_S16_QACC_alone
+    .type m_alone_EE_SRCMB_S16_QACC_alone,@function
+m_alone_EE_SRCMB_S16_QACC_alone:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_alone_EE_SRCMB_S16_QACC_alone:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.SRCMB.S16.QACC q2, a3, 0
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_alone_EE_SRCMB_S16_QACC_alone
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_alone_EE_SRCMB_S16_QACC_alone, .-m_alone_EE_SRCMB_S16_QACC_alone
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_alone_EE_VMULAS_U16_QACC_alone
+    .type m_alone_EE_VMULAS_U16_QACC_alone,@function
+m_alone_EE_VMULAS_U16_QACC_alone:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_alone_EE_VMULAS_U16_QACC_alone:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.VMULAS.U16.QACC q0, q1
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_alone_EE_VMULAS_U16_QACC_alone
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_alone_EE_VMULAS_U16_QACC_alone, .-m_alone_EE_VMULAS_U16_QACC_alone
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_alone_EE_VMULAS_U16_ACCX_alone
+    .type m_alone_EE_VMULAS_U16_ACCX_alone,@function
+m_alone_EE_VMULAS_U16_ACCX_alone:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_alone_EE_VMULAS_U16_ACCX_alone:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.VMULAS.U16.ACCX q0, q1
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_alone_EE_VMULAS_U16_ACCX_alone
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_alone_EE_VMULAS_U16_ACCX_alone, .-m_alone_EE_VMULAS_U16_ACCX_alone
+
+    .section .iram1,"ax",@progbits
+    .align 4
+    .global m_alone_EE_ZERO_QACC_alone
+    .type m_alone_EE_ZERO_QACC_alone,@function
+m_alone_EE_ZERO_QACC_alone:
+    entry a1, 32
+    movi a6, 2000
+    rsr.ccount a7
+.Lloop_m_alone_EE_ZERO_QACC_alone:
+    mov a3, a2
+    addi a4, a2, 16
+    EE.ZERO.QACC
+    addi a6, a6, -1
+    bnez a6, .Lloop_m_alone_EE_ZERO_QACC_alone
+    rsr.ccount a2
+    sub a2, a2, a7
+    retw.n
+    .size m_alone_EE_ZERO_QACC_alone, .-m_alone_EE_ZERO_QACC_alone
 
     .section .iram1,"ax",@progbits
     .align 4

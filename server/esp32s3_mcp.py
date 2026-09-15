@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ESP32-S3 hardware knowledge MCP server (stdio).
 
-Serves three layers, kept apart on purpose:
+Serves four layers, kept apart on purpose:
 
 1. knowledge extracted from Espressif's own PDFs by tools/extract_*.py -- every reply carries the document,
    its version and the printed page, so a caller can check the claim instead of trusting it;
@@ -9,7 +9,13 @@ Serves three layers, kept apart on purpose:
    firmware assembles a snippet or a reconstructed instruction word, so "what does this mnemonic encode to"
    is answered by the assembler, not by a reading of the manual;
 3. what the device did (data/pie_timing_measured.json, produced by experiments/pie-timing on a real
-   ESP32-S3) and where the manual and the assembler disagree (data/pie_encoding_errata.json).
+   ESP32-S3; data/pie_examples_measured.json, produced by examples/firmware) and where the manual and the
+   assembler disagree (data/pie_encoding_errata.json);
+4. what a PIE kernel costs and what breaks when writing one (data/pie_measured_costs.json), measured by the
+   *sibling* project cardputer-adv-pocketjs on its own Cardputer ADV and quoted from its docs/pie-simd.md.
+   Layer 4 is another project's silicon, not this one's: every reply carries that repository's revision, the
+   line range and the verbatim lines, and `measured_in_this_repository: false`. Layers 3 and 4 must never be
+   presented as one measurement.
 
 The manual's full text is *not* in this repository (only the extracted facts are), so `search_manual` and
 `get_page` need a local corpus:
@@ -100,6 +106,71 @@ def measured() -> dict | None:
         return None
 
 
+def measured_interlocks() -> list[dict]:
+    """Interlocks measured on real silicon, one entry per (producer, consumer) pair the harness ran.
+
+    Only ever from a run that passed its own validity gate. These are measurements of *this* chip, so they
+    are handed back in their own field with `provenance.kind = measured_on_hardware` and never merged with
+    Table 1.7-2's stage numbers, which stay in `citation` and stay the table's claim. Where the two
+    disagree, both are reported: a measured stall that misses the model is a finding about the manual, not
+    a reason to hide either number.
+    """
+    m = measured() or {}
+    if not m.get("valid"):
+        return []
+    prov = {"kind": "measured_on_hardware",
+            "log": (m.get("provenance") or {}).get("log"),
+            "firmware_git_rev": (m.get("provenance") or {}).get("firmware_git_rev"),
+            "firmware_image_sha256": (m.get("provenance") or {}).get("firmware_image_sha256")}
+    out = []
+    for p in m.get("predictions", []):
+        entry = {
+            "case": p.get("case"),
+            "producer": p.get("producer"), "consumer": p.get("consumer"),
+            "registers": p.get("registers"),
+            "measured_stall_cycles_at_distance_1": p.get("measured_stall_at_d1"),
+            "predicted_stall_cycles_at_distance_1": p.get("predicted_stall_at_d1"),
+            "predicted_min_issue_distance_D": p.get("predicted_min_issue_distance_D"),
+            "measured_min_issue_distance_D": p.get("measured_min_issue_distance_D"),
+            "distances_measured": p.get("distances_measured"),
+            "stall_by_distance": p.get("stall_by_distance"),
+            "noise_cycles_at_distance_1": p.get("noise_cycles_at_d1"),
+            "matches_prediction": p.get("match"),
+            "basis": p.get("basis"),
+            "prediction_source": p.get("why"),
+            "provenance": prov,
+        }
+        if p.get("confound"):
+            entry["confound"] = p["confound"]
+        out.append(entry)
+    return out
+
+
+def measured_interlock_for(producer: str, consumer: str) -> dict | None:
+    """The measured entry for one instruction pair, matched on mnemonics (operands ignored).
+
+    The measured pairs are (last producer instruction) -> (first consumer instruction), which is the pair
+    the harness timed at issue distance 1. Matching the *last* producer instruction matters: a case whose
+    producer list is [EE.ZERO.QACC, EE.VMULAS.U16.QACC] timed VMULAS -> consumer, not ZERO.QACC -> consumer.
+
+    Two cases can time the same pair with different independent variants (one of them confounded by a
+    different consumer instruction), so an entry whose number carries such an artefact is deprioritised: the
+    pair gets the confound-free measurement, and the other one stays reachable through measured_timing().
+    """
+    p_name = (producer.strip().upper().split() or [""])[0]
+    c_name = (consumer.strip().upper().split() or [""])[0]
+    if not p_name or not c_name:
+        return None
+    matches = []
+    for entry in measured_interlocks():
+        prods = [(x.strip().upper().split() or [""])[0] for x in (entry.get("producer") or [])]
+        cons = [(x.strip().upper().split() or [""])[0] for x in (entry.get("consumer") or [])]
+        if prods and prods[-1] == p_name and c_name in cons:
+            matches.append(entry)
+    clean = [x for x in matches if not x.get("confound")]
+    return (clean or matches or [None])[0]
+
+
 @lru_cache(maxsize=1)
 def errata() -> dict | None:
     """Instructions where the manual's printed diagram and the Espressif assembler disagree."""
@@ -122,6 +193,100 @@ def measured_semantics() -> dict | None:
         return json.load(open(path, encoding="utf-8"))
     except Exception:
         return None
+
+
+@lru_cache(maxsize=1)
+def cost_data() -> dict | None:
+    """Costs and pitfalls measured on a real Cardputer ADV by the *sibling* project cardputer-adv-pocketjs.
+
+    Deliberately a different tier from measured() and measured_semantics(): those are this repository's own
+    device runs, this one is another project's write-up, quoted with its revision, line range and verbatim
+    lines. Every reply built from it says `measured_in_this_repository: false`, because the same author and
+    the same class of board is not the same measurement.
+    """
+    path = os.path.join(DATA, "pie_measured_costs.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        return json.load(open(path, encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def cost_citation(m: dict, src: dict) -> dict:
+    """A citation for the sibling document: line range + verbatim lines instead of a printed page."""
+    s = m["source"]
+    span = f"{src['line_start']}-{src['line_end']}" if src["line_end"] != src["line_start"] \
+        else str(src["line_start"])
+    return {
+        "document": f"{s['document']} ({s['project']} {s['path']})",
+        "version": s["version"],
+        "project": s["project"],
+        "path": s["path"],
+        "lines": span,
+        "line_start": src["line_start"],
+        "line_end": src["line_end"],
+        "what": src.get("what", ""),
+        "quote": src["quote"],
+        "doc_sha256": s["sha256"],
+        "url": s["url"],
+        "measured_in_this_repository": False,
+        "citation_note": "The primary-source tier cites a printed page because its source is a PDF; this "
+                         "tier's source is a Markdown file in another repository, so the line range and the "
+                         "verbatim lines are the citation, pinned by sha256.",
+    }
+
+
+def cost_provenance(m: dict, item: dict) -> dict:
+    p = m["provenance"]
+    return {"kind": item["provenance_kind"], "measured_in_this_repository": False,
+            "origin_project": p["origin_project"], "origin_revision": p["origin_revision"],
+            "measured_where": p["where"], "estimate": bool(item.get("estimate")),
+            "estimate_marker_in_the_source": item.get("estimate_marker"),
+            "note": p["note"]}
+
+
+def cost_item_reply(m: dict, section: str, item: dict) -> dict:
+    out = {
+        "id": item["id"],
+        "section": section,
+        "statement": item["statement"],
+        "numbers": item["numbers"],
+        "how_measured": item["how_measured"],
+        "provenance": cost_provenance(m, item),
+        "citations": [cost_citation(m, s) for s in item["sources"]],
+    }
+    if item.get("caveats"):
+        out["caveats"] = item["caveats"]
+    if item.get("linked_entries"):
+        out["linked_entries"] = [{
+            "file": lk["file"],
+            "locate": lk["locate"],
+            **({"expects": lk["expect"]} if lk.get("expect") else {}),
+            **({"what": lk["what"]} if lk.get("what") else {}),
+            "this_repositorys_own_data": True,
+        } for lk in item["linked_entries"]]
+        out["linked_entries_note"] = ("These point into this repository's own data files (its TRM extraction "
+                                      "and its own device runs). Where an item links one, the fact has been "
+                                      "established twice, in different trees -- once here, once by the "
+                                      "sibling project. They are kept apart, not merged.")
+    if item.get("issue_claim_check"):
+        out["issue_claim_check"] = item["issue_claim_check"]
+    if item.get("resolution"):
+        out["resolution"] = item["resolution"]
+    return out
+
+
+def cost_value(m: dict, item_id: str, as_printed: str) -> tuple[float | None, dict]:
+    """(value, the item's reply) for one constant, so a computed answer cites where its constant came from."""
+    for sec in m["section_index"]:
+        for item in m[sec["name"]]:
+            if item["id"] != item_id:
+                continue
+            for num in item["numbers"]:
+                if num["as_printed"] == as_printed:
+                    return num.get("value"), cost_item_reply(m, sec["name"], item)
+    return None, {}
 
 
 CORPUS_HINT = ("The manual's page text is not part of this repository. Build it once:\n"
@@ -247,14 +412,20 @@ def build_server():
         title="ESP32-S3 hardware knowledge (Espressif TRM/Datasheet)",
         version="0.1.0",
         instructions=(
-            "Answers about the ESP32-S3, from three layers that are deliberately kept apart. (1) "
+            "Answers about the ESP32-S3, from four layers that are deliberately kept apart. (1) "
             "Espressif's own documents (TRM v1.8, Datasheet v2.2): register maps, PIE instructions, "
             "pipeline stages, addresses — every reply carries the printed page it came from, so quote "
             "that page when you pass an answer on. (2) The toolchain: check_asm, instruction_encoding "
             "and decode_instruction run the same Espressif binutils that builds firmware, so what a "
             "mnemonic encodes to is reported from the assembler rather than from a reading of the "
             "manual. (3) The device: measured_timing serves timings measured on real silicon, and "
-            "manual_errata lists the instructions where the manual and the assembler disagree. Facts "
+            "manual_errata lists the instructions where the manual and the assembler disagree. (4) What "
+            "a kernel costs and what breaks while writing one: measured_costs and pie_cost_estimate "
+            "serve the sibling project cardputer-adv-pocketjs's own measurements of its own kernels "
+            "(cost model, pitfalls, the price of a scalar division, measurement discipline), quoted "
+            "with that repository's revision, line range and verbatim lines; those replies say "
+            "measured_in_this_repository: false, because another project's board is not this "
+            "repository's measurement — never merge layer 3 and layer 4 into one number. Facts "
             "that no layer states (e.g. base addresses for a register family, field bit ranges) are "
             "reported as absent or heuristic, never invented."),
     )
@@ -336,6 +507,13 @@ def build_server():
                                           "citation": d.get("citation"),
                                           "provenance": {"kind": "measured_on_hardware",
                                                          "log": (m.get("provenance") or {}).get("log")}})
+
+        # Interlocks measured on silicon that involve this instruction (issue #1: the pairs built on
+        # QACC_H/QACC_L's def->use). Kept in their own field: a measured stall of the *pair* is not a stage
+        # of the instruction, and the table's own numbers above are left exactly as tabulated.
+        interlocks = [x for x in measured_interlocks()
+                      if q and any(q in str(i).upper() for i in (x.get("producer") or [])
+                                   + (x.get("consumer") or []))]
         if row is None:
             out = {"found": False, "query": name,
                    "hint": "Table 1.7-2 covers 217 of the 220 instructions; LD.QR/ST.QR/MV.QR (p301-303) "
@@ -344,6 +522,8 @@ def build_server():
                 out["measured"] = measured_rows
                 out["hint"] += " A run on real silicon did pass its anchors for these, so `measured` is " \
                                "what they are -- quote it as a measurement, not as the manual."
+            if interlocks:
+                out["measured_interlocks"] = interlocks
             return out
         stages = {"1": "E (execute)", "2": "M (memory access)"}
         out = {
@@ -360,6 +540,13 @@ def build_server():
         }
         if measured_rows:
             out["measured"] = measured_rows
+        if interlocks:
+            out["measured_interlocks"] = interlocks
+            out["measured_interlocks_note"] = (
+                "Stalls measured on real silicon for pairs built on this instruction (provenance "
+                "`measured_on_hardware`). The tabulated stages above are the manual's claim and are reported "
+                "unchanged: where a measurement misses the D = max(SA - SB + 1, 0) prediction, both are kept "
+                "so the disagreement stays visible.")
         return out
 
     @server.tool(description="Peripheral address ranges (Table 4.3-3) used to turn register offsets "
@@ -405,7 +592,9 @@ def build_server():
 
     @server.tool(description="Estimate interlock (stall) cycles for a sequence of PIE instructions, using "
                               "TRM Table 1.7-2 stages and the 1.7.1 rule. Models adjacent-pair data hazards "
-                              "only; resource/control hazards are reported as unmodelled.")
+                              "only; resource/control hazards are reported as unmodelled. Pairs that were "
+                              "measured on real silicon (experiments/pie-timing) come back with the measured "
+                              "stall next to the model's, labelled measured_on_hardware.")
     def analyze_sequence(instructions: list[str], include_pairs: bool = True) -> dict:
         names = unit_of(instructions)
         if not names:
@@ -453,13 +642,29 @@ def build_server():
             conflicts.sort(key=lambda c: (-c["stall_cycles"], c["register"]))
             stall = max([c["stall_cycles"] for c in conflicts], default=0)
             total += stall
-            pairs.append({"from": a["instruction"], "to": b["instruction"], "stall_cycles": stall,
-                          "conflicts": conflicts})
+            pair = {"from": a["instruction"], "to": b["instruction"], "stall_cycles": stall,
+                    "conflicts": conflicts}
+            # If this exact adjacent pair was run on silicon (experiments/pie-timing), hand the measurement
+            # over next to the table's number instead of replacing it: `stall_cycles` stays the model, and
+            # `measured_interlock` says what the chip did. A verdict is stated so a caller does not have to
+            # diff two numbers of different kinds.
+            meas = measured_interlock_for(a["instruction"], b["instruction"])
+            if meas:
+                pair["measured_interlock"] = {
+                    **meas,
+                    "table_stall_cycles": stall,
+                    "silicon_vs_table": ("agrees"
+                                         if abs((meas["measured_stall_cycles_at_distance_1"] or 0.0)
+                                                - stall) < 0.25 else "contradicts"),
+                }
+            pairs.append(pair)
         if not include_pairs:
             for p in pairs:
                 p.pop("conflicts", None)
 
-        return {
+        measured_pairs = [{"from": p["from"], "to": p["to"], **p["measured_interlock"]}
+                          for p in pairs if p.get("measured_interlock")]
+        out = {
             "sequence": names,
             "stall_cycles_total": total,
             "issue_cycles_estimate": len(names) + total,
@@ -481,6 +686,21 @@ def build_server():
                                "names are matched exactly as tabulated (qz1/fu0.. are distinct operands).",
             },
         }
+        if measured_pairs:
+            contradictions = [m for m in measured_pairs if m["silicon_vs_table"] == "contradicts"]
+            out["measured_pairs"] = measured_pairs
+            out["measured_interlocks_note"] = (
+                "`stall_cycles_total` and every `pairs[].stall_cycles` are Table 1.7-2 + rule 1.7.1 -- the "
+                "manual's claim, unchanged. `measured_pairs` are stalls of the same adjacent pairs measured "
+                "on an ESP32-S3 (provenance `measured_on_hardware`). They are reported side by side and never "
+                "merged, so where silicon misses the model the caller sees both rather than one overwritten "
+                + ("number. This sequence has %d pair(s) where silicon contradicts the table: %s."
+                   % (len(contradictions),
+                      ", ".join(f"{m['from']} -> {m['to']} (table {m['table_stall_cycles']}, "
+                                f"silicon {m['measured_stall_cycles_at_distance_1']})"
+                                for m in contradictions))
+                   if contradictions else "number."))
+        return out
 
     # ---------------------------------------------------------------------------------------------
     # Toolchain-backed verification. The manual's diagrams are read by tools/extract_pie.py, and the
@@ -556,7 +776,9 @@ def build_server():
 
     @server.tool(description="Timings measured on real ESP32-S3 silicon (experiments/pie-timing), not "
                              "manual text: includes whether the run passed its own validity gate, the "
-                             "anchors that test the method, and the caveats.")
+                             "anchors that test the method, the staging the table omits, and one entry per "
+                             "instruction pair the harness timed (what Table 1.7-2 + rule 1.7.1 predict "
+                             "against what the chip did, with provenance measured_on_hardware).")
     def measured_timing(instruction: str = "") -> dict:
         m = measured()
         if m is None:
@@ -566,16 +788,30 @@ def build_server():
         q = instruction.upper().strip()
         rows = m.get("measurements", [])
         derived = m.get("derived", [])
+        interlocks = measured_interlocks()
         if q:
             rows = [r for r in rows if q in r["case"].upper()]
             derived = [d for d in derived if q in d["instruction"].upper()]
+            interlocks = [x for x in interlocks
+                          if any(q in str(i).upper() for i in (x.get("producer") or [])
+                                 + (x.get("consumer") or []))]
         out = {"valid": m.get("valid"), "provenance": m.get("provenance"), "anchors": m.get("anchors"),
-               "derived": derived, "measurements": rows, "caveats": m.get("caveats"),
+               "derived": derived, "measurements": rows, "interlocks": interlocks,
+               "predictions": m.get("predictions"), "caveats": m.get("caveats"),
                "problems": m.get("problems")}
+        if interlocks:
+            out["how_to_read"] = (
+                "`derived` is staging the table does not state, derived from a stall difference. `interlocks` "
+                "is one entry per instruction pair the harness ran: what Table 1.7-2 + rule 1.7.1 predict "
+                "(`predicted_stall_cycles_at_distance_1`, `predicted_min_issue_distance_D`) versus what the "
+                "chip did (`measured_stall_cycles_at_distance_1`, `measured_min_issue_distance_D`), with "
+                "`matches_prediction` for the verdict and `confound` on a case whose number carries a known "
+                "artefact of the measurement design. Everything here is a measurement of one chip at one "
+                "clock; the manual's own numbers are never overwritten by it.")
         if not m.get("valid"):
-            out["warning"] = ("This run did not pass its validity gate, so no derived stage numbers are "
-                              "offered. The anchors and the measured stalls are still reported, because "
-                              "they are what says the method itself is not yet trustworthy.")
+            out["warning"] = ("This run did not pass its validity gate, so no derived stage numbers and no "
+                              "measured interlocks are offered. The anchors and the measured stalls are still "
+                              "reported, because they are what says the method itself is not yet trustworthy.")
         return out
 
     @server.tool(description="Instruction semantics measured on real ESP32-S3 silicon with the examples/"
@@ -626,6 +862,168 @@ def build_server():
                                "different instruction; layout_not_machine_readable: the extracted diagram "
                                "is not a field list, so the extraction needs fixing."}
 
+    # ---------------------------------------------------------------------------------------------
+    # Fourth tier: what a PIE kernel actually costs and what breaks when writing one, as measured on
+    # a real Cardputer ADV by the sibling project cardputer-adv-pocketjs. Quoted, never merged with
+    # this repository's own runs: data/pie_measured_costs.json carries the revision, the line range,
+    # the verbatim lines and a measured_in_this_repository:false flag on every entry.
+    # ---------------------------------------------------------------------------------------------
+
+    def costs_guard() -> dict:
+        m = cost_data()
+        if m is None:
+            return {"error": "no_measured_costs",
+                    "hint": "data/pie_measured_costs.json is missing; it is curated from the sibling "
+                            "project's docs/pie-simd.md and gated by tools/verify_measured_costs.py."}
+        return {}
+
+    @server.tool(description="What PIE instructions really cost, and what breaks silently when writing a "
+                             "kernel: the cost model (one cycle per instruction whatever the kind, +0.6 only "
+                             "for EE.VST.128.IP, floor = instructions + 0.6 x stores + stalls, 1.3-1.4x in "
+                             "real operation), the pitfalls (loopgtz's 256-byte body, early-clobber \"=&a\", "
+                             "PIE is coprocessor 3 so no ISRs, no 16-bit lane shift, SRCMB's shift comes from "
+                             "AR), the price of scalar divisions and math calls, and what makes a number "
+                             "measured on this board untrustworthy. Measured by the SIBLING PROJECT "
+                             "cardputer-adv-pocketjs, not by this repository -- every reply marks that and "
+                             "cites the document revision, line range and verbatim lines. The section "
+                             "index always comes back first; narrow with section= or query=, or ask for "
+                             "everything.")
+    def measured_costs(section: str = "", query: str = "") -> dict:
+        guard = costs_guard()
+        if guard:
+            return guard
+        m = cost_data()
+        assert m is not None
+        names = [s["name"] for s in m["section_index"]]
+        want = section.strip()
+        if want and want not in names:
+            return {"found": False, "query": section, "sections": names,
+                    "hint": "Ask for one of the sections above, or leave the argument empty for the index."}
+        q = query.strip().upper()
+        selected = [want] if want else names
+        items, counts = [], {}
+        for name in selected:
+            rows = m[name]
+            if q:
+                rows = [i for i in rows if q in json.dumps(i, ensure_ascii=False).upper()]
+            counts[name] = len(rows)
+            items.extend(cost_item_reply(m, name, i) for i in rows)
+        return {
+            "provenance": m["provenance"],
+            "document": m["source"],
+            "sections": m["section_index"],
+            "counts": counts,
+            "count": len(items),
+            "items": items,
+            "read_this_with": m["read_this_with"],
+            "how_to_read": "Every item's numbers are the sibling project's own measurements of its own "
+                           "kernels, quoted with the lines they came from; `provenance.kind` says whether the "
+                           "item is a measurement, a derivation, a static count, an estimate the source "
+                           "itself marks as one (`estimate_marker` is the word the source uses), or a "
+                           "conflict between sources. `measured_in_this_repository` is false throughout: "
+                           "this repository's own device numbers are in measured_timing and "
+                           "example_measured_semantics, and the two must not be averaged or quoted as one "
+                           "another. Use pie_cost_estimate to apply the model to your own kernel.",
+        }
+
+    @server.tool(description="Apply the measured cost model (sibling project cardputer-adv-pocketjs, "
+                             "docs/pie-simd.md) to a kernel you are writing: the per-block floor, the "
+                             "per-run scaffolding and the row setup, then the 1.3-1.4x real-operation band. "
+                             "Returns the arithmetic, the provenance of every constant and what the model "
+                             "does not cover. This is an estimate from measured constants, never a "
+                             "measurement of your kernel.")
+    def pie_cost_estimate(blocks: int, instructions_per_block: int, stores_per_block: int = 0,
+                          stalls_per_block: int = 0, runs: int = 0, cycles_outside_loop_per_run: int = 0,
+                          divisions_in_row_setup: int = 0) -> dict:
+        guard = costs_guard()
+        if guard:
+            return guard
+        m = cost_data()
+        assert m is not None
+        if blocks < 1 or instructions_per_block < 1:
+            return {"error": "nothing_to_estimate",
+                    "hint": "blocks and instructions_per_block are the number of loop bodies and the static "
+                            "instruction count of one body; both must be positive."}
+        bad = {k: v for k, v in (("stores_per_block", stores_per_block), ("stalls_per_block", stalls_per_block),
+                                 ("runs", runs), ("cycles_outside_loop_per_run", cycles_outside_loop_per_run),
+                                 ("divisions_in_row_setup", divisions_in_row_setup)) if v < 0}
+        if bad:
+            return {"error": "negative_term", "terms": bad}
+
+        const = {}
+        for key, (item_id, printed) in {
+            "store_extra": ("lower_bound_formula", "0.6"),
+            "factor_low": ("real_operation_is_1_3_to_1_4_times_the_floor", "1.3"),
+            "factor_high": ("real_operation_is_1_3_to_1_4_times_the_floor", "1.4"),
+            "division_cycles": ("integer_division_about_16_cycles_back_calculated", "16"),
+        }.items():
+            value, item = cost_value(m, item_id, printed)
+            const[key] = {"value": value, "from": item_id, "citations": item.get("citations", [])}
+        alt_value, alt_item = cost_value(m, "integer_division_16_vs_32_within_one_document", "32")
+
+        core = blocks * (instructions_per_block + const["store_extra"]["value"] * stores_per_block
+                         + stalls_per_block)
+        scaffold = runs * cycles_outside_loop_per_run
+        setup = divisions_in_row_setup * const["division_cycles"]["value"]
+        total = core + scaffold + setup
+        lower = round(total * const["factor_low"]["value"], 1)
+        upper = round(total * const["factor_high"]["value"], 1)
+
+        out = {
+            "estimate_only": True,
+            "confidence": "an estimate built from the sibling project's measured constants -- not a "
+                          "measurement of your kernel",
+            "requested": {"blocks": blocks, "instructions_per_block": instructions_per_block,
+                          "stores_per_block": stores_per_block, "stalls_per_block": stalls_per_block,
+                          "runs": runs, "cycles_outside_loop_per_run": cycles_outside_loop_per_run,
+                          "divisions_in_row_setup": divisions_in_row_setup},
+            "terms": {
+                "vector_core_cycles": core,
+                "per_block": instructions_per_block + const["store_extra"]["value"] * stores_per_block
+                             + stalls_per_block,
+                "scaffold_cycles": scaffold,
+                "row_setup_cycles": setup,
+                "total_before_the_real_operation_factor": total,
+            },
+            "real_operation_band_cycles": [lower, upper],
+            "constants": {k: {"value": v["value"], "from": v["from"],
+                              "citations": [{"lines": c["lines"], "quote": c["quote"]}
+                                            for c in v["citations"]]}
+                          for k, v in const.items()},
+            "notes": [
+                "The floor is per loop body, not per row: count the scaffolding outside loopgtz/bnez with "
+                "objdump -d and pass it as runs x cycles_outside_loop_per_run.",
+                "0.6 is charged per 128-bit store, so a constant broadcast of nk stores costs nk x 0.6.",
+                "The 1.3-1.4x band comes from task switches saving and restoring PIE's coprocessor-3 state; "
+                "it is not something the kernel can remove.",
+                "Integer divisions are counted here at the measured 16 cycles; the same document's earlier "
+                "section says about 32 and is named there as a wrong assumption -- the disagreement entry "
+                "carries both.",
+            ],
+            "citations_for_the_model": cost_item_reply(m, "cost_model", next(
+                i for i in m["cost_model"] if i["id"] == "lower_bound_formula"))["citations"],
+            "provenance": m["provenance"],
+        }
+        if runs:
+            out["warnings"] = ["The 1.3-1.4x factor was calibrated on kernels where one row is one loop and "
+                               "the scaffold is about a tenth of the total; a row split into runs makes the "
+                               "scaffold the same order as the vector term, and the document says the factor "
+                               "does not hold there."]
+        if alt_value is not None:
+            out["integer_division_note"] = {
+                "used_cycles_per_division": const["division_cycles"]["value"],
+                "the_same_document_also_says": alt_value,
+                "disagreement_entry": "integer_division_16_vs_32_within_one_document",
+                "citations": [{"lines": c["lines"], "quote": c["quote"]} for c in alt_item.get("citations", [])]}
+        return out
+
+    @server.resource("esp32s3://pocketjs/pie-costs",
+                     title="cardputer-adv-pocketjs: measured PIE costs and pitfalls (verbatim data file)",
+                     mime_type="application/json")
+    def pocketjs_costs() -> str:
+        path = os.path.join(DATA, "pie_measured_costs.json")
+        return open(path, encoding="utf-8").read() if os.path.exists(path) else "{}"
+
     @server.resource("esp32s3://trm/pie-hazards", title="TRM 1.7 Instruction Performance (verbatim)",
                      mime_type="text/markdown")
     def pie_hazards() -> str:
@@ -635,9 +1033,18 @@ def build_server():
     @server.resource("esp32s3://docs/sources", title="Primary sources and their digests",
                      mime_type="application/json")
     def sources() -> str:
-        return json.dumps({"note": "Facts are extracted from these documents only; PDFs are not "
-                                   "redistributed here (fetch with tools/fetch_sources.sh).",
-                           "documents": DOCS}, ensure_ascii=False, indent=1)
+        out = {"note": "Facts are extracted from these documents only; PDFs are not "
+                       "redistributed here (fetch with tools/fetch_sources.sh).",
+               "documents": DOCS}
+        c = cost_data()
+        if c:
+            out["sibling_project_document"] = {
+                "note": "Not a primary source for this repository's extraction and not part of the "
+                        "documents above: it is another project's own measurement write-up, quoted by "
+                        "measured_costs/pie_cost_estimate with the revision, line range and verbatim lines. "
+                        "Every reply from it says measured_in_this_repository: false.",
+                **c["source"]}
+        return json.dumps(out, ensure_ascii=False, indent=1)
 
     return server
 

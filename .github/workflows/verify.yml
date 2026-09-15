@@ -34,6 +34,21 @@ jobs:
         run: python tools/verify_pie.py
       - name: Verify registers (coverage / shape / collisions / spot checks)
         run: python tools/verify_registers.py
+      - name: "Check out the sibling project the fourth tier quotes (optional)"
+        # data/pie_measured_costs.json quotes another project's measurement write-up by line, so the gate
+        # below re-checks every quote and every number against that document when it is present, and reports
+        # those checks as skipped when it is not (no network, private fork, revision moved). The checkout is
+        # therefore allowed to fail without failing the job; the structural, provenance, link and
+        # re-run-the-recorded-search checks run either way.
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: dj-oyu/cardputer-adv-pocketjs
+          path: cardputer-adv-pocketjs
+      - name: "Verify measured costs (fourth tier: quotes, numbers, links, recorded searches)"
+        env:
+          ESP32S3_POCKETJS_DOC: ${{ github.workspace }}/cardputer-adv-pocketjs/docs/pie-simd.md
+        run: python tools/verify_measured_costs.py
       - name: Generated firmware assembly is up to date
         run: python tools/gen_pie_timing_asm.py --check
       - name: Timing-log parser self-test
