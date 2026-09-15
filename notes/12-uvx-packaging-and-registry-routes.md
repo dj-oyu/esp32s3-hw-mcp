@@ -58,3 +58,20 @@ E2E 88項目）が落ちる。
   esp32s3-hw-mcp` → 18/18 ツールを発見（確認後に `hermes mcp remove` で元に戻した）。
 - CI の package ジョブと同じ手順をローカルで再現（`python -m build --wheel` → `check_wheel.py` →
   素の venv にインストール → E2E）。コーパス無しでも通る（本文検索の2項目は skip になる）。
+
+## 公開経路（uvx）そのものの門（.github/workflows/uvx.yml）
+
+`.github/workflows/verify.yml` は「クローンの知識が正しいか」を見るが、利用者が打つのは
+`uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp` の方で、こちらは uv が
+**自前のキャッシュ環境に pyproject.toml の宣言だけから組み立てる**。壊れ方が静かなので専用のジョブを足した。
+
+- `tools/check_uvx.py` が spec を uvx で解決し、`--version` / `--list` / `--registry` / 別名
+  `esp32-hw-mcp` を実行して**走っているサーバーからツール一覧を読み戻す**。期待値は
+  `esp32s3_hw_mcp/registry.py` のルート表から取るので、索引とサーバーが食い違えば落ちる。
+  `--registry` では `roots.data.source == "wheel"`（クローンではなくインストール済みパッケージから
+  答えている）と `missing_required == []` も要求する。
+- 検査する spec は3つ: そのコミットのパス、そのコミットの git ツリー（`git+file://`）、
+  そして公開 main の `git+https://…`（PR では実行しない。main への push と手動実行で走る）。
+- 最後に MCP クライアントとしての E2E（`ESP32S3_SERVER_CMD="uvx --from $GITHUB_WORKSPACE esp32s3-hw-mcp"` で
+  88項目のスイート）を回す。コーパスと Espressif ツールチェーンが無いので該当項目は理由つきで skip し、
+  残りを実行する（ローカルで再現済み: 87 + 2 skip）。

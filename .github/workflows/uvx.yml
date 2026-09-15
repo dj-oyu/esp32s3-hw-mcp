@@ -1,0 +1,54 @@
+name: uvx
+
+# The published path: `uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp`.
+#
+# This workflow exists because that path installs the package its own way -- uv builds it into a cache
+# environment of its own, with only what pyproject.toml declares -- and the way it breaks is quiet: a missing
+# entry point, a data file left out of the wheel, and the server still starts, still lists its tools, and
+# answers from nothing. So the tool list is read back from the *running* server, twice: as text (`--list`),
+# and as a real MCP client over stdio (initialize -> tools/list -> the tool calls).
+#
+# The specs checked are the commit under test (its path and its git tree over git+file://) and, outside pull
+# requests, the published main over git+https -- the exact string a user types.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  uvx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # git+file:// specs resolve a commit out of this repository, so the whole history must be here.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv and an MCP client
+        # uv is the thing under test; the version is pinned so the check does not move underfoot (bump it
+        # deliberately). `mcp` is only for the client side of the end-to-end step below.
+        run: pip install "uv==0.12.14" mcp
+
+      - name: The commit under test starts under uvx and lists its tools
+        # --list is also printed raw, so the job log shows the surface a human sees.
+        run: |
+          uvx --from "$GITHUB_WORKSPACE" esp32s3-hw-mcp --list
+          python3 tools/check_uvx.py --spec "$GITHUB_WORKSPACE" --spec "git+file://$GITHUB_WORKSPACE"
+
+      - name: The published repository starts under uvx and lists its tools
+        # Not on pull requests: there it would test main, not the change. On a push to main this is exactly
+        # what a user gets.
+        if: github.event_name != 'pull_request'
+        run: python3 tools/check_uvx.py --spec git+https://github.com/dj-oyu/esp32s3-hw-mcp
+
+      - name: An MCP client launched through uvx sees the same tools
+        # The same 88-check suite the checkout and the wheel go through, with the server command swapped for
+        # the uvx one: initialize, tools/list, and every tool call. Checks needing the PDF corpus or the
+        # Espressif toolchain skip themselves here (uvx has neither) and fail nowhere else.
+        env:
+          ESP32S3_SERVER_CMD: uvx --from ${{ github.workspace }} esp32s3-hw-mcp
+        run: python3 tools/test_mcp_server.py

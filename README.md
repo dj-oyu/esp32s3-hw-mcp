@@ -52,6 +52,11 @@ hermes mcp add esp32s3-hw --command uvx --args --from git+https://github.com/dj-
   成果物が実際に入っているか、件数・entry point・登録ツールの実体まで）、素の環境にインストールした同じ
   サーバーを stdio 越しの E2E 88項目に通す。**同梱物が1つ欠けてもツールは起動してしまい、何も無いところから
   答える**ので、そこを門にしている。
+- `.github/workflows/uvx.yml` が**公開経路そのもの**を検査する: `uvx --from <repo>` で起動してツール一覧を
+  読み戻す（テキストの `--list` と、MCP クライアントとしての `initialize` → `tools/list` → 各ツール呼び出しの
+  両方）。検査対象はそのコミット（パス指定と `git+file://`）と、PR 以外では公開 main の
+  `git+https://github.com/dj-oyu/esp32s3-hw-mcp`。ツール一覧の期待値は `esp32s3_hw_mcp/registry.py` から
+  読むので、索引と実装が食い違えば落ちる（`tools/check_uvx.py`）。
 
 ## 一次情報ポリシー
 
