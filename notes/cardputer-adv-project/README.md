@@ -27,13 +27,12 @@
 |---|---|---|
 | `pie-cost-model.md` | あちらの**実機で較正されたコストモデルと落とし穴**（1命令1サイクル、`VST.128.IP` のみ +0.6、実動作 1.3〜1.4倍、索引ロードの値段、`loopgtz` 256B、early-clobber、ISR 不可、スカラー除算・数学関数の値段、ビルド間15%ぶれ、計測の落とし穴） | cardputer-adv-pocketjs `docs/pie-simd.md` §3.5〜§3.13、§5〜§9 |
 | `vm-pie-fit.md` | あちらの **QuickJS 改 VM に PIE が刺さるかの判定**（呼び出し経路／アロケータ／自己管理スタック／中止可能プロセスモデルの4領域）。結論は「刺さらない」＋その理由の分類と、唯一形が合う候補（定数一括充填）＋整列の壁 | cardputer-adv-pocketjs @ vm/main (74e704d) の実コード |
+| `codec.md` | **Opus / minimp3 を PIE で組むときに効く事実**: この木で走るのは CELT だけ、pre-rotate が 4 レーン化できない理由（置換群の全列挙つき）、**CELT は飽和しない**、ステレオの丸め/飽和の順序、コンブのタップ契約、minimp3 は float なのでビット一致しない（実測 LSB 差）、ACCX と QACC の使い分け（実測 74 vs 90 命令） | cardputer-adv-pocketjs の `components/opus`・`components/minimp3`・`.cache/codecs/*`、および草案 ex16〜ex18 |
 
 ## これから入るもの（予定）
 
 - `flower-perf.md`: flower シーンの現在の重さと、あちらの §3.8〜§3.13 のノウハウがどの行に効くかの対応表
   （装飾神光線のスカラーパス、拒否テストの経済学、overlay の呼び出し回数など）。調査中。
-- `codec.md`: あちらの Opus / minimp3 が実際に走らせる DSP 経路と、どの段が `examples/` の
-  どのカーネル（ex16〜ex18）に対応するかの対応表。
 - `examples-map.md`: こちら側の例題（ex01〜ex2x）が、あちらのどのファイル・どの関数を置き換える想定かを
   1 行ずつ書いた対応表。**「置き換えられる」と「置き換えるとビルドが通る」は別**なので、状態も書く。
 
