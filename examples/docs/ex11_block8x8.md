@@ -1,5 +1,10 @@
 # ex11 (proposed) — 8x8 integer block transform, the eight columns in the SIMD lanes
 
+> **ABI 修正（call8 callee は a10〜a15 を壊してはいけない）**: 本文の計測値・命令数は修正前の `.S` で取ったもの。
+> `ex11_block8x8.S` に a10..a15 の退避・復帰（prologue の `s32i` と各 `retw.n` 前の `l32i`）を追加したため、
+> **関数全体のサイズ・命令数は増えている**（このファイルで 2 命令）。**ループ本体と 1 反復あたりの命令数は不変**（ループ内は無改変）。
+> md5: `4b5df4425e05f3c97110c25d87c4d9f0` → `a4e7cbcdf3c540ef53813541e94908e8`（tools/check_abi.py / tools/fix_abi.py）
+
 > **Status (integrated)**: this kernel now lives at `examples/firmware/main/ex11_block8x8.S`, is listed in
 > `examples/firmware/main/CMakeLists.txt`, and is called from `main.c`'s `ex11()`. It builds and the host
 > checker (`tools/selftest_examples_checker.py`) passes; it has **not been run on hardware**. The body below

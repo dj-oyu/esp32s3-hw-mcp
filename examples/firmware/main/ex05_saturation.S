@@ -22,7 +22,12 @@
     .global ex05_accx_saturation
     .type ex05_accx_saturation,@function
 ex05_accx_saturation:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10, a11 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
     mov a6, a3                      /* a6 = the eight 16-bit lanes to multiply */
     mov a7, a4                      /* a7 = out2 */
     EE.VLD.128.IP q0, a6, 0
@@ -37,5 +42,8 @@ ex05_accx_saturation:
     s32i a10, a7, 0
     EE.SRS.ACCX a11, a9, 0
     s32i a11, a7, 4
+    /* ABI: put the caller's a2/a3 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
     retw.n
     .size ex05_accx_saturation, .-ex05_accx_saturation

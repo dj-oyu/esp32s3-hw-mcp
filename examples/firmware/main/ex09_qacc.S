@@ -27,7 +27,11 @@
     .global \fname
     .type \fname,@function
 \fname:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a12, a1, 32
     mov a12, a5                     /* shift amount for EE.SRCMB (from a register, not SAR) */
     EE.ZERO.QACC
     EE.VLD.128.IP q1, a2, 0
@@ -38,6 +42,8 @@
     .endr
     EE.SRCMB.S16.QACC q5, a12, 0
     EE.VST.128.IP q5, a4, 0
+    /* ABI: put the caller's a4 back before returning. */
+    l32i a12, a1, 32
     retw.n
     .size \fname, .-\fname
 .endm
@@ -48,7 +54,11 @@
     .global \fname
     .type \fname,@function
 \fname:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a12, a1, 32
     mov a12, a5
     EE.ZERO.QACC
     EE.VLD.128.IP q0, a2, 0
@@ -65,6 +75,8 @@
     .endr
     EE.SRCMB.S16.QACC q5, a12, 0
     EE.VST.128.IP q5, a4, 0
+    /* ABI: put the caller's a4 back before returning. */
+    l32i a12, a1, 32
     retw.n
     .size \fname, .-\fname
 .endm
@@ -77,7 +89,11 @@
     .global \fname
     .type \fname,@function
 \fname:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a12, a1, 32
     mov a12, a5
     mov a7, a6                      /* rows remaining */
 .Lc\fname:
@@ -101,6 +117,8 @@
     addi a7, a7, -1
     j .Lc\fname
 .Lce\fname:
+    /* ABI: put the caller's a4 back before returning. */
+    l32i a12, a1, 32
     retw.n
     .size \fname, .-\fname
 .endm
@@ -130,7 +148,16 @@ CHAIN ex09_chain_g4, 4
     .global ex09_raw_qacc
     .type ex09_raw_qacc,@function
 ex09_raw_qacc:
-    entry a1, 32
+    entry a1, 80
+    /* ABI: this kernel writes a10, a11, a12, a13, a14, a15 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
+    s32i a13, a1, 44
+    s32i a14, a1, 48
+    s32i a15, a1, 52
     EE.ZERO.QACC
     EE.VLD.128.IP q1, a2, 0
     EE.VLD.128.IP q0, a3, 0
@@ -159,6 +186,13 @@ ex09_raw_qacc:
     s32i a13, a4, 28
     s32i a14, a4, 32
     s32i a15, a4, 36
+    /* ABI: put the caller's a2/a3/a4/a5/a6/a7 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
+    l32i a13, a1, 44
+    l32i a14, a1, 48
+    l32i a15, a1, 52
     retw.n
     .size ex09_raw_qacc, .-ex09_raw_qacc
 
@@ -169,7 +203,11 @@ ex09_raw_qacc:
     .global ex09_zero_vis
     .type ex09_zero_vis,@function
 ex09_zero_vis:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a12, a1, 32
     mov a12, a5
     EE.ZERO.QACC
     EE.VLD.128.IP q1, a2, 0
@@ -183,6 +221,8 @@ ex09_zero_vis:
     nop.n
     EE.SRCMB.S16.QACC q5, a12, 0
     EE.VST.128.IP q5, a4, 0
+    /* ABI: put the caller's a4 back before returning. */
+    l32i a12, a1, 32
     retw.n
     .size ex09_zero_vis, .-ex09_zero_vis
 
@@ -195,7 +235,13 @@ ex09_zero_vis:
     .global ex09_rows_raw
     .type ex09_rows_raw,@function
 ex09_rows_raw:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10, a11, a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
     mov a7, a5                      /* rows remaining */
 .Lrr:
     beqz a7, .Lrr_end
@@ -238,6 +284,10 @@ ex09_rows_raw:
     addi a7, a7, -1
     j .Lrr
 .Lrr_end:
+    /* ABI: put the caller's a2/a3/a4 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
     retw.n
     .size ex09_rows_raw, .-ex09_rows_raw
 
@@ -248,7 +298,12 @@ ex09_rows_raw:
     .global ex09_rows_unrolled
     .type ex09_rows_unrolled,@function
 ex09_rows_unrolled:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a11, a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a11, a1, 32
+    s32i a12, a1, 36
     mov a12, a5
     mov a6, a3
     movi a11, 4
@@ -272,6 +327,9 @@ ex09_rows_unrolled:
     EE.VST.128.IP q5, a4, 16
     addi a11, a11, -1
     bnez a11, .Lru
+    /* ABI: put the caller's a3/a4 back before returning. */
+    l32i a11, a1, 32
+    l32i a12, a1, 36
     retw.n
     .size ex09_rows_unrolled, .-ex09_rows_unrolled
 
@@ -326,7 +384,11 @@ ex09_ipwalk4:
     .global ex09_mac_fixed
     .type ex09_mac_fixed,@function
 ex09_mac_fixed:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a12, a1, 32
     mov a12, a6                     /* shift */
     mov a7, a3                      /* vertex base */
     EE.VLD.128.IP q0, a2, 0         /* coefficients: loaded once */
@@ -351,6 +413,8 @@ ex09_mac_fixed:
     addi a5, a5, -1
     j .Lfx
 .Lfx_end:
+    /* ABI: put the caller's a4 back before returning. */
+    l32i a12, a1, 32
     retw.n
     .size ex09_mac_fixed, .-ex09_mac_fixed
 
@@ -363,7 +427,12 @@ ex09_mac_fixed:
     .global ex09_srcmb_wb
     .type ex09_srcmb_wb,@function
 ex09_srcmb_wb:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10, a11 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
     mov a10, a6                     /* shift_a */
     mov a11, a7                     /* shift_b */
     EE.ZERO.QACC
@@ -382,5 +451,8 @@ ex09_srcmb_wb:
     nop.n
     EE.SRCMB.S16.QACC q6, a11, 0
     EE.VST.128.IP q6, a5, 0
+    /* ABI: put the caller's a2/a3 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
     retw.n
     .size ex09_srcmb_wb, .-ex09_srcmb_wb

@@ -29,7 +29,12 @@
     .global ex03_fir16_tap
     .type ex03_fir16_tap,@function
 ex03_fir16_tap:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10, a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a12, a1, 36
     mov a12, a4
     EE.VLD.128.IP q0, a2, 0         /* window[0..7]  */
     addi a9, a2, 16
@@ -41,6 +46,9 @@ ex03_fir16_tap:
     EE.VMULAS.S16.ACCX q0, q2
     EE.VMULAS.S16.ACCX q1, q3
     EE.SRS.ACCX a2, a12, 0
+    /* ABI: put the caller's a2/a4 back before returning. */
+    l32i a10, a1, 32
+    l32i a12, a1, 36
     retw.n
     .size ex03_fir16_tap, .-ex03_fir16_tap
 
@@ -53,13 +61,19 @@ ex03_fir16_tap:
     .global ex03_align_probe
     .type ex03_align_probe,@function
 ex03_align_probe:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
     addi a10, a2, 2
     EE.VLD.128.IP q0, a2, 0
     EE.VLD.128.IP q1, a10, 0
     EE.VST.128.IP q0, a3, 0
     addi a9, a3, 16
     EE.VST.128.IP q1, a9, 0
+    /* ABI: put the caller's a2 back before returning. */
+    l32i a10, a1, 32
     retw.n
     .size ex03_align_probe, .-ex03_align_probe
 

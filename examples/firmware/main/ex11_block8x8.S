@@ -67,7 +67,11 @@
     .global ex11_block8x8
     .type ex11_block8x8,@function
 ex11_block8x8:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a12, a1, 32
     mov a12, a5                     /* shift amount register for EE.SRCMB.S16.QACC */
     mov a6, a3                      /* the block rows are re-read for every output row */
     movi a7, 8                      /* output rows remaining */
@@ -99,5 +103,7 @@ ex11_block8x8:
     EE.VST.128.IP q5, a4, 16
     addi a7, a7, -1
     bnez a7, .Lex11_row
+    /* ABI: put the caller's a4 back before returning. */
+    l32i a12, a1, 32
     retw.n
     .size ex11_block8x8, .-ex11_block8x8

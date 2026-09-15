@@ -1,5 +1,10 @@
 # ex15 (proposed) — 非整列フレームバッファ転送（LCD ウィンドウが奇数のバイトから始まる場合）
 
+> **ABI 修正（call8 callee は a10〜a15 を壊してはいけない）**: 本文の計測値・命令数は修正前の `.S` で取ったもの。
+> `ex15_fbstore.S` に a10..a15 の退避・復帰（prologue の `s32i` と各 `retw.n` 前の `l32i`）を追加したため、
+> **関数全体のサイズ・命令数は増えている**（このファイルで 12 命令）。**ループ本体と 1 反復あたりの命令数は不変**（ループ内は無改変）。
+> md5: `d9400a77e608f4d231c8092c44fd4065` → `9874faa4220ef8c68c547e8346444ec6`（tools/check_abi.py / tools/fix_abi.py）
+
 `examples/firmware/main/proposed/ex15_fbstore.S` — notes/08-media-3d-perf.md のパイプライン表が
 **未着手**と書いている段（`フレームバッファ転送 | EE.SRCQ.128.ST.INCP(非整列寄せ, SAR_BYTE) + GDMA/SPI`）を、
 その表が挙げている 3 命令で書いたものです。対象は Cardputer ADV のパネル（135×240 px、16 bpp = 2 B/px、

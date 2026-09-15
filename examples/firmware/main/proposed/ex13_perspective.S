@@ -61,7 +61,11 @@
     .global ex13_recip_q15
     .type ex13_recip_q15,@function
 ex13_recip_q15:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
     LD.QR q4, a5, 16                /* q4 = the lane-pair mask (p301; the block is 16-byte aligned) */
     EE.VLD.128.IP q0, a2, 0         /* q0 = the eight uint16 w lanes (p164) */
     movi a8, 1
@@ -108,6 +112,8 @@ ex13_recip_q15:
                                      * The entry is 1..32767, so both forms read it the same way. */
     EE.VST.128.IP q5, a6, 0         /* inv_out (p275) */
     EE.VST.128.IP q7, a7, 0         /* x_over_w_out */
+    /* ABI: put the caller's a2 back before returning. */
+    l32i a10, a1, 32
     retw.n
     .size ex13_recip_q15, .-ex13_recip_q15
 

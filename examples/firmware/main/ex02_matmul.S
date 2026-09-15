@@ -28,7 +28,13 @@
     .global ex02_matmul16
     .type ex02_matmul16,@function
 ex02_matmul16:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10, a11, a12 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
     movi a12, 0                     /* shift for EE.SRS.ACCX */
     movi a6, 16                     /* 16 rows of A */
 .Lrow:
@@ -55,5 +61,9 @@ ex02_matmul16:
     addi a2, a2, 32
     addi a6, a6, -1
     bnez a6, .Lrow
+    /* ABI: put the caller's a2/a3/a4 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
     retw.n
     .size ex02_matmul16, .-ex02_matmul16

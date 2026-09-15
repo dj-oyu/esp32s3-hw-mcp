@@ -147,7 +147,15 @@ ex12_integrate:
     .global ex12_sat_masks
     .type ex12_sat_masks,@function
 ex12_sat_masks:
-    entry a1, 32
+    entry a1, 80
+    /* ABI: this kernel writes a10, a11, a12, a13, a14 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
+    s32i a13, a1, 44
+    s32i a14, a1, 48
     srli a6, a5, 3                  /* a6 = whole groups of eight */
     beqz a6, .Lsm_tail
 .Lsm_group:
@@ -223,6 +231,12 @@ ex12_sat_masks:
     addi a6, a6, -1
     bnez a6, .Lsm_tail_box
 .Lsm_done:
+    /* ABI: put the caller's a2/a3/a4/a5/a6 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
+    l32i a13, a1, 44
+    l32i a14, a1, 48
     retw.n
     .size ex12_sat_masks, .-ex12_sat_masks
 
@@ -263,14 +277,21 @@ ex12_sat_masks:
     .global ex12_dist2_qacc
     .type ex12_dist2_qacc,@function
 ex12_dist2_qacc:
-    entry a1, 64
+    entry a1, 96
+    /* ABI: this kernel writes a10, a11, a12, a15 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 64
+    s32i a11, a1, 68
+    s32i a12, a1, 72
+    s32i a15, a1, 76
     movi a6, 1
     slli a6, a6, 31
     addi a6, a6, -1                 /* 0x7FFFFFFF: movi cannot hold it in one instruction */
-    s32i a6, a1, 52                 /* frame[52] = the int32 clamp ceiling */
+    s32i a6, a1, 36                 /* frame[36] = the int32 clamp ceiling */
     movi a9, 7
     and a6, a5, a9                  /* a6 = n_points & 7 */
-    s32i a6, a1, 56                 /* frame[56] = number of leftover pairs */
+    s32i a6, a1, 40                 /* frame[40] = number of leftover pairs */
     srli a15, a5, 3                 /* a15 = whole groups of eight (the loop counter; never a temp) */
     beqz a15, .Ld2_tail
 .Ld2_group:
@@ -294,28 +315,28 @@ ex12_dist2_qacc:
     RUR.QACC_L_3 a9
     RUR.QACC_L_4 a10
     /* lane 0: exactly w0 */
-    l32i a11, a1, 52
+    l32i a11, a1, 36
     minu a11, a6, a11
     s32i a11, a4, 0
     /* lane 1: bits [40,80) -> low 32 = (w1 >> 8) | (w2 << 24) */
     srli a11, a7, 8
     slli a12, a8, 24
     or a11, a11, a12
-    l32i a12, a1, 52
+    l32i a12, a1, 36
     minu a11, a11, a12
     s32i a11, a4, 4
     /* lane 2: bits [80,120) -> low 32 = (w2 >> 16) | (w3 << 16) */
     srli a11, a8, 16
     slli a12, a9, 16
     or a11, a11, a12
-    l32i a12, a1, 52
+    l32i a12, a1, 36
     minu a11, a11, a12
     s32i a11, a4, 8
     /* lane 3: bits [120,160) -> low 32 = (w3 >> 24) | (w4 << 8) */
     srli a11, a9, 24
     slli a12, a10, 8
     or a11, a11, a12
-    l32i a12, a1, 52
+    l32i a12, a1, 36
     minu a11, a11, a12
     s32i a11, a4, 12
     /* ---- the H half: lanes 4..7, same word offsets inside QACC_H ---- */
@@ -324,25 +345,25 @@ ex12_dist2_qacc:
     RUR.QACC_H_2 a8
     RUR.QACC_H_3 a9
     RUR.QACC_H_4 a10
-    l32i a11, a1, 52
+    l32i a11, a1, 36
     minu a11, a6, a11
     s32i a11, a4, 16
     srli a11, a7, 8
     slli a12, a8, 24
     or a11, a11, a12
-    l32i a12, a1, 52
+    l32i a12, a1, 36
     minu a11, a11, a12
     s32i a11, a4, 20
     srli a11, a8, 16
     slli a12, a9, 16
     or a11, a11, a12
-    l32i a12, a1, 52
+    l32i a12, a1, 36
     minu a11, a11, a12
     s32i a11, a4, 24
     srli a11, a9, 24
     slli a12, a10, 8
     or a11, a11, a12
-    l32i a12, a1, 52
+    l32i a12, a1, 36
     minu a11, a11, a12
     s32i a11, a4, 28
     addi a4, a4, 32                 /* eight int32 written */
@@ -351,7 +372,7 @@ ex12_dist2_qacc:
 .Ld2_tail:
     /* the (n_points & 7) leftover pairs, scalar, with the SAME saturating 16-bit difference the vector
      * path takes, so the two paths agree even outside the documented |a-b| <= 32767 range */
-    l32i a6, a1, 56
+    l32i a6, a1, 40
     beqz a6, .Ld2_done
     movi a7, 1
     slli a7, a7, 15
@@ -379,7 +400,7 @@ ex12_dist2_qacc:
     max a10, a10, a8
     mull a10, a10, a10
     add a9, a9, a10                 /* <= 3*32767^2 < 2^32: no wrap (unsigned), bit 31 may be set */
-    l32i a10, a1, 52
+    l32i a10, a1, 36
     minu a9, a9, a10                /* clamp to 2^31-1 exactly as the vector path does */
     s32i a9, a4, 0
     addi a2, a2, 2
@@ -388,6 +409,11 @@ ex12_dist2_qacc:
     addi a6, a6, -1
     bnez a6, .Ld2_tail_pt
 .Ld2_done:
+    /* ABI: put the caller's a2/a3/a4/a7 back before returning. */
+    l32i a10, a1, 64
+    l32i a11, a1, 68
+    l32i a12, a1, 72
+    l32i a15, a1, 76
     retw.n
     .size ex12_dist2_qacc, .-ex12_dist2_qacc
 
@@ -416,7 +442,11 @@ ex12_dist2_qacc:
     .global ex12_dist2_q16
     .type ex12_dist2_q16,@function
 ex12_dist2_q16:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
     srli a7, a5, 3                  /* whole groups of eight = the return value */
     beqz a7, .Lq16_done
     mov a10, a6                     /* `as` operand of SRCMB: the shift comes from a register */
@@ -443,5 +473,7 @@ ex12_dist2_q16:
     bnez a7, .Lq16_group
 .Lq16_done:
     srli a2, a5, 3                  /* return (n_points & ~7): the pairs actually written */
+    /* ABI: put the caller's a2 back before returning. */
+    l32i a10, a1, 32
     retw.n
     .size ex12_dist2_q16, .-ex12_dist2_q16

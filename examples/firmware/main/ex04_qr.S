@@ -52,7 +52,11 @@ ex04_qr_move_roundtrip:
     .global \name
     .type \name,@function
 \name:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a14 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a14, a1, 32
     movi a6, 2000
     rsr.ccount a7
 .Lh_\name:
@@ -66,6 +70,8 @@ ex04_qr_move_roundtrip:
     bnez a6, .Lh_\name
     rsr.ccount a2
     sub a2, a2, a7
+    /* ABI: put the caller's a6 back before returning. */
+    l32i a14, a1, 32
     retw.n
     .size \name, .-\name
 .endm

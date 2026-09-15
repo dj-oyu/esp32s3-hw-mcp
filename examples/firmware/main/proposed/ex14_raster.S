@@ -163,7 +163,16 @@
     .global ex14_span_fill
     .type ex14_span_fill,@function
 ex14_span_fill:
-    entry a1, 32
+    entry a1, 80
+    /* ABI: this kernel writes a10, a11, a12, a13, a14, a15 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
+    s32i a13, a1, 44
+    s32i a14, a1, 48
+    s32i a15, a1, 52
     mull a8, a4, a3                 /* a8 = y * stride_px (pixels) */
     slli a8, a8, 1                  /* -> bytes (2 bytes per pixel) */
     add a8, a8, a2                  /* a8 = &fb16[y][0] */
@@ -214,6 +223,13 @@ ex14_span_fill:
     addi a14, a14, 1
     blt a14, a7, .Lsf_span
 .Lsf_done:
+    /* ABI: put the caller's a2/a3/a4/a5/a6/a7 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
+    l32i a13, a1, 44
+    l32i a14, a1, 48
+    l32i a15, a1, 52
     retw.n
     .size ex14_span_fill, .-ex14_span_fill
 
@@ -230,7 +246,14 @@ ex14_span_fill:
     .global ex14_edge_dda
     .type ex14_edge_dda,@function
 ex14_edge_dda:
-    entry a1, 32
+    entry a1, 64
+    /* ABI: this kernel writes a10, a11, a12, a13 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
+    s32i a13, a1, 44
     EE.VLDBC.32 q4, a6              /* q4 = {4{clip_lo_px}}   (low 2 address bits forced to 0, p173) */
     addi a6, a6, 4
     EE.VLDBC.32 q5, a6              /* q5 = {4{clip_hi_px}} */
@@ -273,5 +296,10 @@ ex14_edge_dda:
     addi a13, a13, -1
     bnez a13, .Ldda_group
 .Ldda_done:
+    /* ABI: put the caller's a2/a3/a4/a5 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
+    l32i a13, a1, 44
     retw.n
     .size ex14_edge_dda, .-ex14_edge_dda

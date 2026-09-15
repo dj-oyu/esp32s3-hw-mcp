@@ -1,5 +1,10 @@
 # ex13 — 透視除算と逆数表（8頂点並列） / perspective divide with a Q15 reciprocal table
 
+> **ABI 修正（call8 callee は a10〜a15 を壊してはいけない）**: 本文の計測値・命令数は修正前の `.S` で取ったもの。
+> `ex13_perspective.S` に a10..a15 の退避・復帰（prologue の `s32i` と各 `retw.n` 前の `l32i`）を追加したため、
+> **関数全体のサイズ・命令数は増えている**（このファイルで 2 命令）。**ループ本体と 1 反復あたりの命令数は不変**（ループ内は無改変）。
+> md5: `71e2c6b8a7f9b99c52000ebd4c5e7e79` → `f22b0304a0c50fffdf290faf97544d5b`（tools/check_abi.py / tools/fix_abi.py）
+
 `examples/firmware/main/proposed/ex13_perspective.S` — **提案（proposed）。ビルドに入っていない。**
 `main.c` / `examples.h` / `CMakeLists.txt` は触っていない（`proposed/` は
 `examples/firmware/main/CMakeLists.txt` のコンパイル対象外）。組み込む手順は最後の節。
@@ -498,6 +503,7 @@ $ xtensa-esp32s3-elf-objdump -d /tmp/ex13.o | grep -c l32r
 $ md5sum examples/firmware/main/proposed/ex13_perspective.S
 71e2c6b8a7f9b99c52000ebd4c5e7e79  examples/firmware/main/proposed/ex13_perspective.S
 ```
+（この md5 は **ABI 修正前**の版。修正後は `f22b0304a0c50fffdf290faf97544d5b` — 冒頭の注記を参照。）
 
 **貼るべき出力はこの空出力そのもの**（成功時にアセンブラは何も出さない）。証拠は逆アセンブル。
 `.iram1.literal` セクションは存在せず、`l32r` も 0 件 = **`.rodata` への 32bit 定数ロードを作っていない**

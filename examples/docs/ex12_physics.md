@@ -1,5 +1,10 @@
 # ex12 — 物理と衝突（PIE で 8 レーンずつ） / physics and collision, eight lanes at a time
 
+> **ABI 修正（call8 callee は a10〜a15 を壊してはいけない）**: 本文の計測値・命令数は修正前の `.S` で取ったもの。
+> `ex12_physics.S` に a10..a15 の退避・復帰（prologue の `s32i` と各 `retw.n` 前の `l32i`）を追加したため、
+> **関数全体のサイズ・命令数は増えている**（このファイルで 20 命令）。**ループ本体と 1 反復あたりの命令数は不変**（ループ内は無改変）。
+> md5: `1062146e3b1c244ee52014fc44fdd65c` → `8ba9c375ce533f8ec8eabbbe2361bb32`（tools/check_abi.py / tools/fix_abi.py）
+
 > **状態（統合後）**: この3カーネルは `examples/firmware/main/ex12_physics.S` に移り、
 > `examples/firmware/main/CMakeLists.txt` のビルドに入って `main.c` の `ex12()` から呼ばれる。
 > ビルドとホスト側チェッカー（`tools/selftest_examples_checker.py`）は通っているが、**実機では未実行**。

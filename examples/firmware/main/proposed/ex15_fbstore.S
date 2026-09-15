@@ -118,7 +118,16 @@
     .global ex15_store_window
     .type ex15_store_window,@function
 ex15_store_window:
-    entry a1, 32
+    entry a1, 80
+    /* ABI: this kernel writes a10, a11, a12, a13, a14, a15 -- the call8 window makes the
+     * callee's a10..a15 the caller's a2..a7, so they are saved here and restored
+     * before every retw.n (tools/check_abi.py). */
+    s32i a10, a1, 32
+    s32i a11, a1, 36
+    s32i a12, a1, 40
+    s32i a13, a1, 44
+    s32i a14, a1, 48
+    s32i a15, a1, 52
     beqz a5, .Lsw_done              /* n_bytes == 0 */
     add a6, a2, a3                  /* a6 = D: the window start (unaligned) */
     add a13, a6, a5                 /* a13 = E: the window end (floor(E) is the tail chunk) */
@@ -228,6 +237,13 @@ ex15_store_window:
     EE.ORQ q5, q5, q1
     EE.VST.128.IP q5, a9, 0
 .Lsw_done:
+    /* ABI: put the caller's a2/a3/a4/a5/a6/a7 back before returning. */
+    l32i a10, a1, 32
+    l32i a11, a1, 36
+    l32i a12, a1, 40
+    l32i a13, a1, 44
+    l32i a14, a1, 48
+    l32i a15, a1, 52
     retw.n
     .size ex15_store_window, .-ex15_store_window
 
