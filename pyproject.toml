@@ -23,9 +23,9 @@ dependencies = ["mcp>=2.0"]
 
 [project.optional-dependencies]
 # `esp32s3-hw-mcp --fetch-corpus` fetches the pinned PDFs and builds the page corpus; nothing else needs it.
-corpus = ["pymupdf>=1.26"]
+corpus = ["pymupdf>=1.26,<2"]
 # The extraction, verification and hardware scripts in tools/ need these (`uv sync --extra dev`).
-dev = ["pymupdf>=1.26", "pypdf>=6", "mcp>=2.0"]
+dev = ["pymupdf>=1.26,<2", "pypdf>=6,<6.20", "mcp>=2.0"]
 
 [project.urls]
 Homepage = "https://github.com/dj-oyu/esp32s3-hw-mcp"

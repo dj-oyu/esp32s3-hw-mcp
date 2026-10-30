@@ -1,5 +1,8 @@
-# Extraction pipeline
-pypdf>=6
-pymupdf>=1.26
+# Extraction pipeline. Upper bounds keep data/ byte-identical to a fresh extraction (the verify gate):
+# pypdf 6.20 drops spaces in pipeline-table cells ("FFT_BIT_WIDTH 1" -> "FFT_BIT_WIDTH1") and pymupdf 2.0
+# reorders some register descriptions ("IV block data" -> "block data IV"). Lift them only together with
+# a regenerated data/ that has been read, not just accepted.
+pypdf>=6,<6.20
+pymupdf>=1.26,<2
 # MCP server (stdio)
 mcp>=2

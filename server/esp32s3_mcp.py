@@ -317,7 +317,7 @@ def cost_value(m: dict, item_id: str, as_printed: str) -> tuple[float | None, di
 
 CORPUS_HINT = ("The manual's page text is not redistributed here, so this needs a corpus. The server can "
                "build one itself, once:\n"
-               "  uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp "
+               "  uvx --with 'pymupdf<2' --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp "
                "--fetch-corpus\n"
                "  (it fetches the sha256-pinned PDFs and leaves the corpus under ~/.cache/esp32s3-hw-mcp, "
                "where the server looks for it)\n"
@@ -1229,7 +1229,7 @@ def cmd_fetch_corpus(args: list[str]) -> int:
             builder.build(pdfs[key], out)
         except ImportError as exc:            # pymupdf is needed for this one command
             print(f"{exc}\n\npymupdf is needed only to build the corpus. Run this once as:\n"
-                  "  uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp "
+                  "  uvx --with 'pymupdf<2' --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp "
                   "--fetch-corpus", file=sys.stderr)
             return 2
     print("\ndone. `esp32s3-hw-mcp --paths` should now report the corpus as present; search_manual and "
