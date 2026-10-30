@@ -377,7 +377,7 @@ ARTIFACTS: list[dict] = [
         "in_wheel": False,
         "required": False,
         "hint": "`esp32s3-hw-mcp --fetch-corpus` fetches the PDFs (sha256-checked), builds the corpus under "
-                "~/.cache/esp32s3-hw-mcp and the server finds it there -- add `--with pymupdf` to the uvx "
+                "~/.cache/esp32s3-hw-mcp and the server finds it there -- add `--with 'pymupdf<2'` to the uvx "
                 "command for the one run that builds it. From a checkout instead: `bash "
                 "tools/fetch_sources.sh` then `.venv/bin/python tools/build_corpus.py "
                 "sources/esp32-s3_technical_reference_manual_en.pdf --out corpus/trm-s3`. "

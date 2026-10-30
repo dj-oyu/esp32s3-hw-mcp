@@ -20,7 +20,7 @@ uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --paths  
 マニュアル**本文**のページ検索（`search_manual` / `get_page`）だけは本文を再配布できないため、初回に一度だけ:
 
 ```bash
-uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
+uvx --with 'pymupdf<2' --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
 ```
 
 sha256 を検証して PDF を取得し（16MB）、`~/.cache/esp32s3-hw-mcp/` にTRM 1531ページ＋Datasheet 87ページの
@@ -45,7 +45,7 @@ Claude Code のクラウド環境などでは、環境の Setup script に次を
 
 ```bash
 R=git+https://github.com/dj-oyu/esp32s3-hw-mcp
-uvx --with pymupdf --from $R esp32s3-hw-mcp --fetch-corpus
+uvx --with 'pymupdf<2' --from $R esp32s3-hw-mcp --fetch-corpus
 uvx --from $R esp32s3-hw-mcp --fetch-toolchain
 claude mcp add -s user esp32s3-hw -- uvx --from $R esp32s3-hw-mcp   # コンテナ全体に登録
 ```
@@ -295,7 +295,7 @@ bash tools/fetch_sources.sh                                   # PDF取得＋sha2
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp              # 利用者（uvx）
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --list       # ツール面
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --paths      # ルートの解決結果
-uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
+uvx --with 'pymupdf<2' --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-toolchain  # IDF が固定する binutils
 
 .venv/bin/python server/esp32s3_mcp.py                                              # 同じサーバー（クローンから）
