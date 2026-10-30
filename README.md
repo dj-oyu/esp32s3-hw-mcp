@@ -26,6 +26,35 @@ uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-h
 sha256 を検証して PDF を取得し（16MB）、`~/.cache/esp32s3-hw-mcp/` にTRM 1531ページ＋Datasheet 87ページの
 コーパスを作る。以後は同じ uvx 起動がそこを見つけるので、環境変数は要らない。
 
+符号化を確かめる4ツール（`check_asm` / `decode_instruction` / `instruction_encoding` / `toolchain_status`）の
+binutils も同じ形で入る:
+
+```bash
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-toolchain   # 181MB
+```
+
+版はここでは選ばない。ESP-IDF v6.0.1（cardputer-adv-pocketjs がビルドに使う版）の `tools/tools.json` が
+`recommended` とする `xtensa-esp-elf` を、そのファイルの sha256 で検証して `~/.espressif/tools/` の
+managed-install の配置に展開する（橋渡しが既に探す場所なので PATH は触らない）。`--idf-ref v5.4` で別の
+IDF の固定に従う。GitHub の「最新リリース」を取らないのは、ファームを組む assembler と別物になるため。
+
+### AIエージェントのLinuxコンテナに入れる
+
+Claude Code のクラウド環境などでは、環境の Setup script に次を置けば18ツールすべてが答える
+（2026-10-30、Claude Code のクラウドコンテナで実測: 本体7秒・コーパス18秒・binutils 32秒、E2E 88項目すべて通過）。
+
+```bash
+R=git+https://github.com/dj-oyu/esp32s3-hw-mcp
+uvx --with pymupdf --from $R esp32s3-hw-mcp --fetch-corpus
+uvx --from $R esp32s3-hw-mcp --fetch-toolchain
+claude mcp add -s user esp32s3-hw -- uvx --from $R esp32s3-hw-mcp   # コンテナ全体に登録
+```
+
+ネットワークを制限している環境では `documentation.espressif.com`（PDF）、`raw.githubusercontent.com`
+（tools.json）、`github.com` と `objects.githubusercontent.com` / `release-assets.githubusercontent.com`
+（binutils の配布物）を許可する。登録は `-s user`（コンテナの `~/.claude.json`）にして、使う側のリポジトリの
+`.mcp.json` には書かない（cardputer-adv-pocketjs は `.mcp.json` をマシン固有の設定として git 管理外にしている）。
+
 MCP クライアントへの登録（クライアントの流儀に従う。`hermes mcp add` は有効化するツールを対話で聞く）:
 
 ```bash
@@ -267,6 +296,7 @@ uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp          
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --list       # ツール面
 uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --paths      # ルートの解決結果
 uvx --with pymupdf --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-corpus
+uvx --from git+https://github.com/dj-oyu/esp32s3-hw-mcp esp32s3-hw-mcp --fetch-toolchain  # IDF が固定する binutils
 
 .venv/bin/python server/esp32s3_mcp.py                                              # 同じサーバー（クローンから）
 .venv/bin/python tools/test_mcp_server.py                                            # stdio越しに88項目のE2E

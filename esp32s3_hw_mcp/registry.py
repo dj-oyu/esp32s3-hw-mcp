@@ -433,11 +433,14 @@ ARTIFACTS: list[dict] = [
         "count": None,
         "presenters": {"tools": ["check_asm", "decode_instruction", "instruction_encoding",
                                  "toolchain_status"], "resources": []},
-        "producer": "ESP-IDF (`source /opt/esp-idf/export.sh`, or a managed install under ~/.espressif)",
+        "producer": "ESP-IDF (`source /opt/esp-idf/export.sh`, or a managed install under ~/.espressif -- "
+                    "which `esp32s3-hw-mcp --fetch-toolchain` writes, at the version ESP-IDF pins)",
         "gate": "tools/selftest_asm_toolchain.py, and check_asm compares a claimed word with the emitted one",
         "in_wheel": True,
         "required": False,
-        "hint": "Optional: without it, 4 of the tools answer toolchain_missing and the rest keep working.",
+        "hint": "Optional: without it, 4 of the tools answer toolchain_missing and the rest keep working. "
+                "`esp32s3-hw-mcp --fetch-toolchain` installs the build ESP-IDF v6.0.1 pins in its "
+                "tools/tools.json (sha256-checked) under ~/.espressif, where the bridge looks.",
     },
 ]
 
