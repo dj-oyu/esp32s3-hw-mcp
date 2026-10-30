@@ -19,7 +19,8 @@ Serves four layers, kept apart on purpose:
 
 The manual's full text is *not* in this repository (only the extracted facts are), so `search_manual` and
 `get_page` need a local corpus. `esp32s3-hw-mcp --fetch-corpus` fetches the pinned PDFs and builds it where
-the server looks for it (~/.cache/esp32s3-hw-mcp); from a checkout the same thing is:
+the server looks for it (~/.cache/esp32s3-hw-mcp), and `--fetch-toolchain` installs the binutils the encoding
+tools drive, at the version ESP-IDF pins. From a checkout the corpus is:
 
     bash tools/fetch_sources.sh
     .venv/bin/python tools/build_corpus.py sources/esp32-s3_technical_reference_manual_en.pdf --out corpus/trm-s3
@@ -1117,7 +1118,10 @@ def build_server():
 # (~/.cache/esp32s3-hw-mcp), and needs pymupdf for that one run.
 # ---------------------------------------------------------------------------------------------------------
 
-HELP = """esp32s3-hw-mcp -- ESP32-S3 hardware knowledge server (MCP over stdio)
+IDF_REF = "v6.0.1"           # the ESP-IDF release cardputer-adv-pocketjs builds with
+IDF_TOOLS_JSON = "https://raw.githubusercontent.com/espressif/esp-idf/{ref}/tools/tools.json"
+
+HELP = f"""esp32s3-hw-mcp -- ESP32-S3 hardware knowledge server (MCP over stdio)
 
   (no arguments)            serve MCP over stdio; this is what a client launches
   --list                     the tool surface, for humans
@@ -1127,6 +1131,8 @@ HELP = """esp32s3-hw-mcp -- ESP32-S3 hardware knowledge server (MCP over stdio)
   --corpus-dir DIR           where --fetch-corpus writes the corpus (default: a checkout's corpus/, else
                              ~/.cache/esp32s3-hw-mcp/corpus)
   --sources-dir DIR          where --fetch-corpus puts the PDFs (same rule)
+  --fetch-toolchain          install the Espressif binutils that ESP-IDF pins (check_asm & co. need it)
+  --idf-ref REF              which ESP-IDF release's pin --fetch-toolchain follows (default: {IDF_REF})
   --version                  print the version
 
 Environment: ESP32S3_DATA_DIR, ESP32S3_CORPUS_DIR, ESP32S3_SOURCES_DIR, ESP32S3_CACHE_DIR,
@@ -1231,6 +1237,86 @@ def cmd_fetch_corpus(args: list[str]) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------------------------------------
+# `--fetch-toolchain` installs the binutils the four encoding tools drive. The version is not chosen here:
+# it is the one ESP-IDF itself pins in tools/tools.json for the release the sibling firmware builds with,
+# so check_asm answers with the same assembler that builds that firmware, and the archive is checked
+# against the sha256 that file carries. "Latest crosstool-NG release" would be a different assembler.
+# It lands in the managed-install layout (~/.espressif/tools/xtensa-esp-elf/<version>/xtensa-esp-elf/bin)
+# that asm_toolchain.find_tool already searches, so nothing has to be added to PATH.
+# ---------------------------------------------------------------------------------------------------------
+
+
+def _idf_platform() -> str:
+    import platform
+    machine = platform.machine().lower()
+    arm = machine in ("arm64", "aarch64")
+    if sys.platform.startswith("linux"):
+        return "linux-arm64" if arm else "linux-amd64"
+    if sys.platform == "darwin":
+        return "macos-arm64" if arm else "macos"
+    if sys.platform == "win32":
+        return "win64"
+    raise SystemExit(f"no Espressif toolchain build for {sys.platform}/{machine}")
+
+
+def resolve_toolchain(ref: str, plat: str) -> dict:
+    """Version, URL and sha256 of the xtensa-esp-elf build that ESP-IDF `ref` marks recommended."""
+    req = urllib.request.Request(IDF_TOOLS_JSON.format(ref=ref), headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        tools = json.load(resp)["tools"]
+    tool = next(t for t in tools if t["name"] == "xtensa-esp-elf")
+    ver = next(v for v in tool["versions"] if v["status"] == "recommended")
+    if plat not in ver:
+        raise SystemExit(f"ESP-IDF {ref} has no xtensa-esp-elf build for {plat}")
+    return {"version": ver["name"], **ver[plat]}
+
+
+def cmd_fetch_toolchain(args: list[str]) -> int:
+    import shutil
+    import tarfile
+    import tempfile
+    import zipfile
+
+    ref, plat = _opt(args, "--idf-ref", IDF_REF), _idf_platform()
+    pin = resolve_toolchain(ref, plat)
+    dest = os.path.join(os.path.expanduser("~"), ".espressif", "tools", "xtensa-esp-elf", pin["version"])
+    exe = "xtensa-esp32s3-elf-as" + (".exe" if plat == "win64" else "")
+    as_bin = os.path.join(dest, "xtensa-esp-elf", "bin", exe)
+    print(f"ESP-IDF {ref} pins xtensa-esp-elf {pin['version']} ({plat})\n  -> {dest}")
+    if os.path.exists(as_bin):
+        print("  ok (cached)")
+        return 0
+    name = pin["url"].rsplit("/", 1)[-1]
+    with tempfile.TemporaryDirectory() as td:
+        path = os.path.join(td, name)
+        print(f"  fetching      {name} ({pin['size'] / 1e6:.0f} MB)")
+        req = urllib.request.Request(pin["url"], headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=600) as resp, open(path, "wb") as out:
+            shutil.copyfileobj(resp, out, 1 << 20)
+        digest = _sha256(path)
+        if digest != pin["sha256"]:
+            raise SystemExit(f"FAIL  {name}: sha256 {digest} != ESP-IDF's pinned {pin['sha256']}")
+        print(f"  ok (verified) {digest[:16]}...")
+        os.makedirs(dest, exist_ok=True)
+        if name.endswith(".zip"):
+            with zipfile.ZipFile(path) as z:
+                z.extractall(dest)
+        else:
+            with tarfile.open(path) as t:
+                # "tar" keeps the archive's symlinks and exec bits (the binutils need both) while still
+                # refusing absolute paths and escapes; the filter argument only exists from 3.12 / backports.
+                if hasattr(tarfile, "tar_filter"):
+                    t.extractall(dest, filter="tar")
+                else:
+                    t.extractall(dest)
+    if not os.path.exists(as_bin):
+        raise SystemExit(f"FAIL  extracted, but {as_bin} is not there (archive layout changed?)")
+    print("\ndone. `esp32s3-hw-mcp --paths` should now report the toolchain as present; check_asm, "
+          "decode_instruction, instruction_encoding and toolchain_status answer from it.")
+    return 0
+
+
 def print_paths() -> int:
     reg = registry.describe(with_counts=False)
     print("roots (first hit wins; an ESP32S3_* variable overrides each one):")
@@ -1295,6 +1381,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if "--fetch-corpus" in args:
         return cmd_fetch_corpus(args)
+    if "--fetch-toolchain" in args:
+        return cmd_fetch_toolchain(args)
     print(f"unknown option(s): {' '.join(args)}\n\n{HELP}", file=sys.stderr)
     return 2
 
